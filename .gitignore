@@ -27,3 +27,6 @@ DerivedData/
 # Python
 __pycache__/
 *.pyc
+
+# generated map disks
+BLANKMAP*.D64

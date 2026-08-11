@@ -273,6 +273,46 @@ writes a fixture; the Swift tests assert an exact match on both output and inter
 Confirmed non-vacuous by mutation: changing the four `ROL A` rotates to three produces 949
 recorded failures.
 
+### Headless World Maker (works — `tools/wm_trace.py`)
+
+The World Maker can be run end to end with **no UI interaction at all**: poke `game3` to
+`$0800`, patch out its keyboard wait, and `SYS $1E99`. It formats the attached disk and
+generates a complete world. This is far more reliable than driving menus.
+
+The wait it blocks on is at `$1F7C`, and it polls the **keyboard matrix directly**:
+
+```text
+$1F7C  LDX #$FF / STX $DC02      ; DDRA = outputs
+$1F82  STX $DC00                 ; select row 0
+$1F85  LDA $DC01 / AND #$08      ; bit 3 = F7
+$1F8A  BNE $1F7C                 ; spin while not pressed
+```
+
+Patch `$1F8A` (the `BNE`) to `EA EA` and it falls straight through.
+
+Structure learned from running it:
+
+- The pipeline `$0E20` is called **twice**, from `$0DB5` and `$0DC3`, each followed by
+  `JSR $0F47`. The world is generated in two passes.
+- **The map is assembled on disk, not in RAM.** 104 KB will not fit in 64 KB. RAM barely
+  changes across phase boundaries (~141 bytes), which is why generation takes 18 minutes —
+  it is streaming sectors the whole time.
+- Consequently, snapshotting RAM *or* the disk image at phase boundaries reveals nothing
+  useful: disk writes only happen after a complete `$0E20` pass, so intra-pipeline snapshots
+  are identical.
+- The land-mass phase writes predominantly `$00` and `$BB`. Rendering a generated map with
+  `$00` as ocean and `$BB` as land shows clear ocean/land separation — the first genuinely
+  map-like image — but land appears as long thin horizontal streaks, so the row stride is
+  wrong.
+
+**A binarized stride sweep over land cells (`$BB`) found no peak at any width from 64 to
+6000** — monotonic decay only. That is the second failed statistical attack on the layout.
+Do not try a third.
+
+**Next instrument:** checkpoint the sector-write routine `$0F47` and log `(track, sector,
+payload)` in write order. That gives ground truth for the layout with no inference: exactly
+which bytes land in which sector, and in what order rows are produced.
+
 ### Harness gotchas (all cost real time — do not rediscover)
 
 - **A leftover checkpoint leaves the CPU paused.** Every later step then silently does
@@ -287,8 +327,21 @@ recorded failures.
 
 ## Driving VICE (hard-won, reusable)
 
-- **Use `vice_keyboard_matrix`, not `vice_keyboard_key_press`.** The game scans the keyboard
-  matrix directly and never reads the KERNAL buffer, so buffer-level input is invisible to it.
+- **Keys can stick down, and poison everything afterwards.** `vice_keyboard_matrix` with
+  `hold_frames` did not always auto-release; F7 was held for a long stretch of one session
+  (visible as CIA1 `port_b` = `$F7`, bit 3 low), which made menu behavior erratic and
+  unrepeatable — the same call launching World Maker once and doing nothing the next time.
+  Check `vice_cia_get_state` `port_b` = `$FF` before trusting any input result, and release
+  explicitly with both `vice_keyboard_key_release` and `vice_keyboard_matrix pressed=False`.
+- **Menus read the KERNAL buffer; use `vice_keyboard_key_press` for them.** An earlier note
+  here claimed matrix input was always required. That was over-generalized from in-game
+  behavior. `key_press` is what reliably drives the title menu and World Maker prompts.
+- **Joystick injection never worked on the "press button to continue" screens.** Neither
+  `vice_joystick_set` nor `vice_joystick_tap` on either port, nor Space/Return, advanced them.
+  Unresolved. Prefer driving code directly (below) over automating the game's UI.
+- **Prefer poke-and-`SYS` over UI automation.** Loading a routine into memory and calling it
+  has worked every time; screen-synced menu driving has been fragile and slow. The RNG and
+  arithmetic harnesses both use poke-and-`SYS`.
 - **Turn warp OFF when timing input, ON otherwise.** Loads take a long time in real time, but
   warp compresses the menus' key-poll window so far that presses land between polls.
 - **Sync to screen state rather than sleeping.** Screenshot-poll and pixel-diff against a
