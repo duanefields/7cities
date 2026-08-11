@@ -34,7 +34,8 @@ against the original before it is trusted.
 | Text and font extraction       | Solved                                                     |
 | Map disk format                | Partly solved — layout known, cell encoding not yet        |
 | World Maker RNG                | **Ported and verified** against the original 6502          |
-| World Maker generation phases  | Mapped, not yet ported                                     |
+| Multiply / divide helpers      | **Ported and verified** against the original 6502          |
+| World Maker generation phases  | Mapped; land-mass phase entry located, data not yet decoded |
 | Renderer                       | Not started                                                |
 
 See `NOTES.md` for the full reverse engineering record, including what has been ruled out.

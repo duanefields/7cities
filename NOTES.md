@@ -146,6 +146,54 @@ $0E8D  JSR $090C
 RIVERS,TRIBUTARIES` is printed by routine `$380D`, called from `$30BB`, so rivers run inside
 the `$2E32`/`$3961` subtree.
 
+**Correction:** an earlier note here claimed `$0F0C` was the land-mass phase and `$1F95` its
+printer. Both were wrong — they came from a nearest-preceding-`JSR`-target heuristic, not from
+reading the code. `$0F0C` is a *disk buffer* routine (it moves 8- and 16-byte runs between
+`$0200`/`$0278` and `($29),Y`). Attribute routines by reading them, not by proximity.
+
+### Land-mass phase — real entry at `$212A`
+
+`BUILDING LAND MASSES` is printed at `$2123` by the screen-string routine `$0C1B` (`$29`/`$2A`
+= screen destination, A/Y = string pointer). Generation begins immediately after:
+
+```text
+$2146  JSR $0AE2      ; random byte
+$214D  JSR $0A6E      ; divide by $5A (90)  -> 0..2
+$2150  STA $57        ; keep the quotient
+$2154  JSR $0A51      ; multiply by 7       -> 0, 7, or 14
+$2157  TAX
+$2158  LDA $2286,X    ; index a table of 7-byte records
+$215B  CMP #$FE       ; $FE is the table sentinel
+$215F  JMP $280A      ; ... on sentinel
+```
+
+The table at `$2286` holds exactly three records before the sentinel:
+
+```text
+00 00 02 02 00 02 FE
+00 FF 01 02 00 02 FE
+00 00 01 02 00 06 FE
+```
+
+Small magnitudes with an `FF` that reads as -1 — consistent with signed direction or motion
+vectors, which is what a plate tectonics model would start from. Working hypothesis: the
+generator picks one of three plate configurations at random. **Not yet confirmed** — decoding
+these six fields is the next task.
+
+### Arithmetic helpers (ported)
+
+Neither is RNG; both are general-purpose and used throughout generation.
+
+| Routine | Operation                                                            |
+| :------ | :------------------------------------------------------------------- |
+| `$0A51` | 8x8 to 16-bit multiply, shift-and-add. `A x Y`, low in A, high in Y  |
+| `$0A6E` | 16-by-8 restoring divide. `(Y:A) / X`, quotient in A, remainder in Y |
+
+`Arithmetic.swift` transcribes both literally, **including a wart**: the divide's inner
+`ROL A` discards its carry out, so when the dividend's high byte is greater than or equal to
+the divisor the quotient overflows and the result is garbage. `game3` avoids this by keeping
+high bytes small. Do not "fix" it — downstream code may depend on the exact results.
+
 Note `$2D23` is invoked twice with different parameter blocks (`$2D70`, `$2D74`, `$2DA6`) — a
 parameterized terrain-scatter pass, worth identifying early since it likely covers several of
 the manual's "geological principles".
