@@ -351,51 +351,46 @@ which bytes land in which sector, and in what order rows are produced.
 - `vice_machine_config_set` wants `resources` as an object; the MCP schema declares it a
   string, so the typed tool call fails. Use `tools/v.py` for that one.
 
-## Open: map cell encoding
+## Solved: map layout — the map is BLOCKED, not row-major
 
-What is known:
+This was the long-running blocker. The answer was in the World Maker's
+sector-write loop at `$0F54`, not in any statistic.
 
-- Map row = 256 bytes = exactly one sector. Sharp autocorrelation peak at W=256 once sector
-  order was corrected; the nibble view peaks at 512, the same layout seen twice.
-- Content is on tracks 19-33. Tracks 14-18 and 34-35 are uniform fill. 406 rows in the
-  region, 171 with real data.
-- Byte histogram: `$00` 35.8%, `$01` 30.8%, `$BB` 7.4%, `$11` 2.8%, `$80` 2.7%, then `$CB`,
-  `$BC`, `$CC`, `$DB`, `$DD`.
+```text
+$0F82  ... STY $29 / STA $2A     ; source pointer
+       LDA #$10 / STA $27        ; 16 iterations
+$0F56  LDA ($29),Y / STA $0200,X ; 8 bytes
+$0F63  LDA ($29),Y / STA $0278,X ; 8 more
+$0F90  LDA $29 / ADC #$80        ; source advances by 128 per iteration
+```
 
-Ruled out, each producing structure but nothing map-like:
+Each sector gathers 16 bytes from each of 16 source rows spaced `$80` apart.
+So **every 256-byte sector is a 16x16 tile block**, and the in-memory row stride
+is 128. Blocks tile left to right, **16 per row**, giving a 256-tile-wide map.
 
-- byte-per-cell tilemap
-- nibble-per-cell tilemap (solid `$01` renders as alternating stripes, so `$01` is one cell)
-- RLE with high bit as count (5/171 rows decode to a valid length — chance level)
-- RLE with low byte as count (18/171 — chance level)
-- column-major (sector = column)
+That is why row-major rendering smeared land into long horizontal streaks, and
+why no stride search ever found a peak — there is no single row stride to find.
+Two separate statistical attacks failed on this; reading the writer solved it in
+one pass. **Lesson: instrument the producer, do not infer from the product.**
 
-Structure learned from diffing `BLANKMAP.D64` against `7CITIES2.D64`. Uniform sectors are
-exactly `$4B` followed by 255 copies of `$01`; content sectors carry a different leading byte
-and payloads confined to distinct value bands. Laid out in loader order, all 431 sectors fall
-into zones:
+`tools/map_preview.py` renders any map disk to PNG. Verified: the historical map
+from `7CITIES2.D64` renders as a recognisable Americas — North, Central and South
+America, with the Old World down the right edge. The coastline test passes.
 
-| Rows    | Content                                        |
-| :------ | :--------------------------------------------- |
-| 0-151   | uniform `$01`                                  |
-| 152-167 | all high-bit values (`$80`-`$AD`)              |
-| 168-171 | high entropy, 33-47 distinct values per sector |
-| 172-191 | uniform `$01`                                  |
-| 192-397 | the varied main region                         |
-| 398-430 | uniform `$01`                                  |
+## Open: terrain value semantics
 
-That reads as **several stacked planes, not one grid**, which explains why every single-grid
-hypothesis produced structure but never a coastline. The manual's 8:1 exploration-to-map zoom
-ratio implies at least two terrain representations; the 16 high-bit rows plus 4 high-entropy
-rows are plausibly a separate table (villages, or the overview map).
+Confirmed: `$00` is ocean and `$BB` is land, from diffing a disk either side of
+the land-mass phase.
 
-Note the leading byte is *not* a constant header — across the disk it takes many values from
-the same alphabet as the map data, so "1-byte header + 255-byte payload" is not established.
+The remaining values group by **high nibble** (`$Bx`, `$Cx`, `$Dx`, `$Ex`), which
+reads as a terrain class with the low nibble as a variant. The preview tool
+colors them as an elevation ramp, which produces a plausible map, but the
+specific assignments are **inference, not confirmed**. Confirming them means
+reading the terrain phase (`$2AE9`, `$2D23`, `$2E32`, `$3961`, `$3EAD`).
 
-**Next step when this is picked up again:** get in-game (the sync technique above works; the
-game program loads and reaches "THE BEGINNING"), then screenshot the rendered map while
-reading the map buffer out of RAM. Correlating the two settles the encoding directly. Chasing
-it statistically was tried at length and did not pay off.
+A band of still-unmapped values (`$20`, `$A0`, `$A9`, `$10`, `$8D`) sits across
+the upper part of the historical map and renders as magenta. Not yet identified;
+possibly an index or the Old World's own encoding.
 
 ## Manual (`docs/Seven Cities of Gold.pdf`)
 
