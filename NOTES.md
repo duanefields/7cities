@@ -392,9 +392,17 @@ above and below are padding (`$01`), and the historical disk carries an extra
 non-terrain region above the map that must be excluded by taking the longest
 *contiguous* run of terrain rows, not the min-to-max span.
 
+**Horizontal offset.** The sector stream starts one block *before* the map's
+true left edge, so the assembled image comes out shifted right and the eastern
+bulge of South America wraps around to the left. Roll left by 1 block (16
+tiles) to correct it. Chosen objectively, not by eye: at a 1-block roll the
+wrap seam cuts through **zero** land tiles and column 0 is entirely ocean,
+while all seven other offsets slice a continent in half.
+
 `tools/map_preview.py` renders any map disk. The historical map comes out as an
 unmistakable Americas — Great Lakes, Florida, Gulf of Mexico, the Caribbean
-chain, Central America, and South America with the Amazon basin.
+chain, Central America, and South America with the Amazon basin, the Andes and
+the Brazilian bulge.
 
 **Lesson, learned expensively:** two statistical attacks on this layout failed
 completely; reading the code that writes the format solved it. Instrument the

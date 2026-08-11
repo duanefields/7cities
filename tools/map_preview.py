@@ -117,10 +117,30 @@ def crop_to_map(img, w, h):
     return img[top * w:bottom * w], w, bottom - top, top
 
 
-def render(path, dest, scale=3, first_track=13):
+def roll_columns(img, w, h, blocks=1):
+    """Rotate the map horizontally by whole blocks.
+
+    The sector stream starts one block before the map's true left edge, so the
+    assembled image comes out shifted right — the eastern edge of South America
+    wraps around to the left. Chosen objectively rather than by eye: at a
+    1-block roll the wrap seam cuts through zero land tiles and column 0 is
+    entirely ocean, while every other offset slices a continent in half.
+    """
+    dx = (blocks * BLOCK) % w
+    if not dx:
+        return img
+    out = bytearray(len(img))
+    for y in range(h):
+        row = img[y * w:(y + 1) * w]
+        out[y * w:(y + 1) * w] = row[dx:] + row[:dx]
+    return bytes(out)
+
+
+def render(path, dest, scale=3, first_track=13, roll=1):
     secs = sectors(path, first_track)
     img, w, h = deblock(secs)
     img, w, h, top = crop_to_map(img, w, h)
+    img = roll_columns(img, w, h, roll)
 
     counts = collections.Counter(img)
 
