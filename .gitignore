@@ -1,0 +1,29 @@
+# Original game data — copyright EA / Ozark Softscape.
+# Never commit these. Builders supply their own disk images; see README.
+d64/
+docs/
+local/
+
+# Extracted / derived assets
+assets/
+*.d64
+*.D64
+*.prg
+*.PRG
+*.bin
+*.lst
+*.disasm.s
+
+# Swift
+.build/
+.swiftpm/
+*.xcodeproj
+*.xcworkspace
+DerivedData/
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
