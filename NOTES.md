@@ -351,31 +351,54 @@ which bytes land in which sector, and in what order rows are produced.
 - `vice_machine_config_set` wants `resources` as an object; the MCP schema declares it a
   string, so the typed tool call fails. Use `tools/v.py` for that one.
 
-## Solved: map layout — the map is BLOCKED, not row-major
+## Solved: map layout
 
-This was the long-running blocker. The answer was in the World Maker's
-sector-write loop at `$0F54`, not in any statistic.
+The answer was in the World Maker's write path, not in any statistic. Three
+separate things had to be right, and the first two attempts got each of them
+wrong.
+
+**1. Sectors are 16x16 blocks.** The assembly loop at `$0F54` gathers 16 bytes
+from each of 16 source rows spaced `$80` apart.
+
+**2. Blocks tile 8 per row, not 16.** The source row stride is `$80` = 128
+tiles, and a block is 16 wide, so one memory row spans 128 / 16 = **8 blocks**.
+Rendering at 16 per row places two consecutive map rows side by side and
+produces a visibly doubled map — two North Americas, two South Americas.
+
+**3. A sector is not row-major inside the block.** Tracing X through the loop:
+each outer pass writes 8 tiles to `$0200+8i` and 8 more to `$0278+8i+8` ==
+`$0280+8i`. So the sector splits as
 
 ```text
-$0F82  ... STY $29 / STA $2A     ; source pointer
-       LDA #$10 / STA $27        ; 16 iterations
-$0F56  LDA ($29),Y / STA $0200,X ; 8 bytes
-$0F63  LDA ($29),Y / STA $0278,X ; 8 more
-$0F90  LDA $29 / ADC #$80        ; source advances by 128 per iteration
+bytes $00-$7F : left 8 columns of all 16 rows
+bytes $80-$FF : right 8 columns of all 16 rows
 ```
 
-Each sector gathers 16 bytes from each of 16 source rows spaced `$80` apart.
-So **every 256-byte sector is a 16x16 tile block**, and the in-memory row stride
-is 128. Blocks tile left to right, **16 per row**, giving a 256-tile-wide map.
+Reading it row-major scrambles the columns inside every block — the map is
+roughly recognisable but visibly corrupted.
 
-That is why row-major rendering smeared land into long horizontal streaks, and
-why no stride search ever found a peak — there is no single row stride to find.
-Two separate statistical attacks failed on this; reading the writer solved it in
-one pass. **Lesson: instrument the producer, do not infer from the product.**
+**Buffer address**, from `$0EE4` with `$62` = 7:
 
-`tools/map_preview.py` renders any map disk to PNG. Verified: the historical map
-from `7CITIES2.D64` renders as a recognisable Americas — North, Central and South
-America, with the Old World down the right edge. The coastline test passes.
+```text
+source = $5700 + (hi_nibble($0C) * 2048) + (lo_nibble($0C) * 2)
+```
+
+so the in-RAM map buffer is about 26 KB at `$5700`.
+
+**Geometry.** The map proper is **128 x 400 tiles**, occupying block-rows 24-48
+(tile rows 384-783). Both `7CITIES2.D64` and an independently generated world
+crop to exactly the same geometry, which is a strong consistency check. Regions
+above and below are padding (`$01`), and the historical disk carries an extra
+non-terrain region above the map that must be excluded by taking the longest
+*contiguous* run of terrain rows, not the min-to-max span.
+
+`tools/map_preview.py` renders any map disk. The historical map comes out as an
+unmistakable Americas — Great Lakes, Florida, Gulf of Mexico, the Caribbean
+chain, Central America, and South America with the Amazon basin.
+
+**Lesson, learned expensively:** two statistical attacks on this layout failed
+completely; reading the code that writes the format solved it. Instrument the
+producer, do not infer from the product.
 
 ## Open: terrain value semantics
 

@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from d64 import D64, sectors_per_track  # noqa: E402
 
 BLOCK = 16
-BLOCKS_PER_ROW = 16
+BLOCKS_PER_ROW = 8       # source row stride $80 = 128 tiles / 16 per block
 PADDING = 0x01          # untouched filler outside the map proper
 
 # Terrain palette.
@@ -61,7 +61,17 @@ def sectors(path, first_track=13):
 
 
 def deblock(secs):
-    """Un-tile the 16x16 blocks into a flat row-major image."""
+    """Un-tile the 16x16 blocks into a flat row-major image.
+
+    A sector is NOT row-major within the block. Tracing X through the assembly
+    loop at $0F54: each outer pass writes 8 tiles to $0200+8i and 8 more to
+    $0278+8i+8 == $0280+8i. So the sector splits as
+
+        bytes $00-$7F : left 8 columns of all 16 rows
+        bytes $80-$FF : right 8 columns of all 16 rows
+
+    Reading it row-major scrambles the columns inside every block.
+    """
     rows = (len(secs) + BLOCKS_PER_ROW - 1) // BLOCKS_PER_ROW
     w, h = BLOCKS_PER_ROW * BLOCK, rows * BLOCK
     img = bytearray(PADDING for _ in range(w * h))
@@ -70,18 +80,40 @@ def deblock(secs):
         by = (i // BLOCKS_PER_ROW) * BLOCK
         for r in range(BLOCK):
             off = (by + r) * w + bx
-            img[off:off + BLOCK] = sec[r * BLOCK:(r + 1) * BLOCK]
+            img[off:off + 8] = sec[r * 8:r * 8 + 8]              # left half
+            img[off + 8:off + 16] = sec[0x80 + r * 8:0x80 + r * 8 + 8]
     return bytes(img), w, h
 
 
 def crop_to_map(img, w, h):
-    """Trim the all-padding block-rows above and below the map proper."""
-    keep = [by for by in range(0, h, BLOCK)
-            if any(img[(by + r) * w + x] not in (PADDING, 0x4B)
-                   for r in range(BLOCK) for x in range(w))]
-    if not keep:
+    """Trim to the block-rows that actually hold terrain.
+
+    Keeping every non-padding row is not enough: both disks carry other
+    structures outside the map proper, and the historical disk has a whole
+    region above the map that is neither padding nor terrain. Classify by
+    content instead — a map row is dominated by ocean plus land.
+    """
+    def is_map(by):
+        band = img[by * w:(by + BLOCK) * w]
+        counts = collections.Counter(band)
+        ocean = counts[0x00]
+        land = sum(n for v, n in counts.items() if v >> 4 in (0xB, 0xC, 0xD, 0xE))
+        return (ocean + land) / len(band) > 0.75
+
+    # Take the longest *contiguous* run of terrain rows. Spanning min..max
+    # would swallow the non-terrain region the historical disk carries above
+    # the map, which sits between two separate runs of map-like rows.
+    best = run = None
+    for by in range(0, h, BLOCK):
+        if is_map(by):
+            run = (run[0], by) if run else (by, by)
+            if best is None or run[1] - run[0] > best[1] - best[0]:
+                best = run
+        else:
+            run = None
+    if best is None:
         return img, w, h, 0
-    top, bottom = min(keep), max(keep) + BLOCK
+    top, bottom = best[0], best[1] + BLOCK
     return img[top * w:bottom * w], w, bottom - top, top
 
 
