@@ -628,3 +628,50 @@ than a claim about reality.
 For the port this is good news: the map is a straight 256x400 tile grid at
 ~3 miles per tile, and a zoomable renderer needs one tile image per terrain
 nibble, not procedural detail generation.
+
+## The game's own terrain vocabulary (`$1566`)
+
+A table of 8-byte names in the game's custom font encoding (character index =
+ASCII - `$20`), copied to a status line at `$8EE4` by the routine at `$33FD`:
+
+```text
+0 DEEP    1 MEDIUM   2 SHALLOW   3 SHIP
+4 RIVER   5 PLAIN    6 FOREST    7 MOUNTAIN
+8 SWAMP   9 VILLAGE  A CACHE     B FORT      C MISSION
+```
+
+So the game distinguishes three water depths, and `CACHE`, `FORT` and `MISSION`
+are things the player builds during play rather than generated terrain.
+
+**This enum is not the raw map nibble.** Indexed directly by nibble it would
+make `B` (21% of the map) a FORT, which is absurd. Some translation happens
+between reading a cell and naming it; the translation table has not been found
+yet and may be computed rather than stored.
+
+### Independent confirmation of the nibble decode (`$468F`)
+
+A 16-entry table indexed by **map nibble**:
+
+```text
+index:  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
+value:  0  0  0  0  3  3  3  3  3  3  3  2  1  2  3  6
+```
+
+The groupings match the empirical decode exactly — water `0`-`3` together, all
+seven river values `4`-`A` collapsing to a single class, then `B`, `C`, `D`,
+`E`, `F` separate. This is the game agreeing with the map analysis, arrived at
+from completely different evidence. Note `E` groups with rivers and swamp is in
+the vocabulary, which supports `E` = SWAMP.
+
+## Open: where are the terrain tile bitmaps?
+
+Not yet found, and **not** in `game_unpacked.bin` — an entropy profile of the
+unpacked binary shows almost no graphics-like regions, so it is nearly all code
+and tables.
+
+Most likely they live in the 62 KB of raw sector data on disk 1 tracks 1-10,
+which is where the font was found and which the fastloader reads directly.
+That region is still only partly explored.
+
+The display is hires bitmap at 8x8 pixels per map cell, so each terrain type
+needs 8 bytes of pattern plus a color nibble pair in the video matrix.
