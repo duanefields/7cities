@@ -68,17 +68,22 @@ engineering record; this holds the work.
 - [ ] **Animate water.** Entries `$0`/`$1`/`$2` point at RAM buffers driven by
       the `EOR #$55` pass at `$4057`, which swaps multicolor pixel pairs. Worth
       reproducing for fidelity.
-- [ ] **Identify the exploration view's composition step.** The original draws
-      terrain procedurally into redefined characters rather than from a tile
-      atlas; reproducing that exactly is a separate job from drawing our own.
+- [x] ~~**Identify the exploration view's composition step.**~~ Solved and
+      ported. The view is a 12x12 grid of unique character codes over 6x6 map
+      tiles (`$3107`), the charset is double-buffered and rewritten per frame
+      (`$31B4`), and each tile is composed by `$58B8` from its map position.
+      See NOTES.md.
 
 ## Unknowns still in the map data
 
 - [ ] Nibble `3` — 14 cells, all in the top-right corner. Edge or metadata,
       unidentified. The terrain table calls index 3 `SHIP`.
-- [ ] How the raw map nibble maps to the game's terrain enum. The enum at
-      `$1566` is not indexed by the raw nibble, and the translation has not been
-      found.
+- [x] ~~How the raw map nibble maps to the game's terrain enum.~~ The evidence
+      now says it is the identity. Under that assumption the dispatch table at
+      `$5529` lines up entry-for-entry with the enum at `$1566`, and **97.7% of
+      river endpoints point at water or another river** — a permuted mapping
+      could not produce connected river courses. Treat as settled unless
+      something contradicts it.
 
 ## The game itself — none of this is started
 
