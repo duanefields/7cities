@@ -56,10 +56,12 @@ struct OriginalTiles {
         ]
         // 4 double-width pixels per row, drawn square so tiles stay 1:1 on the map
         let side = 8 * scale
-        let image = NSImage(size: NSSize(width: side, height: side))
-        image.lockFocus()
-        defer { image.unlockFocus() }
-        guard let ctx = NSGraphicsContext.current?.cgContext else { return nil }
+        guard let ctx = CGContext(
+            data: nil, width: side, height: side, bitsPerComponent: 8,
+            bytesPerRow: side * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return nil }
         for y in 0..<8 {
             let bits = rows[y]
             for p in 0..<4 {
@@ -71,7 +73,8 @@ struct OriginalTiles {
                                 height: CGFloat(scale)))
             }
         }
-        let tex = SKTexture(image: image)
+        guard let cg = ctx.makeImage() else { return nil }
+        let tex = SKTexture(cgImage: cg)
         tex.filteringMode = .nearest
         return tex
     }

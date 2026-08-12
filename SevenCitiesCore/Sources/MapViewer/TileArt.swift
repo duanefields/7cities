@@ -36,14 +36,22 @@ enum TileArt {
     }
 
     static func texture(for terrain: Terrain) -> SKTexture {
-        let image = NSImage(size: NSSize(width: size, height: size))
-        image.lockFocus()
-        defer { image.unlockFocus() }
-        guard let ctx = NSGraphicsContext.current?.cgContext else {
-            return SKTexture()
-        }
+        // Draw into a bitmap context and build the texture from the finished
+        // CGImage. Creating an SKTexture from an NSImage that is still
+        // lockFocus'd yields an empty texture — the map renders as nothing but
+        // background, which is exactly how this first failed.
+        let px = Int(size)
+        guard let ctx = CGContext(
+            data: nil, width: px, height: px, bitsPerComponent: 8,
+            bytesPerRow: px * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return SKTexture() }
+
         draw(terrain, in: ctx)
-        let tex = SKTexture(image: image)
+
+        guard let cg = ctx.makeImage() else { return SKTexture() }
+        let tex = SKTexture(cgImage: cg)
         tex.filteringMode = .nearest
         return tex
     }

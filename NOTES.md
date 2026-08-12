@@ -823,3 +823,30 @@ to a tileset it actually had.
 
 **`local/original_tiles.json` is never committed** — unlike the RNG test
 vectors, those are the original's pixels.
+
+### Opening the project in Xcode
+
+There is no `.xcodeproj` — this is a Swift Package. Open it with:
+
+```bash
+open SevenCitiesCore/Package.swift
+```
+
+or in Xcode use File > Open and select `Package.swift`. Xcode builds, runs and
+debugs SwiftPM packages natively; a generated project would only drift.
+
+To run the viewer from Xcode, edit the `MapViewer` scheme and add the asset
+directory as an argument (the absolute path to `local`).
+
+### Bug worth remembering: lockFocus and SKTexture
+
+The viewer first came up as bare background with only the explorer visible. The
+cause was building `SKTexture(image:)` from an `NSImage` that was still inside
+`lockFocus()` / `unlockFocus()` — the texture comes out empty, silently.
+
+Draw into a `CGContext`, call `makeImage()`, and use `SKTexture(cgImage:)`.
+
+`MapViewer <assets> --dump <out.png> [historical|generated] [original|custom]`
+renders the tileset and a slice of the world through the same texture path
+without opening a window, so this class of failure is visible in a file rather
+than needing a screen.

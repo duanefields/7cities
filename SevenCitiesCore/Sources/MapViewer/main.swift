@@ -1,6 +1,8 @@
 import AppKit
+import ImageIO
 import SevenCitiesCore
 import SpriteKit
+import UniformTypeIdentifiers
 
 // Plain AppKit entry point rather than a SwiftUI App, so the viewer runs
 // straight from `swift run` without needing an app bundle.
@@ -159,6 +161,14 @@ final class ViewerController: NSObject, NSApplicationDelegate {
 
 let args = CommandLine.arguments
 let assets = URL(fileURLWithPath: args.count > 1 ? args[1] : "local")
+
+// Headless check: MapViewer <assets> --dump <out.png> [historical|generated] [original|custom]
+if let i = args.firstIndex(of: "--dump"), i + 1 < args.count {
+    let file = args.contains("generated") ? "generated.map" : "historical.map"
+    let style: TileStyle = args.contains("custom") ? .custom : .original
+    exit(DumpMode.run(assetDirectory: assets, mapFile: file, style: style,
+                      out: URL(fileURLWithPath: args[i + 1])))
+}
 print("assets: \(assets.path)")
 
 let app = NSApplication.shared
