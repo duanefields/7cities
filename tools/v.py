@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Thin JSON-RPC client for the vice-mcp HTTP server."""
 import json, sys, urllib.request
+from typing import Any
 
 URL = "http://127.0.0.1:6510/mcp"
 _id = [100]
@@ -23,7 +24,7 @@ def rpc(method, params=None):
     return json.loads(raw)
 
 
-def call(tool, **args):
+def call(tool, **args) -> Any:
     r = rpc("tools/call", {"name": tool, "arguments": args})
     if "error" in r:
         return {"_error": r["error"]}
