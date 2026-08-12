@@ -51,11 +51,11 @@ engineering record; this holds the work.
       the dispatch table at `$5529` gives the pattern per terrain value and
       matches the enum from `$1566`. Water is the exception — it points at a RAM
       buffer because it animates. See NOTES.md for the layout and palette.
-- [ ] **Wire the static tiles into the extractor and viewer.** `extract.sh`
-      should emit the original tileset from the user's own disks so the viewer
-      defaults to classic art without needing a captured frame. This replaces
-      `local/original_tiles.json`, which came from a screenshot and had
-      reconstructed rivers, villages and mountain.
+- [x] ~~**Wire the static tiles into the extractor and viewer.**~~ Done.
+      `extract.sh` emits `assets/original_tiles.json` from the user's own disks
+      and the viewer renders the classic art by default. `SevenCitiesCore` gained
+      `GameCipher` (the substitution), `TerrainTiles` (the `$5529` dispatch and
+      2x2 unpack) and `DiskImage.fileContents(named:)`.
 - [ ] **Animate water.** Entries `$0`/`$1`/`$2` point at RAM buffers driven by
       the `EOR #$55` pass at `$4057`, which swaps multicolor pixel pairs. Worth
       reproducing for fidelity.

@@ -3,24 +3,35 @@ import Foundation
 import SevenCitiesCore
 import SpriteKit
 
-/// The original's 8x8 multicolor terrain art, lifted from a captured frame.
+/// The original's terrain art, read out of the game's own program.
 ///
-/// Produced by `tools/extract_tiles.py` and loaded at runtime rather than
-/// compiled in — these are the original's pixels and must not ship with the
-/// engine. If the file is absent the viewer falls back to the custom tiles and
-/// says so.
+/// Produced by the extractor from *your* disk images into `assets/`, and loaded
+/// at runtime rather than compiled in — these are the original's pixels and must
+/// not ship with the engine. If the file is absent the viewer falls back to the
+/// custom tiles and says so.
+///
+/// A tile is 2x2 of the original's characters: 8 multicolor pixels across by 16
+/// rows down. Multicolor pixels are double-width, so a tile draws as a 16x16
+/// square. See `TerrainTiles` for where this comes from.
 struct OriginalTiles {
 
     struct Palette: Decodable {
-        let bg0_land: Int
-        let bg1_water: Int
-        let bg2_vegetation: Int
-        let fg_detail: Int
+        let land: Int
+        let water: Int
+        let vegetation: Int
+        let detail: Int
+    }
+
+    struct Tile: Decodable {
+        let address: Int
+        let animated: Bool
+        let pixels: [[UInt8]]
     }
 
     let palette: Palette
-    let tiles: [String: [UInt8]]
-    let origin: [String: String]
+    let width: Int
+    let height: Int
+    let tiles: [String: Tile]
 
     /// The C64 hardware palette, in the usual VICE rendering.
     static let c64: [NSColor] = [
@@ -36,39 +47,45 @@ struct OriginalTiles {
         guard let data = try? Data(contentsOf: url) else { return nil }
         struct Wire: Decodable {
             let palette: Palette
-            let tiles: [String: [UInt8]]
-            let origin: [String: String]
+            let width: Int
+            let height: Int
+            let tiles: [String: Tile]
         }
         guard let w = try? JSONDecoder().decode(Wire.self, from: data) else { return nil }
-        return OriginalTiles(palette: w.palette, tiles: w.tiles, origin: w.origin)
+        return OriginalTiles(palette: w.palette, width: w.width,
+                             height: w.height, tiles: w.tiles)
     }
 
-    /// How many tiles are the original's own pixels rather than reconstructions.
-    var capturedCount: Int { origin.values.filter { $0.hasPrefix("captured") }.count }
+    /// Tiles drawn from a stored pattern, as opposed to the water the original
+    /// animates out of a RAM buffer and which we render as flat color.
+    var patternCount: Int { tiles.values.filter { !$0.animated }.count }
 
     func texture(for terrain: Terrain, scale: Int = 4) -> SKTexture? {
-        guard let rows = tiles[String(describing: terrain)], rows.count == 8 else {
-            return nil
-        }
+        guard let tile = tiles[String(describing: terrain)],
+              tile.pixels.count == height
+        else { return nil }
+
         let pal = [
-            Self.c64[palette.bg0_land], Self.c64[palette.bg1_water],
-            Self.c64[palette.bg2_vegetation], Self.c64[palette.fg_detail],
+            Self.c64[palette.land], Self.c64[palette.water],
+            Self.c64[palette.vegetation], Self.c64[palette.detail],
         ]
-        // 4 double-width pixels per row, drawn square so tiles stay 1:1 on the map
-        let side = 8 * scale
+        // Multicolor pixels are double-width, so 8 across becomes 16 and the
+        // tile comes out square.
+        let w = width * 2 * scale, h = height * scale
         guard let ctx = CGContext(
-            data: nil, width: side, height: side, bitsPerComponent: 8,
-            bytesPerRow: side * 4,
+            data: nil, width: w, height: h, bitsPerComponent: 8,
+            bytesPerRow: w * 4,
             space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
         else { return nil }
-        for y in 0..<8 {
-            let bits = rows[y]
-            for p in 0..<4 {
-                let v = Int((bits >> (6 - p * 2)) & 3)
-                ctx.setFillColor(pal[v].cgColor)
-                ctx.fill(CGRect(x: CGFloat(p * 2 * scale),
-                                y: CGFloat((7 - y) * scale),
+
+        for y in 0..<height {
+            let row = tile.pixels[y]
+            guard row.count == width else { return nil }
+            for x in 0..<width {
+                ctx.setFillColor(pal[Int(row[x]) & 3].cgColor)
+                ctx.fill(CGRect(x: CGFloat(x * 2 * scale),
+                                y: CGFloat((height - 1 - y) * scale),
                                 width: CGFloat(2 * scale),
                                 height: CGFloat(scale)))
             }

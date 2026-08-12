@@ -79,8 +79,49 @@ do {
 }
 
 if let side1 = findDisk(named: "7CITIES1.D64") {
-    print("side 1: \(side1.lastPathComponent) found (fonts and the World Maker live here)")
+    print("side 1: \(side1.lastPathComponent) found")
+    do {
+        let disk = try DiskImage(contentsOf: side1)
+        let art = try TerrainTiles(programDisk: disk)
+
+        // A tiny hand-rolled encoder: the shape is fixed and this keeps the
+        // asset readable, which matters when the whole point is that a user can
+        // see what came off their own disk.
+        var json = "{\n"
+        let p = TerrainTiles.palette
+        json += "  \"palette\": { \"land\": \(p.land), \"water\": \(p.water), "
+        json += "\"vegetation\": \(p.vegetation), \"detail\": \(p.detail) },\n"
+        json += "  \"width\": \(TerrainTiles.width), "
+        json += "\"height\": \(TerrainTiles.height),\n"
+        json += "  \"tiles\": {\n"
+        let entries = Terrain.allCases.compactMap { t -> String? in
+            guard let tile = art.tiles[t] else { return nil }
+            let rows = tile.pixels
+                .map { "[" + $0.map(String.init).joined(separator: ",") + "]" }
+                .joined(separator: ",\n        ")
+            return """
+                  "\(t)": {
+                    "address": \(tile.address),
+                    "animated": \(tile.isAnimated),
+                    "pixels": [
+                        \(rows)
+                    ]
+                  }
+            """
+        }
+        json += entries.joined(separator: ",\n") + "\n  }\n}\n"
+
+        let dest = outDir.appendingPathComponent("original_tiles.json")
+        try json.write(to: dest, atomically: true, encoding: .utf8)
+        let drawn = art.tiles.values.filter { !$0.isAnimated }.count
+        print("terrain tiles: \(drawn) patterns + "
+              + "\(art.tiles.count - drawn) animated -> \(dest.path)")
+    } catch {
+        print("note: could not read the terrain tiles (\(error)) — "
+              + "the viewer will fall back to custom art")
+    }
 } else {
     print("note: 7CITIES1.D64 not found — only side 2 is needed for the classic map")
+    print("      side 1 also carries the original terrain art")
 }
 print("\ndone — run the viewer with:  swift run MapViewer assets")

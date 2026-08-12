@@ -44,9 +44,11 @@ and the World Maker and is used by the deeper reverse engineering tools.
 
 The world is 256 x 400 tiles at roughly three miles each.
 
-Original tiles are lifted from a captured frame of the running game and are therefore optional;
-without them the viewer falls back to the custom tiles and says so in its title bar. Producing
-them is the one step that still needs an emulator — see `TODO.md`.
+Both the classic map and the original terrain art come from your own disks, with no emulator.
+The art is not a screenshot: the game draws terrain as redefined characters, and the tile
+bitmaps turned out to be static data inside its main program, so `extract.sh` reads them
+directly. If `assets/original_tiles.json` is missing the viewer falls back to the custom tiles
+and says so in its title bar.
 
 ## Opening it in Xcode
 
@@ -92,6 +94,8 @@ Swift tests then assert the port reproduces it exactly.
 | Fastloader / disk sector order  | Solved from the loader's own command string            |
 | Map format                      | Solved — blocked sectors, nibble tiles, 256x400         |
 | Terrain vocabulary              | Solved — from the game's own name table                |
+| `game` cipher                   | Solved — fixed byte substitution, verified exactly     |
+| Terrain tiles                   | Solved — read from the program, no emulator            |
 | World Maker RNG                 | **Ported and verified** against the original 6502      |
 | Multiply / divide helpers       | **Ported and verified** against the original 6502      |
 | World generation                | Placeholder — *a* generator, not *the* one             |

@@ -185,9 +185,10 @@ final class ViewerController: NSObject, NSApplicationDelegate {
 
         var title = "Seven Cities — \(mapChoice.title) — \(effective.rawValue) tiles"
         if tileStyle == .original && !haveOriginals {
-            title += "  (original_tiles.json missing; run tools/extract_tiles.py)"
+            title += "  (original_tiles.json missing; run ./extract.sh)"
         } else if effective == .original, let o = originals {
-            title += "  (\(o.capturedCount)/\(o.tiles.count) captured, rest reconstructed)"
+            let animated = o.tiles.count - o.patternCount
+            title += "  (\(o.patternCount) original patterns, \(animated) animated)"
         }
         window.title = title
         refreshChecks()
