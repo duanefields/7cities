@@ -61,9 +61,15 @@ final class WorldScene: SKScene {
     /// one bitmap per type, so a group is built per (terrain, variant) and the
     /// fill below picks between them. Mountains only join into ranges, and woods
     /// only read as individual trees, because of this. See `TerrainTiles`.
+    /// Keyed by the *variant*, not the position. Keying by position created
+    /// sixteen identical groups for every terrain that does not vary — 272 tile
+    /// groups in a set, almost all duplicates — where keying by variant needs
+    /// about forty.
     private func variantKey(_ terrain: Terrain, x: Int, y: Int) -> String {
-        guard style == .original else { return String(describing: terrain) }
-        return "\(terrain)#\(((y % 4 + 4) % 4) * 4 + ((x % 4 + 4) % 4))"
+        guard style == .original, let o = originals else {
+            return String(describing: terrain)
+        }
+        return "\(terrain)#\(o.variant(for: terrain, x: x, y: y))"
     }
 
     /// Detail art is only drawn once a tile is at least its texture's own
@@ -108,12 +114,11 @@ final class WorldScene: SKScene {
     private func buildTileMap() {
         var groups: [String: SKTileGroup] = [:]
         for terrain in Terrain.allCases {
-            if style == .original, originals != nil {
-                for cell in 0..<16 {
-                    let x = cell % 4, y = cell / 4
-                    let key = variantKey(terrain, x: x, y: y)
+            if style == .original, let o = originals {
+                for v in 0..<o.variantCount(for: terrain) {
+                    let key = "\(terrain)#\(v)"
                     guard groups[key] == nil,
-                          let texture = originals?.texture(for: terrain, x: x, y: y)
+                          let texture = o.texture(for: terrain, variant: v)
                     else { continue }
                     let group = SKTileGroup(tileDefinition: SKTileDefinition(texture: texture))
                     group.name = key

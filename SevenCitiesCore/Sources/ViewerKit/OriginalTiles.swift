@@ -106,6 +106,37 @@ struct OriginalTiles {
                              height: w.height, tiles: w.tiles)
     }
 
+    /// Chosen so a tile texture is exactly `TileArt.size` on a side.
+    ///
+    /// This matters more than it looks. With a 64-pixel texture in a 32-point
+    /// cell, the texture is minified 2:1 even at zoom 1.0, and it takes zoom
+    /// 2.0 before a pixel is drawn at full size. Nearest-neighbour minification
+    /// drops pixels rather than averaging, so a two-pixel-wide river survived
+    /// in some tiles and vanished in others right through the range people
+    /// actually browse at. Matching the cell means zoom 1.0 is 1:1 and anything
+    /// above it magnifies.
+    static var defaultScale: Int { max(1, Int(TileArt.size) / 16) }
+
+    /// Which variant a map position selects, so callers can build one texture
+    /// per distinct appearance rather than one per position.
+    func variant(for terrain: Terrain, x: Int, y: Int) -> Int {
+        guard let tile = tiles[String(describing: terrain)] else { return 0 }
+        let i = tile.variantIndex[((y % 4 + 4) % 4) * 4 + ((x % 4 + 4) % 4)]
+        return min(i, tile.variants.count - 1)
+    }
+
+    /// How many distinct appearances a terrain has.
+    func variantCount(for terrain: Terrain) -> Int {
+        tiles[String(describing: terrain)]?.variants.count ?? 1
+    }
+
+    /// A texture for one specific variant.
+    func texture(for terrain: Terrain, variant: Int, scale: Int = defaultScale) -> SKTexture? {
+        guard let tile = tiles[String(describing: terrain)],
+              variant < tile.variants.count else { return nil }
+        return texture(pixels: tile.variants[variant], scale: scale)
+    }
+
     /// Tiles drawn from a stored pattern, as opposed to the water the original
     /// animates out of a RAM buffer and which we render as flat color.
     var patternCount: Int { tiles.values.filter { !$0.animated }.count }
@@ -114,9 +145,12 @@ struct OriginalTiles {
     var variantCount: Int { tiles.values.reduce(0) { $0 + $1.variants.count } }
 
     func texture(for terrain: Terrain, x: Int = 0, y: Int = 0,
-                 scale: Int = 4) -> SKTexture? {
+                 scale: Int = defaultScale) -> SKTexture? {
         guard let tile = tiles[String(describing: terrain)] else { return nil }
-        let pixels = tile.pixels(x: x, y: y)
+        return texture(pixels: tile.pixels(x: x, y: y), scale: scale)
+    }
+
+    private func texture(pixels: [[UInt8]], scale: Int) -> SKTexture? {
         guard pixels.count == height else { return nil }
 
         let pal = [
