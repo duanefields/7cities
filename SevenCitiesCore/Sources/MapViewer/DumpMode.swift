@@ -10,9 +10,16 @@ import SevenCitiesCore
 enum DumpMode {
 
     static func run(assetDirectory: URL, mapFile: String, style: TileStyle,
-                    out: URL) -> Int32 {
+                    out: URL, generateSeed: UInt16? = nil) -> Int32 {
         let mapURL = assetDirectory.appendingPathComponent(mapFile)
-        guard let map = try? WorldMap(contentsOf: mapURL) else {
+        let loaded: WorldMap?
+        if let seed = generateSeed {
+            var g = WorldGenerator(seed: seed)
+            loaded = g.generate()
+        } else {
+            loaded = try? WorldMap(contentsOf: mapURL)
+        }
+        guard let map = loaded else {
             FileHandle.standardError.write(Data("cannot load \(mapURL.path)\n".utf8))
             return 1
         }
@@ -25,8 +32,9 @@ enum DumpMode {
             return TileArt.texture(for: t).cgImage()
         }
 
-        let tile = 16
-        let cols = 64, rows = 64
+        let tile = generateSeed == nil ? 16 : 4
+        let cols = generateSeed == nil ? 64 : map.width
+        let rows = generateSeed == nil ? 64 : map.height
         let startX = max(0, map.width / 2 - cols / 2)
         let startY = max(0, map.height / 2 - rows / 2)
         let w = cols * tile, h = (rows + 2) * tile

@@ -14,7 +14,12 @@ final class WorldScene: SKScene {
     private var tileMap: SKTileMapNode!
     private let cam = SKCameraNode()
     private let explorer = SKShapeNode(circleOfRadius: TileArt.size * 0.32)
-    private let status = SKLabelNode(fontNamed: "Menlo-Bold")
+
+    /// Called with the status text whenever it changes. The HUD lives in the
+    /// window as an AppKit view rather than as a node, because anything
+    /// parented to the camera inherits the camera transform and therefore
+    /// shrinks, grows and drifts off-screen as you zoom.
+    var onStatusChange: ((String) -> Void)?
 
     private var position2D: (x: Int, y: Int)
     private var zoom: CGFloat = 3.0 { didSet { applyZoom() } }
@@ -44,13 +49,6 @@ final class WorldScene: SKScene {
 
         camera = cam
         addChild(cam)
-
-        status.fontSize = 13
-        status.fontColor = .white
-        status.horizontalAlignmentMode = .left
-        status.verticalAlignmentMode = .top
-        status.zPosition = 100
-        cam.addChild(status)
 
         applyZoom()
         centreOnExplorer(animated: false)
@@ -99,10 +97,8 @@ final class WorldScene: SKScene {
 
     private func applyZoom() {
         cam.setScale(1.0 / zoom)
-        status.position = CGPoint(x: -size.width / (2 * zoom) + 10,
-                                  y: size.height / (2 * zoom) - 10)
-        status.fontSize = 13 / zoom
-        explorer.setScale(max(1.0, 1.0 / zoom))
+        // Keep the explorer marker a readable size on screen at any zoom.
+        explorer.setScale(max(0.35, 1.0 / zoom))
     }
 
     private func centreOnExplorer(animated: Bool) {
@@ -119,9 +115,10 @@ final class WorldScene: SKScene {
     private func refreshStatus() {
         let t = map[position2D.x, position2D.y]
         let tiles = (style == .original && originals != nil) ? "original" : "custom"
-        status.text = "  (\(position2D.x), \(position2D.y))   TERRAIN: \(t.displayName)"
-            + "   ZOOM \(String(format: "%.2f", zoom))x   TILES: \(tiles)"
-            + (follow ? "" : "   [free look]")
+        onStatusChange?(
+            "(\(position2D.x), \(position2D.y))    TERRAIN: \(t.displayName)"
+            + "    ZOOM: \(String(format: "%.2f", zoom))x    TILES: \(tiles)"
+            + (follow ? "" : "    [free look]"))
     }
 
     // MARK: - Input

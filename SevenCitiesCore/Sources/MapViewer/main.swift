@@ -9,14 +9,14 @@ import UniformTypeIdentifiers
 
 /// Which world to show. Both come from disks you own, via
 /// `tools/extract_map.py`; neither ships with the engine.
-enum MapChoice: String, CaseIterable {
-    case historical = "Classic (North & South America)"
-    case generated = "Generated World"
+enum MapChoice {
+    case historical
+    case generated(seed: UInt16)
 
-    var filename: String {
+    var title: String {
         switch self {
-        case .historical: "historical.map"
-        case .generated: "generated.map"
+        case .historical: "Classic (North & South America)"
+        case .generated(let s): "Generated World #\(s)"
         }
     }
 }
@@ -26,7 +26,9 @@ final class ViewerController: NSObject, NSApplicationDelegate {
     private let assetDirectory: URL
     private var window: NSWindow!
     private var skView: SKView!
+    private var hud: NSTextField!
     private var mapChoice: MapChoice = .historical      // default: the classic map
+    private var generated: WorldMap?
     private var tileStyle: TileStyle = .original        // default: in-game tiles
     private var originals: OriginalTiles?
 
@@ -42,9 +44,31 @@ final class ViewerController: NSObject, NSApplicationDelegate {
             backing: .buffered, defer: false)
         window.center()
 
+        let container = NSView(frame: frame)
+        container.autoresizingMask = [.width, .height]
+
         skView = SKView(frame: frame)
+        skView.autoresizingMask = [.width, .height]
         skView.ignoresSiblingOrder = true
-        window.contentView = skView
+        container.addSubview(skView)
+
+        // The HUD is an AppKit view pinned to the top-left, so it keeps a
+        // constant size and position no matter how far the map is zoomed.
+        hud = NSTextField(labelWithString: "")
+        hud.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .semibold)
+        hud.textColor = .white
+        hud.backgroundColor = NSColor.black.withAlphaComponent(0.55)
+        hud.drawsBackground = true
+        hud.isBezeled = false
+        hud.isEditable = false
+        hud.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(hud)
+        NSLayoutConstraint.activate([
+            hud.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 12),
+            hud.topAnchor.constraint(equalTo: container.topAnchor, constant: 12),
+        ])
+
+        window.contentView = container
         window.makeKeyAndOrderFront(nil)
 
         buildMenus()
@@ -66,14 +90,15 @@ final class ViewerController: NSObject, NSApplicationDelegate {
 
         let worldItem = NSMenuItem()
         let worldMenu = NSMenu(title: "World")
-        for (i, choice) in MapChoice.allCases.enumerated() {
-            let item = NSMenuItem(title: choice.rawValue,
-                                  action: #selector(pickMap(_:)),
-                                  keyEquivalent: String(i + 1))
-            item.target = self
-            item.representedObject = choice.rawValue
-            worldMenu.addItem(item)
-        }
+        let classic = NSMenuItem(title: "Classic Map (North & South America)",
+                                 action: #selector(pickClassic), keyEquivalent: "1")
+        classic.target = self
+        worldMenu.addItem(classic)
+        // Not a sticky choice: every invocation makes a fresh world.
+        let gen = NSMenuItem(title: "Generate New World",
+                             action: #selector(generateWorld), keyEquivalent: "g")
+        gen.target = self
+        worldMenu.addItem(gen)
         worldItem.submenu = worldMenu
         main.addItem(worldItem)
 
@@ -95,21 +120,24 @@ final class ViewerController: NSObject, NSApplicationDelegate {
     }
 
     private func refreshChecks() {
-        NSApp.mainMenu?.item(withTitle: "")?.submenu?.items.forEach { _ in }
         for menu in NSApp.mainMenu?.items ?? [] {
             for item in menu.submenu?.items ?? [] {
                 guard let tag = item.representedObject as? String else { continue }
-                item.state = (tag == mapChoice.rawValue || tag == tileStyle.rawValue)
-                    ? .on : .off
+                item.state = (tag == tileStyle.rawValue) ? .on : .off
             }
         }
     }
 
-    @objc private func pickMap(_ sender: NSMenuItem) {
-        guard let raw = sender.representedObject as? String,
-              let choice = MapChoice.allCases.first(where: { $0.rawValue == raw })
-        else { return }
-        mapChoice = choice
+    @objc private func pickClassic() {
+        mapChoice = .historical
+        reload()
+    }
+
+    @objc private func generateWorld() {
+        let seed = UInt16.random(in: 1...UInt16.max)
+        var generator = WorldGenerator(seed: seed)
+        generated = generator.generate()
+        mapChoice = .generated(seed: seed)
         reload()
     }
 
@@ -124,14 +152,19 @@ final class ViewerController: NSObject, NSApplicationDelegate {
     // MARK: - Loading
 
     private func reload() {
-        let url = assetDirectory.appendingPathComponent(mapChoice.filename)
-        guard let map = try? WorldMap(contentsOf: url) else {
-            window.title = "Seven Cities — missing \(mapChoice.filename)"
+        let url = assetDirectory.appendingPathComponent("historical.map")
+        let loaded: WorldMap?
+        switch mapChoice {
+        case .historical: loaded = try? WorldMap(contentsOf: url)
+        case .generated: loaded = generated
+        }
+        guard let map = loaded else {
+            window.title = "Seven Cities — historical.map not found"
             let scene = SKScene(size: skView.bounds.size)
             scene.backgroundColor = .black
             let label = SKLabelNode(fontNamed: "Menlo")
-            label.text = "Missing \(mapChoice.filename) — run tools/extract_map.py"
-            label.fontSize = 15
+            label.text = "historical.map not found — run ./extract.sh, or press G to generate a world"
+            label.fontSize = 14
             label.position = CGPoint(x: skView.bounds.midX, y: skView.bounds.midY)
             scene.addChild(label)
             skView.presentScene(scene)
@@ -145,10 +178,11 @@ final class ViewerController: NSObject, NSApplicationDelegate {
 
         let scene = WorldScene(map: map, style: effective,
                                originals: originals, size: skView.bounds.size)
+        scene.onStatusChange = { [weak self] text in self?.hud.stringValue = " \(text) " }
         skView.presentScene(scene)
         window.makeFirstResponder(skView)
 
-        var title = "Seven Cities — \(mapChoice.rawValue) — \(effective.rawValue) tiles"
+        var title = "Seven Cities — \(mapChoice.title) — \(effective.rawValue) tiles"
         if tileStyle == .original && !haveOriginals {
             title += "  (original_tiles.json missing; run tools/extract_tiles.py)"
         } else if effective == .original, let o = originals {
@@ -166,8 +200,12 @@ let assets = URL(fileURLWithPath: args.count > 1 ? args[1] : "local")
 if let i = args.firstIndex(of: "--dump"), i + 1 < args.count {
     let file = args.contains("generated") ? "generated.map" : "historical.map"
     let style: TileStyle = args.contains("custom") ? .custom : .original
+    var seed: UInt16?
+    if let j = args.firstIndex(of: "--gen"), j + 1 < args.count {
+        seed = UInt16(args[j + 1])
+    }
     exit(DumpMode.run(assetDirectory: assets, mapFile: file, style: style,
-                      out: URL(fileURLWithPath: args[i + 1])))
+                      out: URL(fileURLWithPath: args[i + 1]), generateSeed: seed))
 }
 print("assets: \(assets.path)")
 
