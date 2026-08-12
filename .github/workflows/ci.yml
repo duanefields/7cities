@@ -1,0 +1,40 @@
+name: CI
+
+# The whole suite runs without any game data, which is the point: no disk
+# images are committed, so CI exercises the engine and the invariants that do
+# not depend on them.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Swift version
+        run: swift --version
+
+      - name: Build
+        run: swift build --package-path SevenCitiesCore
+
+      - name: Test
+        run: swift test --package-path SevenCitiesCore
+
+      - name: Extractor reports missing disks cleanly
+        run: |
+          # Without disk images this must fail with instructions rather than a
+          # stack trace, since that is the first thing a new clone hits.
+          if ./extract.sh; then
+            echo "expected extract.sh to exit non-zero with no disks" >&2
+            exit 1
+          fi
+
+      - name: No game data committed
+        run: |
+          if git ls-files | grep -iE '\.(d64|prg)$'; then
+            echo "disk images must never be committed" >&2
+            exit 1
+          fi

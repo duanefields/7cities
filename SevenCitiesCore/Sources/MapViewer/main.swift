@@ -159,6 +159,14 @@ final class ViewerController: NSObject, NSApplicationDelegate {
         case .historical: loaded = try? WorldMap(contentsOf: url)
         case .generated: loaded = generated
         }
+        // Someone who has not supplied disk images should still get a world to
+        // walk around rather than an error screen, so fall back to generating
+        // one. Only an explicit request for the classic map can fail.
+        if loaded == nil, case .historical = mapChoice, generated == nil {
+            generateWorld()
+            return
+        }
+
         guard let map = loaded else {
             window.title = "Seven Cities — historical.map not found"
             let scene = SKScene(size: skView.bounds.size)

@@ -14,9 +14,20 @@ if ! command -v swift >/dev/null 2>&1; then
     exit 1
 fi
 
-if [ ! -d d64 ]; then
-    echo "Creating d64/ — put your disk images there and run this again."
+if [ ! -d d64 ] || [ -z "$(ls -A d64 2>/dev/null)" ]; then
     mkdir -p d64
+    cat <<'MSG'
+No disk images found.
+
+Put images of disks you own into d64/ and run this again:
+
+    d64/7CITIES1.D64    program disk, side 1 — the terrain art
+    d64/7CITIES2.D64    program disk, side 2 — the historical map
+
+No game data ships with this project. You can still explore generated worlds
+without any disks at all: run "make run" and use the World menu.
+MSG
+    exit 1
 fi
 
 exec swift run --package-path SevenCitiesCore Extract .

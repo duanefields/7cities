@@ -18,21 +18,51 @@ plus tools that read data from disk images *you already own*.
 
 ## Quick start
 
-```bash
-mkdir -p d64
-# copy your own images in:
-#   d64/7CITIES1.D64    program disk, side 1
-#   d64/7CITIES2.D64    program disk, side 2 — the historical map
+You do not need the game to try this. Clone it and run:
 
-./extract.sh        # decodes the map into assets/
-make run            # opens the viewer
+```bash
+make run            # opens the viewer on a freshly generated world
 ```
 
-`make` on its own lists the other targets. Requirements: macOS and Swift 6 (Xcode 16 or the
-standalone toolchain). **No emulator and no Python are needed.**
+To get the *classic* map and the original terrain art, add images of disks you own:
 
-Only side 2 is required, because that is where the historical map lives. Side 1 holds the fonts
-and the World Maker and is used by the deeper reverse engineering tools.
+```bash
+mkdir -p d64
+#   d64/7CITIES1.D64    program disk, side 1 — the terrain art
+#   d64/7CITIES2.D64    program disk, side 2 — the historical map
+
+./extract.sh        # decodes both into assets/
+make run
+```
+
+`make` on its own lists the other targets. Side 2 carries the historical map; side 1 carries
+the terrain art, the fonts and the World Maker. Either can be supplied without the other.
+
+## Dependencies
+
+**To build and run the port — one dependency, and it is the toolchain:**
+
+| Requirement | Version | Notes                                       |
+| :---------- | :------ | :------------------------------------------ |
+| macOS       | 14+     | declared in `Package.swift`                 |
+| Swift       | 6.0+    | Xcode 16, or the standalone toolchain       |
+
+There are **no Swift package dependencies** — `Package.swift` has an empty dependency list, so
+`swift build` fetches nothing. No emulator, no Python, no network access. AppKit and SpriteKit
+are system frameworks.
+
+**To run the research tools in `tools/` — optional, and needed by nobody who just wants to
+build or play:**
+
+| Requirement | Needed by                                                |
+| :---------- | :-------------------------------------------------------- |
+| Python 3.9+ | all of them                                                |
+| Pillow      | the 9 that render or compare images (`pip install pillow`) |
+| [vice-mcp](https://github.com/barryw/vice-mcp) | the 8 that drive the emulator |
+
+`vice-mcp` is a fork of VICE with an MCP server built in — Homebrew's VICE will not work. Only
+the differential-verification tools need it; everything the build and the extractor do is
+static.
 
 ## What the viewer does
 
