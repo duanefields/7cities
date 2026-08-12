@@ -10,6 +10,13 @@ resolution with smooth scrolling and native conveniences.
 **Status: milestone zero.** The map format is fully decoded and there is an explorable viewer.
 The game itself — trade, natives, the court, scoring — is not started. See `TODO.md`.
 
+![The viewer showing the Gulf of Mexico and the Caribbean, drawn with the original C64 terrain
+art](images/viewer-classic-map.png)
+
+The classic map and the terrain art above both came out of the original disks — the art is not
+a screenshot of the game, but the game's own tile data, read out of its main program and
+redrawn. See [What the viewer does](#what-the-viewer-does).
+
 ## You must supply your own disks
 
 **No game data ships here, and none ever will.** The code, graphics, text and maps are
@@ -152,6 +159,7 @@ SevenCitiesCore/    the Swift package, where everything actually lives
   Sources/ViewerKit         the SpriteKit viewer, shared by the app and the CLI
   Sources/Extract           the command-line extractor
   Sources/MapViewer         command-line front end for the viewer
+images/             screenshots used by this README
 tools/              Python research tools (not needed to build or run)
 NOTES.md            the reverse engineering record
 TODO.md             what is still missing
