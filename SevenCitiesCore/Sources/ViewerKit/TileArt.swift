@@ -41,10 +41,10 @@ enum TileArt {
     /// thing at that scale is the shape of the coast, the rivers and the
     /// mountain ranges, not individual trees. Colours are the original's own
     /// multicolour palette, so the overview still reads as the same world.
-    static func flatTexture(for terrain: Terrain) -> SKTexture {
-        if let cached = flatCache[terrain] { return cached }
+    /// One colour per terrain, for the zoomed-out overview.
+    static func flatColor(for terrain: Terrain) -> NSColor {
         let c64 = OriginalTiles.c64
-        let color: NSColor = switch terrain {
+        return switch terrain {
         case .deepWater, .mediumWater, .shallowWater, .ship: c64[0x0E]
         case .riverJunction, .riverWE, .riverNW, .riverSW,
              .riverNS, .riverNE, .riverSE: c64[0x0E].blended(withFraction: 0.25, of: c64[0x07]) ?? c64[0x0E]
@@ -53,9 +53,11 @@ enum TileArt {
         case .mountain: c64[0x00]
         case .village: c64[0x02]
         }
-        // Must match the tile cell exactly. An 8-point texture in a 32-point
-        // cell left the background showing between tiles, which read as a grid
-        // of dots once zoomed out.
+    }
+
+    static func flatTexture(for terrain: Terrain) -> SKTexture {
+        if let cached = flatCache[terrain] { return cached }
+        let color = flatColor(for: terrain)
         let side = Int(size)
         guard let ctx = CGContext(
             data: nil, width: side, height: side, bitsPerComponent: 8,

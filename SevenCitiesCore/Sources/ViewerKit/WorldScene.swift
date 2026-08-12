@@ -23,7 +23,7 @@ final class WorldScene: SKScene {
 
     private var position2D: (x: Int, y: Int)
     private var zoom: CGFloat = 3.0 { didSet { applyZoom() } }
-    private var overviewMap: SKTileMapNode?
+    private var overviewMap: SKSpriteNode?
     private var follow = true
 
     init(map: WorldMap, style: TileStyle, originals: OriginalTiles?, size: CGSize) {
@@ -86,26 +86,42 @@ final class WorldScene: SKScene {
     /// artifact.
     static let detailZoomThreshold: CGFloat = 1.0
 
+    /// The overview is **one image**, a single pixel per map tile, stretched
+    /// over the world and filtered.
+    ///
+    /// It was a tile map of flat-coloured quads, which cannot be interpolated:
+    /// `filteringMode` samples *within* a texture, and there each tile was its
+    /// own texture, so every tile stayed a hard-edged square however far you
+    /// zoomed out. Drawing the whole world as one small texture instead means
+    /// linear filtering has something to work with, and the map softens into
+    /// coastlines and river courses rather than a mosaic. It is also far
+    /// cheaper: one node and a 256x400 texture instead of a hundred thousand
+    /// tile quads.
     private func buildOverviewMap() {
-        var groups: [String: SKTileGroup] = [:]
-        for terrain in Terrain.allCases {
-            let group = SKTileGroup(tileDefinition:
-                SKTileDefinition(texture: TileArt.flatTexture(for: terrain)))
-            group.name = String(describing: terrain)
-            groups[String(describing: terrain)] = group
-        }
-        let set = SKTileSet(tileGroups: Array(groups.values))
-        let node = SKTileMapNode(tileSet: set, columns: map.width, rows: map.height,
-                                 tileSize: CGSize(width: TileArt.size, height: TileArt.size))
-        node.anchorPoint = .zero
-        node.position = .zero
-        for y in 0..<map.height {
-            let row = map.height - 1 - y
-            for x in 0..<map.width {
-                node.setTileGroup(groups[String(describing: map[x, row])],
-                                  forColumn: x, row: y)
+        let w = map.width, h = map.height
+        guard let ctx = CGContext(
+            data: nil, width: w, height: h, bitsPerComponent: 8,
+            bytesPerRow: w * 4, space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return }
+
+        for y in 0..<h {
+            for x in 0..<w {
+                // The context is bottom-up; the map is stored top-down.
+                let color = TileArt.flatColor(for: map[x, h - 1 - y])
+                ctx.setFillColor(color.cgColor)
+                ctx.fill(CGRect(x: x, y: y, width: 1, height: 1))
             }
         }
+        guard let cg = ctx.makeImage() else { return }
+
+        let texture = SKTexture(cgImage: cg)
+        texture.filteringMode = .linear
+        let node = SKSpriteNode(texture: texture)
+        node.anchorPoint = .zero
+        node.position = .zero
+        node.size = CGSize(width: CGFloat(w) * TileArt.size,
+                           height: CGFloat(h) * TileArt.size)
         node.zPosition = 0.5
         overviewMap = node
         addChild(node)
