@@ -42,7 +42,7 @@ Both images are standard 35-track D64s (174,848 bytes, no error info).
 | :---------- | :------------- | ------: | :--------------------------------------------- |
 | `ea`        | `$02A8`        |     102 | BASIC stub, `LOAD"EA",8,1`                     |
 | `ea` + `$9D` | `$C000-$C9FF` |   2,560 | EA fastloader / raw sector reader              |
-| `game`      | `$0800-$94FF`  |  36,096 | Main game; ~6 KB data then ~30 KB of 6502 code |
+| `game`      | `$0800-$94FF`  |  36,096 | Main game — **packed on disk**, see below       |
 | `game2`     | `$0800-$21FF`  |   6,656 | Old World / court sequence plus the text table |
 | `game3`     | `$0800-$4FFF`  |  18,432 | World Maker plus disk formatter; 100% code     |
 | `game4`     | `$1000-$23FF`  |   5,120 | Pure tabular data, ~3-byte period. Unidentified |
@@ -572,3 +572,59 @@ The renderer is in `game.prg`, the 36 KB main binary, which is still completely
 unexamined — all work so far has been in `game3`. Settle this before designing
 the SpriteKit renderer: a procedural-detail surface is a very different job
 from a straight tilemap.
+
+
+## Correction: `game.prg` IS packed
+
+An early note here claimed "the code is not packed or encrypted". That was
+wrong, and it stood in the record for a long time. It came from a crude
+JSR/RTS density heuristic that I over-trusted.
+
+The control is unambiguous:
+
+| Binary  |   Size | JSR | BNE | `AND #$0F` |
+| :------ | -----: | --: | --: | ---------: |
+| `game3` | 18,432 | 938 | 433 |          5 |
+| `game`  | 36,096 |  66 |  34 |      **0** |
+
+Zero `AND #$0F` in 36 KB is impossible for real 6502. `game2` and `game3` are
+plain; `game` is not.
+
+**`tools/dump_game.py`** boots the game under vice-mcp, waits for it to unpack
+itself, and dumps `$0800-$94FF` to `local/game_unpacked.bin`. The result has
+JSR=1114, BNE=647 and matches the on-disk image in **0.0%** of bytes.
+
+Always analyze `game_unpacked.bin`, never `game.bin`.
+
+## Display modes (from the unpacked binary)
+
+| Site    | Write              | Meaning                                |
+| :------ | :----------------- | :------------------------------------- |
+| `$1501` | `$D011` = `$1C`    | bit 5 set — **hires bitmap mode**      |
+| `$14FC` | `$D016` = `$C8`    | bit 4 clear — hires, not multicolor    |
+| `$1506` | `$D018` = `$34`    | video matrix `$0C00`, bitmap at bank+0 |
+| `$2C6E` | `$D018` = `$38`    | bitmap at bank+`$2000`                 |
+| `$2C81` | `$D011` = `$17`    | bit 5 clear — **text mode**, 24 rows   |
+
+So the game switches between a **hires bitmap** map/exploration view and a
+text-mode view for menus and the court. Sprites (`$D000`/`$D001`/`$D015`) are
+used for the moving party, not for terrain.
+
+### This answers the cell-versus-sprite question
+
+Terrain is drawn as **8x8 hires bitmap blocks**, one per map cell — not sprites
+and not charset tiles. And the scale now reconciles:
+
+- exploration view: 320/8 = 40 cells across = 120 miles, so **~3 miles per cell**
+- map view at 960 miles per screen is 8x that = 320 cells, which is the whole
+  256-wide map — the map view shows the entire world width, exactly as the
+  manual implies
+
+The world is therefore about 768 x 1,200 miles internally. Not geographically
+accurate against the real Americas (~9,000 miles north to south), but
+internally consistent, and the manual's figures are the game's own scale rather
+than a claim about reality.
+
+For the port this is good news: the map is a straight 256x400 tile grid at
+~3 miles per tile, and a zoomable renderer needs one tile image per terrain
+nibble, not procedural detail generation.
