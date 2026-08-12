@@ -25,7 +25,14 @@ struct OriginalTiles {
     struct Tile: Decodable {
         let address: Int
         let animated: Bool
-        let pixels: [[UInt8]]
+        /// `variantIndex[(y & 3) * 4 + (x & 3)]` selects from `variants`.
+        let variantIndex: [Int]
+        let variants: [[[UInt8]]]
+
+        func pixels(x: Int, y: Int) -> [[UInt8]] {
+            let i = variantIndex[((y % 4 + 4) % 4) * 4 + ((x % 4 + 4) % 4)]
+            return variants[min(i, variants.count - 1)]
+        }
     }
 
     let palette: Palette
@@ -33,12 +40,19 @@ struct OriginalTiles {
     let height: Int
     let tiles: [String: Tile]
 
-    /// The C64 hardware palette, in the usual VICE rendering.
+    /// The C64 hardware palette, Pepto PAL.
+    ///
+    /// Plains sit on colour 7, and the choice of palette decides whether that
+    /// reads as the original's olive yellow-green or as a bright lemon. Pepto
+    /// gives `#B8C76F`, which is what the hardware looks like on a PAL screen
+    /// and what published maps of this game show; Colodore's `#EDF171` is far
+    /// too yellow here. The game itself sets `$D021 = $07` in every view, so
+    /// this is purely a rendering choice.
     static let c64: [NSColor] = [
-        (0, 0, 0), (255, 255, 255), (129, 51, 44), (112, 190, 196),
-        (132, 60, 142), (85, 160, 73), (56, 45, 131), (206, 215, 118),
-        (140, 90, 39), (87, 66, 0), (180, 102, 95), (78, 78, 78),
-        (120, 120, 120), (154, 226, 142), (108, 94, 181), (149, 149, 149),
+        (0, 0, 0), (255, 255, 255), (104, 55, 43), (112, 164, 178),
+        (111, 61, 134), (88, 141, 67), (53, 40, 121), (184, 199, 111),
+        (111, 79, 37), (67, 57, 0), (154, 103, 89), (68, 68, 68),
+        (108, 108, 108), (154, 210, 132), (108, 94, 181), (149, 149, 149),
     ].map { NSColor(srgbRed: $0.0 / 255, green: $0.1 / 255, blue: $0.2 / 255, alpha: 1) }
 
     static func load(nextTo mapURL: URL) -> OriginalTiles? {
@@ -60,10 +74,14 @@ struct OriginalTiles {
     /// animates out of a RAM buffer and which we render as flat color.
     var patternCount: Int { tiles.values.filter { !$0.animated }.count }
 
-    func texture(for terrain: Terrain, scale: Int = 4) -> SKTexture? {
-        guard let tile = tiles[String(describing: terrain)],
-              tile.pixels.count == height
-        else { return nil }
+    /// How many distinct appearances the art actually contains.
+    var variantCount: Int { tiles.values.reduce(0) { $0 + $1.variants.count } }
+
+    func texture(for terrain: Terrain, x: Int = 0, y: Int = 0,
+                 scale: Int = 4) -> SKTexture? {
+        guard let tile = tiles[String(describing: terrain)] else { return nil }
+        let pixels = tile.pixels(x: x, y: y)
+        guard pixels.count == height else { return nil }
 
         let pal = [
             Self.c64[palette.land], Self.c64[palette.water],
@@ -80,7 +98,7 @@ struct OriginalTiles {
         else { return nil }
 
         for y in 0..<height {
-            let row = tile.pixels[y]
+            let row = pixels[y]
             guard row.count == width else { return nil }
             for x in 0..<width {
                 ctx.setFillColor(pal[Int(row[x]) & 3].cgColor)

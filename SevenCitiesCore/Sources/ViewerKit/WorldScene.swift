@@ -55,19 +55,37 @@ final class WorldScene: SKScene {
         refreshStatus()
     }
 
+    /// Terrain is drawn from the tile's map position in the original, not from
+    /// one bitmap per type, so a group is built per (terrain, variant) and the
+    /// fill below picks between them. Mountains only join into ranges, and woods
+    /// only read as individual trees, because of this. See `TerrainTiles`.
+    private func variantKey(_ terrain: Terrain, x: Int, y: Int) -> String {
+        guard style == .original else { return String(describing: terrain) }
+        return "\(terrain)#\(((y % 4 + 4) % 4) * 4 + ((x % 4 + 4) % 4))"
+    }
+
     private func buildTileMap() {
-        var groups: [Terrain: SKTileGroup] = [:]
+        var groups: [String: SKTileGroup] = [:]
         for terrain in Terrain.allCases {
-            let texture: SKTexture
-            if style == .original, let t = originals?.texture(for: terrain) {
-                texture = t
-            } else {
-                texture = TileArt.texture(for: terrain)
+            if style == .original, originals != nil {
+                for cell in 0..<16 {
+                    let x = cell % 4, y = cell / 4
+                    let key = variantKey(terrain, x: x, y: y)
+                    guard groups[key] == nil,
+                          let texture = originals?.texture(for: terrain, x: x, y: y)
+                    else { continue }
+                    let group = SKTileGroup(tileDefinition: SKTileDefinition(texture: texture))
+                    group.name = key
+                    groups[key] = group
+                }
             }
-            let def = SKTileDefinition(texture: texture)
-            let group = SKTileGroup(tileDefinition: def)
-            group.name = String(describing: terrain)
-            groups[terrain] = group
+            let key = String(describing: terrain)
+            if groups[key] == nil {
+                let texture = TileArt.texture(for: terrain)
+                let group = SKTileGroup(tileDefinition: SKTileDefinition(texture: texture))
+                group.name = key
+                groups[key] = group
+            }
         }
         let set = SKTileSet(tileGroups: Array(groups.values))
         tileMap = SKTileMapNode(
@@ -82,7 +100,10 @@ final class WorldScene: SKScene {
             // SpriteKit rows run bottom-up; the map is stored top-down.
             let row = map.height - 1 - y
             for x in 0..<map.width {
-                tileMap.setTileGroup(groups[map[x, row]], forColumn: x, row: y)
+                let terrain = map[x, row]
+                let key = variantKey(terrain, x: x, y: row)
+                tileMap.setTileGroup(groups[key] ?? groups[String(describing: terrain)],
+                                     forColumn: x, row: y)
             }
         }
         addChild(tileMap)

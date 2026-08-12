@@ -133,15 +133,18 @@ public enum AssetExtractor {
         json += "  \"tiles\": {\n"
         let entries = Terrain.allCases.compactMap { t -> String? in
             guard let tile = art.tiles[t] else { return nil }
-            let rows = tile.pixels
-                .map { "[" + $0.map(String.init).joined(separator: ",") + "]" }
-                .joined(separator: ",\n        ")
+            let variants = tile.variants.map { v in
+                "[" + v.map { "[" + $0.map(String.init).joined(separator: ",") + "]" }
+                    .joined(separator: ",") + "]"
+            }.joined(separator: ",\n        ")
+            let idx = tile.variantIndex.map(String.init).joined(separator: ",")
             return """
                   "\(t)": {
                     "address": \(tile.address),
                     "animated": \(tile.isAnimated),
-                    "pixels": [
-                        \(rows)
+                    "variantIndex": [\(idx)],
+                    "variants": [
+                        \(variants)
                     ]
                   }
             """

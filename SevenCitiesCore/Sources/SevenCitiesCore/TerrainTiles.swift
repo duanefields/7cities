@@ -20,19 +20,43 @@ public struct TerrainTiles: Sendable {
 
     /// Where the original keeps its pattern-address table.
     public static let terrainDispatch = 0x5529
+    /// 64 motif indices, read as `[(y & 3) * 4 + (x & 3)] * 4`, used by forest
+    /// and swamp to permute four motifs between the tile's four characters.
+    public static let motifTable = 0x54E9
+    /// `00 24 48 6C`, the mountain variant shifts.
+    public static let variantOffsets = 0x58B4
     /// `game` loads here, so a pattern address minus this is a file offset.
     public static let loadAddress = 0x0800
     public static let bytesPerTile = 32
     public static let width = 8
     public static let height = 16
 
-    /// One tile: `height` rows of `width` palette indices, each 0...3.
+    /// One tile. Terrain is drawn **from the tile's map position**, not from a
+    /// single fixed bitmap, so a tile carries every variant it can take plus the
+    /// rule for choosing between them.
+    ///
+    /// - mountain shifts its source pointer by `(x & 3) + T[x & 1] + T[y & 1]`,
+    ///   which is what makes peaks join into ranges instead of repeating.
+    /// - forest and swamp permute four motifs between the tile's four
+    ///   characters, so a wood reads as many individual trees.
+    /// - everything else has a single variant.
     public struct Tile: Sendable {
         public let address: Int
         /// Water animates from a RAM buffer rather than a stored pattern, so
         /// there is nothing to read and it is drawn as flat color.
         public let isAnimated: Bool
-        public let pixels: [[UInt8]]
+        /// Distinct appearances, in no particular order.
+        public let variants: [[[UInt8]]]
+        /// `variantIndex[(y & 3) * 4 + (x & 3)]` selects from `variants`.
+        public let variantIndex: [Int]
+
+        /// The variant for a map position.
+        public func pixels(x: Int, y: Int) -> [[UInt8]] {
+            variants[variantIndex[(y & 3) * 4 + (x & 3)]]
+        }
+
+        /// The representative appearance, for a legend or a tile strip.
+        public var pixels: [[UInt8]] { variants[variantIndex[0]] }
     }
 
     /// The multicolor palette the exploration view runs, as C64 color indices.
@@ -81,6 +105,12 @@ public struct TerrainTiles: Sendable {
         let table = Self.terrainDispatch - Self.loadAddress
         guard program.count > table + 32 else { throw ExtractError.truncated }
 
+        // Composer tables, read from the program rather than hard-coded.
+        let motifTable = Self.motifTable - Self.loadAddress
+        let variantOffsets = Self.variantOffsets - Self.loadAddress
+        guard program.count > motifTable + 64,
+              program.count > variantOffsets + 4 else { throw ExtractError.truncated }
+
         var out: [Terrain: Tile] = [:]
         for terrain in Terrain.allCases {
             let i = table + Int(terrain.rawValue) * 2
@@ -92,17 +122,72 @@ public struct TerrainTiles: Sendable {
                   address < 0x9000
             else {
                 out[terrain] = Tile(address: address, isAnimated: true,
-                                    pixels: Self.flat(1))
+                                    variants: [Self.flat(1)],
+                                    variantIndex: Array(repeating: 0, count: 16))
                 continue
             }
+
+            var variants: [[[UInt8]]] = []
+            var index = [Int](repeating: 0, count: 16)
+            var seen: [String: Int] = [:]
+            for cell in 0..<16 {
+                let x = cell % 4, y = cell / 4
+                let pixels: [[UInt8]]
+                switch terrain {
+                case .forest, .swamp:
+                    pixels = Self.compose(program, at: offset, x: x, y: y,
+                                          motifTable: motifTable)
+                case .mountain:
+                    let t = [0, Int(program[variantOffsets + 1])]   // 0 and $24
+                    let shift = (x & 3) + t[x & 1] + t[y & 1]
+                    let o = offset + shift
+                    pixels = o + Self.bytesPerTile <= program.count
+                        ? Self.unpack(program, at: o) : Self.unpack(program, at: offset)
+                default:
+                    pixels = Self.unpack(program, at: offset)
+                }
+                let key = pixels.map { $0.map(String.init).joined() }.joined(separator: "|")
+                if let existing = seen[key] {
+                    index[cell] = existing
+                } else {
+                    seen[key] = variants.count
+                    index[cell] = variants.count
+                    variants.append(pixels)
+                }
+            }
             out[terrain] = Tile(address: address, isAnimated: false,
-                                pixels: Self.unpack(program, at: offset))
+                                variants: variants, variantIndex: index)
         }
         self.tiles = out
     }
 
     private static func flat(_ value: UInt8) -> [[UInt8]] {
         Array(repeating: Array(repeating: value, count: width), count: height)
+    }
+
+    /// Forest and swamp: four motifs of eight bytes, permuted between the
+    /// tile's four characters according to the tile's position.
+    ///
+    /// The original writes each motif to a destination picked from a table of
+    /// character offsets — `$0000`, `$0060`, `$0068`, `$0008`, which are exactly
+    /// top-left, top-right, bottom-right and bottom-left of the 2x2 block.
+    private static func compose(_ program: [UInt8], at offset: Int,
+                                x: Int, y: Int, motifTable: Int) -> [[UInt8]] {
+        // motif value -> (column, row) within the 2x2 block
+        let quadrant: [(Int, Int)] = [(0, 0), (1, 0), (1, 1), (0, 1)]
+        var rows = flat(0)
+        let cell = ((y & 3) * 4 + (x & 3)) * 4
+        for i in 0..<4 {
+            let v = Int(program[motifTable + cell + i]) & 3
+            let (col, row) = quadrant[v]
+            for yy in 0..<8 {
+                let byte = program[offset + i * 8 + yy]
+                for p in 0..<4 {
+                    rows[row * 8 + yy][col * 4 + p] = (byte >> (6 - p * 2)) & 3
+                }
+            }
+        }
+        return rows
     }
 
     /// Unpacks 32 bytes into a 2x2 block of characters.
