@@ -23,12 +23,8 @@ public struct TerrainTiles: Sendable {
     /// 64 motif indices, read as `[(y & 3) * 4 + (x & 3)] * 4`, used by forest
     /// and swamp to permute four motifs between the tile's four characters.
     public static let motifTable = 0x54E9
-    /// `00 24 48 6C`, the mountain variant shifts. Read but not yet applied
-    /// correctly — see the note in the extractor.
+    /// `00 24 48 6C`, the mountain slot boundaries.
     public static let variantOffsets = 0x58B4
-    /// Mountains sit two bytes past their dispatch address. Verified against a
-    /// reference render of the whole map: zero differing pixels.
-    public static let mountainOffset = 2
     /// `game` loads here, so a pattern address minus this is a file offset.
     public static let loadAddress = 0x0800
     public static let bytesPerTile = 32
@@ -142,22 +138,15 @@ public struct TerrainTiles: Sendable {
                     pixels = Self.compose(program, at: offset, x: x, y: y,
                                           motifTable: motifTable)
                 case .mountain:
-                    // The original shifts the source by
-                    // `(x & 3) + T[x & 1] + T[y & 1]`, T at `$58B4`, which is
-                    // read correctly from the bytes at `$5922`. Applying it
-                    // literally slices the glyph, because `x & 3` moves the
-                    // source by one to three *bytes*, and a byte is a pixel
-                    // row. It also reproduced only 56 of 400 sampled reference
-                    // tiles. Something about how it is applied is still wrong —
-                    // most likely `$A8`/`$A9` are not the plain map coordinates
-                    // at this point.
-                    //
-                    // Until that is understood, use the fixed `+2` variant,
-                    // which reproduces the reference map's mountains with zero
-                    // differing pixels. Peaks then repeat rather than varying,
-                    // which is a known simplification and far better than
-                    // shipping sliced glyphs.
-                    let o = offset + Self.mountainOffset
+                    // `(x & 3) + T[x & 1] + T[y & 1]`, T at `$58B4` = 0, $24,
+                    // $48, $6C. The layout confirms this is deliberate: the
+                    // mountain region is 144 bytes, exactly four $24 slots, and
+                    // a tile is 32 bytes — so every slot carries precisely the
+                    // four bytes of headroom that `x & 3`'s shift needs.
+                    // `T[x & 1] + T[y & 1]` then picks slot 0, 1 or 2. All
+                    // twelve combinations render as whole, distinct peaks.
+                    let t = [0, Int(program[variantOffsets + 1])]   // 0 and $24
+                    let o = offset + (x & 3) + t[x & 1] + t[y & 1]
                     pixels = o + Self.bytesPerTile <= program.count
                         ? Self.unpack(program, at: o) : Self.unpack(program, at: offset)
                 default:

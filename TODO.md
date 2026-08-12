@@ -60,11 +60,11 @@ engineering record; this holds the work.
       composition for forest and swamp, verified tiles, an overview layer for
       zoomed-out browsing, and a palette setting. See NOTES.md for the four
       rendering faults this took and the two rules that came out.
-- [ ] **Work out the mountain variant shift.** The formula at `$5922` is read
-      correctly but applying it slices the glyph, and it reproduced only 56 of
-      400 sampled reference tiles. Most likely `$A8`/`$A9` are not the plain map
-      coordinates at that point. Mountains currently use the fixed `+2` variant,
-      which matches the reference exactly but repeats.
+- [x] ~~**Work out the mountain variant shift.**~~ Solved: the formula at
+      `$5922` was right all along. The mountain region is 144 bytes = four `$24`
+      slots, each with exactly the 4 bytes of headroom that `x & 3` needs, so
+      `T[x & 1] + T[y & 1]` picks a slot and `x & 3` shifts within it. Twelve
+      whole, distinct peaks. See NOTES.md for why it was wrongly rejected twice.
 - [ ] **Animate water.** Entries `$0`/`$1`/`$2` point at RAM buffers driven by
       the `EOR #$55` pass at `$4057`, which swaps multicolor pixel pairs. Worth
       reproducing for fidelity.

@@ -1390,9 +1390,42 @@ program. A first attempt at the full mountain formula reproduces only 56 of 400
 sampled tiles exactly, so `$5922`/`$597E` need reading to the end.
 
 **Consequence for the port:** a 16-entry tile atlas cannot reproduce the
-original. Tiles must be selected per position — mountain has at most 12 variants
-(`x&3` times three offsets), forest and swamp 16 each (`x&3`, `y&3`) — so the
-asset should become variants plus an index rule, not one bitmap per terrain.
+original. Tiles must be selected per position — mountain has 12 variants
+(`x & 3` times three slots), forest and swamp 16 each (`x & 3`, `y & 3`) — so
+the asset is variants plus an index rule, not one bitmap per terrain.
+
+#### The mountain layout, and two bad refutations of it
+
+`(x & 3) + T[x & 1] + T[y & 1]` with `T` at `$58B4` = `00 24 48 6C` is correct,
+and the data layout proves it was designed that way:
+
+```text
+mountain region $568B-$571B = 144 bytes = 4 slots of $24
+a tile is 32 bytes, so each $24 slot has exactly 4 bytes spare
+   T[x & 1] + T[y & 1]  picks slot 0, 1 or 2
+   x & 3                shifts 0-3 rows inside the slot's headroom
+```
+
+Rendering all twelve combinations gives twelve whole, distinct peaks. Nothing
+is sliced.
+
+This was rejected twice, and both rejections were wrong in instructive ways.
+
+**A worthless oracle.** The formula reproduced only 56 of 400 sampled tiles from
+the community reference map, which looked decisive. But that map is an atlas
+render by another author using one fixed variant — established earlier in these
+same notes. A *correct* position-dependent formula can only agree with it where
+it happens to emit that variant, roughly one position in eight. 56/400 is 14%.
+The measurement was confirming the formula and was read as refuting it.
+
+**A misattributed symptom.** Mountains genuinely looked sliced in the app, which
+seemed to settle it. The cause was elsewhere: tile textures were 64 pixels in a
+32-point cell, so nearest-neighbour minification was dropping pixel rows at
+every zoom below 2.0. Fixing the texture size fixed the "slicing" — but by then
+the formula had already been reverted for a crime it did not commit.
+
+The shared lesson: **check that the oracle can answer the question, and that the
+symptom belongs to the suspect.**
 
 #### The reference map's annotations are not game data
 
