@@ -19,7 +19,7 @@ final class WorldScene: SKScene {
     /// window as an AppKit view rather than as a node, because anything
     /// parented to the camera inherits the camera transform and therefore
     /// shrinks, grows and drifts off-screen as you zoom.
-    var onStatusChange: ((String) -> Void)?
+    var onStatusChange: (@MainActor (String) -> Void)?
 
     private var position2D: (x: Int, y: Int)
     private var zoom: CGFloat = 3.0 { didSet { applyZoom() } }

@@ -7,6 +7,7 @@ import SevenCitiesCore
 /// The viewer once came up as bare background with only the explorer visible,
 /// and there was no way to inspect it without a screen. This renders through
 /// the same texture path so a broken tile pipeline is visible in a file.
+@MainActor
 enum DumpMode {
 
     static func run(assetDirectory: URL, mapFile: String, style: TileStyle,

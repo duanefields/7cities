@@ -69,6 +69,15 @@ public struct WorldMap: Sendable {
         self.init(width: w, height: h, tiles: out)
     }
 
+    /// Writes the flat 7CMP format the viewer reads.
+    public func write(to url: URL) throws {
+        var out = Data([0x37, 0x43, 0x4D, 0x50, 1])
+        out.append(UInt8(width & 0xFF)); out.append(UInt8(width >> 8))
+        out.append(UInt8(height & 0xFF)); out.append(UInt8(height >> 8))
+        out.append(contentsOf: tiles.map(\.rawValue))
+        try out.write(to: url)
+    }
+
     public func contains(x: Int, y: Int) -> Bool {
         x >= 0 && y >= 0 && x < width && y < height
     }

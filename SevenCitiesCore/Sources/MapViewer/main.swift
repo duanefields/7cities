@@ -21,6 +21,7 @@ enum MapChoice {
     }
 }
 
+@MainActor
 final class ViewerController: NSObject, NSApplicationDelegate {
 
     private let assetDirectory: URL
@@ -193,8 +194,10 @@ final class ViewerController: NSObject, NSApplicationDelegate {
     }
 }
 
+nonisolated(unsafe) var delegateBox: AnyObject?
+
 let args = CommandLine.arguments
-let assets = URL(fileURLWithPath: args.count > 1 ? args[1] : "local")
+let assets = URL(fileURLWithPath: args.count > 1 ? args[1] : "assets")
 
 // Headless check: MapViewer <assets> --dump <out.png> [historical|generated] [original|custom]
 if let i = args.firstIndex(of: "--dump"), i + 1 < args.count {
@@ -209,8 +212,12 @@ if let i = args.firstIndex(of: "--dump"), i + 1 < args.count {
 }
 print("assets: \(assets.path)")
 
-let app = NSApplication.shared
-let controller = ViewerController(assetDirectory: assets)
-app.delegate = controller
-app.setActivationPolicy(.regular)
-app.run()
+MainActor.assumeIsolated {
+    let app = NSApplication.shared
+    let controller = ViewerController(assetDirectory: assets)
+    // The delegate is not otherwise retained once this scope exits.
+    delegateBox = controller
+    app.delegate = controller
+    app.setActivationPolicy(.regular)
+    app.run()
+}
