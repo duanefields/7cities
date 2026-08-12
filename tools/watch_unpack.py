@@ -18,8 +18,7 @@ matches the file and how code-like it is. The shape of those two curves answers
 the question directly.
 
 Requires vice-mcp (a VICE fork with MCP built in, not Homebrew VICE) and a
-title-menu template to sync the F7 press against — same approach as
-`dump_game.py`, which this borrows from.
+title-menu template to sync the F7 press against.
 """
 import os
 import sys

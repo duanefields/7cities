@@ -615,9 +615,10 @@ entropy" measured on `game.bin` was measuring a file the game does not use.
 See "Resolved: there is no depacker" below for the loader's actual data path
 and for how to extract a stage statically.
 
-`tools/dump_game.py` still works and `local/game_unpacked.bin` is still a valid
-RAM snapshot, but it is no longer the only way to get at the code, and an
-emulator is no longer required.
+`tools/decrypt_game.py` reads the program straight off a disk image, so the
+emulator is no longer required to get at the code. The tool that used to boot
+the game and dump RAM for this has been deleted; `catch_decrypt.py` does the
+same thing and stops at the right instant.
 
 ## Display modes (from the unpacked binary)
 

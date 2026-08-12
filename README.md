@@ -60,8 +60,8 @@ build or play:**
 | Requirement | Needed by                                                |
 | :---------- | :-------------------------------------------------------- |
 | Python 3.9+ | all of them                                                |
-| Pillow      | the 9 that render or compare images (`pip install pillow`) |
-| [vice-mcp](https://github.com/barryw/vice-mcp) | the 8 that drive the emulator |
+| Pillow      | the 7 that render or compare images (`pip install pillow`) |
+| [vice-mcp](https://github.com/barryw/vice-mcp) | the 6 that drive the emulator |
 
 `vice-mcp` is a fork of VICE with an MCP server built in — Homebrew's VICE will not work.
 
@@ -79,9 +79,6 @@ exactly two things:
   known-plaintext pair captured live by `catch_decrypt.py`. Its closed form was never found and
   the generating routine is not in RAM, so the table **cannot currently be re-derived
   statically**. If you would rather not take it on trust, that is the tool that reproduces it.
-
-Some tools in `tools/` are superseded and say so at the top — `find_depacker.py` chased a
-depacker that turned out not to exist, and `dump_game.py` predates the static decryption.
 
 ## What the viewer does
 
