@@ -850,3 +850,67 @@ Draw into a `CGContext`, call `makeImage()`, and use `SKTexture(cgImage:)`.
 renders the tileset and a slice of the world through the same texture path
 without opening a window, so this class of failure is visible in a file rather
 than needing a screen.
+
+
+## The loader is a bytecode VM (copy protection)
+
+Going after the depacker statically found something better than a depacker: the
+`$C000` loader is a **virtual machine**, and the `04 8B 07 6D CE`-style data
+filling `$C047`-`$C25F` is its bytecode program.
+
+### Dispatcher — `$C482`
+
+```text
+$C487  JSR $C4E8       ; steals the return address: the bytecode follows the JSR
+$C492  LDA ($26),Y     ; fetch opcode
+$C499  TAX
+$C49A  LDA $C4AD,X     ; opcode table
+$C49D  CLC / ADC #$C1  ; handler = $C400 + (entry + $C1), carry into the high byte
+$C4A0  STA $C4AB       ; self-modifies its own JMP operand
+```
+
+Every handler ends `JMP $C492` to fetch the next opcode — a classic threaded
+interpreter.
+
+### Obfuscation constants
+
+| Where   | Transform  | Applies to                        |
+| :------ | :--------- | :-------------------------------- |
+| `$C4D3` | `EOR #$41` | low byte of a pointer operand     |
+| `$C4E3` | `EOR #$CE` | high byte of a pointer operand    |
+| `$C52E` | `EOR #$8B` | immediate operands                |
+| `$C58E` | `EOR #$8B` | immediate operands (subtract)     |
+| `$C5C8` | `EOR #$7F` | derives a key from the page byte  |
+
+### Opcode map (20 handlers)
+
+```text
+$00 $C4C1   $01 $C4FD   $02 $C500   $03 $C51E   $04 $C528
+$05 $C536   $06 $C553   $07 $C576   $08 $C587   $09 $C518
+$0A $C56B   $0B $C542   $0C $C582   $0D $C59C   $0E $C59F
+$0F $C5A2   $10 $C5A5   $11 $C5A8   $12 $C5AB   $13 $C5AE
+```
+
+Identified so far: `$04` load immediate (`EOR #$8B`), `$05` load indirect,
+`$08` subtract immediate, `$0C` `ASL $28`, and a decrypt primitive at `$C5B0`
+that XORs two bytes in place with a key equal to the pointer's high byte
+`EOR #$7F`.
+
+### What the file itself is
+
+- `game.prg` has entropy **7.04 bits/byte across all 256 values**, so it is
+  compressed, not merely masked.
+- The page-keyed XOR above does **not** decode it — tried with masks `$7F`,
+  `$00` and `$FF`, none produced valid code or any known plaintext. That
+  primitive decrypts whatever region the VM points at, not the game file.
+- A comparison made earlier between `game.prg` and RAM at `$0800-$94FF` was
+  meaningless: compressed input cannot expand in place at the same addresses,
+  so the unpacked code must live elsewhere. That comparison should be redone
+  once the destination is known.
+
+### The way in
+
+Implement the VM in Python — 20 handlers, all present and plain — and run the
+loader's bytecode. That reveals what it decrypts, where it puts it, and how the
+game file is finally expanded, entirely statically. Every emulator-driven
+attempt on this project has been slower and less reliable than reading the code.

@@ -40,9 +40,11 @@ engineering record; this holds the work.
       - Polling RAM during the load to catch a plain-then-transformed moment:
         not yet completed — the run kept failing on title-menu sync.
 
-      Next: disassemble the `$C000` loader properly around its receive loop and
-      look for a transform between taking a byte off the wire and storing it.
-      Static analysis has consistently outperformed emulator automation here.
+      **Now understood well enough to attack.** The `$C000` loader is a bytecode
+      VM — see NOTES.md for the dispatcher, the obfuscation constants and all
+      20 opcode handlers. The next step is to implement that VM in Python and
+      run the loader's own bytecode, which reveals the unpacking entirely
+      statically.
 - [ ] **Fill in the missing original tiles.** Rivers, villages and a clean
       mountain were absent from the captured frame and are reconstructed.
       Capturing more demo frames would replace them with the original's pixels.
