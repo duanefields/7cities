@@ -24,6 +24,8 @@ final class WorldScene: SKScene {
     private var position2D: (x: Int, y: Int)
     private var zoom: CGFloat = 3.0 { didSet { applyZoom() } }
     private var overviewMap: SKSpriteNode?
+    /// Held so their filtering can follow the zoom.
+    private var detailTextures: [SKTexture] = []
     private var follow = true
 
     init(map: WorldMap, style: TileStyle, originals: OriginalTiles?, size: CGSize) {
@@ -84,7 +86,14 @@ final class WorldScene: SKScene {
     ///
     /// An earlier 0.6 was still deep into minification and shipped exactly that
     /// artifact.
-    static let detailZoomThreshold: CGFloat = 1.0
+    /// The real art is kept until a tile is only a few pixels across.
+    ///
+    /// It survives being minified perfectly well *if* minification averages
+    /// rather than drops — see `applyZoom`, which switches filtering with the
+    /// zoom. An earlier version swapped to flat colour below 1.0, which was
+    /// compensating for a filtering choice rather than a real limit, and threw
+    /// away the terrain art across the whole range people browse at.
+    static let detailZoomThreshold: CGFloat = 0.3
 
     /// The overview is **one image**, a single pixel per map tile, stretched
     /// over the world and filtered.
@@ -139,6 +148,7 @@ final class WorldScene: SKScene {
                     let group = SKTileGroup(tileDefinition: SKTileDefinition(texture: texture))
                     group.name = key
                     groups[key] = group
+                    detailTextures.append(texture)
                 }
             }
             let key = String(describing: terrain)
@@ -183,6 +193,12 @@ final class WorldScene: SKScene {
         let overview = zoom < Self.detailZoomThreshold
         overviewMap?.isHidden = !overview
         tileMap?.isHidden = overview
+        // Deliberately *not* switching to linear when shrinking. SpriteKit has
+        // one filtering mode per texture, and linear with mipmaps drops to a
+        // lower mip level and then magnifies it, which smears pixel art into
+        // mush even at 0.89x. Nearest holds up now that a tile texture is the
+        // same size as its cell; the earlier breakage was a 64-pixel texture in
+        // a 32-point cell, not the filter.
         // Keep the explorer marker a readable size on screen at any zoom.
         explorer.setScale(max(0.35, 1.0 / zoom))
     }

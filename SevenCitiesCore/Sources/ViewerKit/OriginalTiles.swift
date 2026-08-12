@@ -180,11 +180,10 @@ struct OriginalTiles {
         }
         guard let cg = ctx.makeImage() else { return nil }
         let tex = SKTexture(cgImage: cg)
-        // Nearest keeps the pixels crisp when magnified, which is the point of
-        // showing the original art at all. Mipmaps stop it falling apart in the
-        // band just above the overview threshold, where it is still minified.
+        // Nearest, and no mipmaps: mipmapping a 32-pixel pixel-art tile makes
+        // SpriteKit pick a blurred level as soon as there is any minification
+        // at all, which looked far worse than the aliasing it was meant to fix.
         tex.filteringMode = .nearest
-        tex.usesMipmaps = true
         return tex
     }
 }
