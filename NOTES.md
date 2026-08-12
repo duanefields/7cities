@@ -782,3 +782,44 @@ decoded 256x400 grid — which is the simpler path and already fully unblocked.
 
 `tools/boot_demo.py` reaches this state automatically and captures the screen
 matrix, color RAM and charset.
+
+## The map viewer
+
+`SevenCitiesCore/Sources/MapViewer` — a macOS SpriteKit viewer for a decoded
+world. Run it with:
+
+```bash
+python3 tools/extract_map.py d64/7CITIES2.D64 local/historical.map
+python3 tools/extract_map.py local/generated_world.d64 local/generated.map
+python3 tools/boot_demo.py local && python3 tools/extract_tiles.py
+cd SevenCitiesCore && swift run MapViewer /Users/duane/Code/7cities/local
+```
+
+Two menus, as asked: **World** picks the classic Americas map or a generated
+one; **Tiles** picks original or custom art. Defaults are the classic map with
+original tiles.
+
+Controls: arrows, numpad, or the `YUI`/`HK`/`NM,` cluster to walk; drag or
+scroll to pan; `=`/`-` to zoom; `0` to fit the whole world; `f` to re-centre on
+the explorer.
+
+The whole 256x400 grid goes into one `SKTileMapNode`, which culls for us, so
+zooming out to the entire world stays cheap.
+
+### "Original tiles" is necessarily approximate
+
+The original has **no tile atlas**. It composes its viewport procedurally into
+redefined characters, drawing mountains and some trees as shapes that span
+several cells, so no single 8x8 character holds a whole one. What
+`tools/extract_tiles.py` lifts is the most representative fragment of each.
+
+Eight tiles are the original's own pixels (water, shallows, plain, forest,
+swamp, mountain, ship). Rivers and villages did not appear in the captured
+frame and are reconstructed in the original's own 4-color 8x8 grid; the viewer
+labels the split in its title bar.
+
+So "Original" mode is faithful to the original's palette and pixel style, not
+to a tileset it actually had.
+
+**`local/original_tiles.json` is never committed** — unlike the RNG test
+vectors, those are the original's pixels.
