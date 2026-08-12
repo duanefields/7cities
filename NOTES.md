@@ -1002,10 +1002,22 @@ it is non-zero. It is not a depacker.
 #### Extracting a stage statically
 
 `$C003`/`$C004`/`$C005` are **per-load parameters** — start page, end page,
-checksum — set by the caller before re-entering the loader (the first stage
-does this at `$19D8`, `JSR $C003`). The values sitting in a RAM dump therefore
-describe whichever load ran last, not the first one. That is why the first
-stage does not satisfy the `$04` checksum found in a dumped loader.
+checksum — read by the loader on each pass. The values sitting in a RAM dump
+therefore describe whichever load ran last, not the first one, which is why the
+first stage does not satisfy the `$04` checksum found in a dumped loader.
+
+**Who writes them is not known.** A byte scan of stage 1 turns up `20 03 C0` at
+`$19D8` and it is tempting to read that as `JSR $C003`, but recursive-descent
+disassembly from every in-range `JSR` target never reaches `$19D8` — it is
+unreachable, so those three bytes are data and the "stage 1 re-enters the
+loader here" reading is a false positive from pattern matching. Nothing in
+stage 1, `game2`, `game3` or `game4` writes `$C003`-`$C005` or the drive's
+track/sector digits by a direct `STA`, and none of them call any KERNAL I/O
+vector either. So how anything after stage 1 gets loaded is still open.
+
+The same care applies to `$1038`: disassembled properly it is the middle of a
+routine starting at `$1033` (`CMP #$00 / BEQ / CLC / ADC $14 / CMP $14 / BNE`),
+which confirms it is not stage 1's entry point but a per-load parameter.
 
 The first stage is **track 1 sector 0, sectors 0-19 per track, 44 sectors,
 page-aligned to `$0800-$33FF`**. Extracted that way it is immediately real

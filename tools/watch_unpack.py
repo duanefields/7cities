@@ -31,7 +31,8 @@ from v import call  # noqa: E402
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DISK1 = f"{ROOT}/d64/7CITIES1.D64"
 LO, HI = 0x0800, 0x94FF
-SAMPLES, INTERVAL = 40, 2.0
+SAMPLES, INTERVAL = 60, 3.0
+KEY = os.environ.get("WATCH_KEY", "F7")   # F7 plays, F1 runs the World Maker
 
 COMMON = {0xA9, 0xA2, 0xA0, 0x85, 0x8D, 0x20, 0x60, 0x4C, 0xAD, 0xA5, 0xE8,
           0xC8, 0xCA, 0x88, 0x29, 0xC9, 0xD0, 0xF0, 0x90, 0xB0, 0x91, 0xB1}
@@ -52,10 +53,7 @@ def dump(lo, hi):
 
 
 def main():
-    from PIL import Image, ImageChops
-    template = Image.open(f"{ROOT}/local/menu_template.png").convert("L")
     disk = open(f"{ROOT}/local/game.bin", "rb").read()
-    scratch = f"{ROOT}/local/_watch.png"
 
     for cp in call("vice_checkpoint_list")["checkpoints"]:
         call("vice_checkpoint_delete", checkpoint_num=cp["checkpoint_num"])
@@ -67,23 +65,18 @@ def main():
     time.sleep(1)
     call("vice_disk_attach", unit=8, path=DISK1)
     call("vice_autostart", path=DISK1)
-    time.sleep(22)
-
+    time.sleep(25)
     warp(False)                      # the menu's poll window is short
-    for _ in range(150):
-        call("vice_display_screenshot", path=scratch)
-        img = Image.open(scratch).convert("L")
-        h = ImageChops.difference(template, img).histogram()
-        if sum(h[40:]) / sum(h) < 0.02:
-            call("vice_keyboard_key_press", key="F7")
-            break
-        time.sleep(0.6)
-    else:
-        raise SystemExit("never saw the title menu")
 
+    # Matching a screenshot against a template picked the title *animation*
+    # rather than the menu, so F7 landed before anything was listening. Instead
+    # sample straight through and re-press every few seconds: pressing F7 when
+    # no menu is up costs nothing, and one of them lands.
     print(f"{'t':>6} {'match%':>8} {'JSR':>6} {'opcode%':>8}")
     rows = []
     for i in range(SAMPLES):
+        if i % 3 == 0:
+            call("vice_keyboard_key_press", key=KEY)
         time.sleep(INTERVAL)
         ram = dump(LO, HI)
         match = sum(1 for a, b in zip(disk, ram) if a == b) / len(ram) * 100
