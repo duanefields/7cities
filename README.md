@@ -16,6 +16,30 @@ The game itself — trade, natives, the court, scoring — is not started. See `
 copyright Electronic Arts / Ozark Softscape. This repository contains only original engine code
 plus tools that read data from disk images *you already own*.
 
+## This project is heavily AI-assisted
+
+Almost all of the code, the reverse engineering and the notes here were written by
+Claude, working from my direction. I am saying so plainly because it changes how you
+should read the claims in `NOTES.md`.
+
+What that means in practice:
+
+- **Findings are verified where they can be.** Ported routines are asserted against
+  output captured from the original 6502 running under an emulator; the map decode was
+  cross-checked against an independent community dump; the terrain art was checked
+  against the game's own rendering. Where something is a guess or a simplification, it
+  says so.
+- **`NOTES.md` records the wrong turns too**, deliberately — a cipher that was declared
+  absent and then found, a variant formula rejected twice on bad evidence, several
+  confident conclusions drawn from measurements that could not support them. That record
+  is more useful than a clean narrative, and it is a fair sample of how the work went.
+- **Commit messages are long on purpose.** They carry the reasoning and the corrections,
+  so the history is readable as an account of the investigation rather than a list of
+  changes.
+
+Treat the reverse-engineering conclusions as well-evidenced but not peer-reviewed. If you
+know this game's internals and something here is wrong, I would like to know.
+
 ## Quick start
 
 You do not need the game to try this. Clone it and run:
