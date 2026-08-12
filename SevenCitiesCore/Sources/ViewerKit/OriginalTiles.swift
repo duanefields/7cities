@@ -40,19 +40,23 @@ struct OriginalTiles {
     let height: Int
     let tiles: [String: Tile]
 
-    /// The C64 hardware palette, Pepto PAL.
+    /// The C64 palette, with the four colours the terrain actually uses
+    /// **measured from a VICE frame of the running game** rather than chosen.
     ///
-    /// Plains sit on colour 7, and the choice of palette decides whether that
-    /// reads as the original's olive yellow-green or as a bright lemon. Pepto
-    /// gives `#B8C76F`, which is what the hardware looks like on a PAL screen
-    /// and what published maps of this game show; Colodore's `#EDF171` is far
-    /// too yellow here. The game itself sets `$D021 = $07` in every view, so
-    /// this is purely a rendering choice.
+    /// This was got wrong twice by picking a published palette and arguing
+    /// about it. Pepto renders colour 7 as a dull olive and Colodore as a
+    /// bright lemon; the emulator shows `#EFEB5F`. Sampling a real frame — and
+    /// taking the brightest member of each cluster, since VICE darkens
+    /// alternate scanlines — settles it. The game sets `$D021 = $07` in every
+    /// view, so plains are colour 7 and the only question was ever how to
+    /// render it.
+    ///
+    /// The rest of the table is Pepto, since nothing here uses those entries.
     static let c64: [NSColor] = [
         (0, 0, 0), (255, 255, 255), (104, 55, 43), (112, 164, 178),
-        (111, 61, 134), (88, 141, 67), (53, 40, 121), (184, 199, 111),
+        (111, 61, 134), (91, 187, 91), (53, 40, 121), (239, 235, 95),
         (111, 79, 37), (67, 57, 0), (154, 103, 89), (68, 68, 68),
-        (108, 108, 108), (154, 210, 132), (108, 94, 181), (149, 149, 149),
+        (108, 108, 108), (154, 210, 132), (133, 143, 252), (149, 149, 149),
     ].map { NSColor(srgbRed: $0.0 / 255, green: $0.1 / 255, blue: $0.2 / 255, alpha: 1) }
 
     static func load(nextTo mapURL: URL) -> OriginalTiles? {

@@ -1405,6 +1405,38 @@ squares mark villages. What the white circles mark is unknown; their tile
 coordinates fall in a regular grid, which suggests region markers rather than
 anything on the map.
 
+### Terrain colors, measured rather than chosen
+
+Got wrong twice by reaching for a published C64 palette and reasoning about it.
+Pepto renders color 7 as a dull olive, Colodore as a bright lemon, and the two
+arguments cancelled out. A VICE frame of the running game settles it —
+sampling the exploration viewport and taking the brightest member of each
+cluster, since VICE darkens alternate scanlines:
+
+| Use      | C64 index | Measured  |
+| :------- | :-------- | :-------- |
+| plains   | `$07`     | `#EFEB5F` |
+| trees    | `$05`     | `#5BBB5B` |
+| water    | `$0E`     | `#858FFC` |
+| detail   | `$00`     | `#000000` |
+
+Plains really are a bright yellow. The game sets `$D021 = $07` in every view, so
+the only question was ever how to render color 7, and a screenshot answers it in
+a way that palette arguments do not.
+
+#### Water is not flat — still to do
+
+The same frame shows two distinct blues dithered together across open water,
+plus **white specks in deep water**. Our renderer draws water as one flat color,
+so both are missing.
+
+Two blues plus white cannot come from the four-color set the land tiles use
+(`$D021` yellow, `$D022`, `$D023`, color RAM black), so **color RAM must be set
+per terrain** rather than uniformly to `$08` as the fill at `$3158` suggests.
+That is the thread to pull: find where water characters get their color RAM
+value, and the deep/medium/shallow distinction and the shore shapes at charset
+`$40-$5F` should follow.
+
 ### The lesson, twice in one session
 
 The genuine result here — the loader's data path, and stage 1 extracted
