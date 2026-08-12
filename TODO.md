@@ -56,6 +56,15 @@ engineering record; this holds the work.
       and the viewer renders the classic art by default. `SevenCitiesCore` gained
       `GameCipher` (the substitution), `TerrainTiles` (the `$5529` dispatch and
       2x2 unpack) and `DiskImage.fileContents(named:)`.
+- [x] ~~**Render terrain the way the original does.**~~ Position-dependent
+      composition for forest and swamp, verified tiles, an overview layer for
+      zoomed-out browsing, and a palette setting. See NOTES.md for the four
+      rendering faults this took and the two rules that came out.
+- [ ] **Work out the mountain variant shift.** The formula at `$5922` is read
+      correctly but applying it slices the glyph, and it reproduced only 56 of
+      400 sampled reference tiles. Most likely `$A8`/`$A9` are not the plain map
+      coordinates at that point. Mountains currently use the fixed `+2` variant,
+      which matches the reference exactly but repeats.
 - [ ] **Animate water.** Entries `$0`/`$1`/`$2` point at RAM buffers driven by
       the `EOR #$55` pass at `$4057`, which swaps multicolor pixel pairs. Worth
       reproducing for fidelity.

@@ -1454,6 +1454,36 @@ be extracted the way the land tiles were. Reproducing it means porting the
 animation rather than reading bytes. The deep/medium/shallow distinction and the
 shore shapes at charset `$40-$5F` are still unexamined.
 
+### Rendering the map: what went wrong four times
+
+The terrain data was correct throughout. Every fault was in drawing it, and
+each was found only because the bug was reported from the running app.
+
+| Symptom | Cause |
+| :------ | :---- |
+| Mountains sliced, "half mountains and corners" | Applied the `$5922` variant shift literally; `x & 3` moves the source by 1-3 *bytes*, and a byte is a pixel row |
+| Woods sparse, everything noisy when zoomed out | Detail art minified to a few pixels; position-varying tiles alias worse than identical ones |
+| Grid of dots when zoomed out | Overview tiles were 8 points square in a 32-point cell, so the background showed between them |
+| Rivers vanishing at 0.6x-1.2x | Tile textures were 64 pixels in a 32-point cell, so nearest-neighbour minification dropped the two-pixel river line; and tile groups were keyed by position, making 272 near-duplicate groups |
+
+Two rules came out of it.
+
+**Match texture size to cell size.** A 64-pixel texture in a 32-point cell is
+minified until zoom 2.0. With nearest-neighbour sampling, minification drops
+pixels rather than averaging, so thin features disappear intermittently — which
+reads as broken geometry, not as blur. Zoom 1.0 should be 1:1.
+
+**Verify through the path the user is on.** `DumpMode` called `texture(for:)`
+with the default `x` and `y`, so every dump rendered variant 0 and exercised a
+path the viewer never takes. Renders looked perfect while the app was visibly
+broken, twice. It now takes the map position, and `DUMP_X`/`DUMP_Y` so a
+reported region can be reproduced exactly.
+
+Zoom matters as much as position: everything checked at 1:1 looked right while
+0.26x and 0.63x were wrong, because a 16x16 tile cannot survive being drawn four
+pixels wide. Below `detailZoomThreshold` the viewer swaps to flat terrain
+colours, which have no fine detail to lose.
+
 ### The lesson, twice in one session
 
 The genuine result here — the loader's data path, and stage 1 extracted
