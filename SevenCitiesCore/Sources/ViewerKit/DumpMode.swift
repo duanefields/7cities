@@ -26,8 +26,11 @@ public enum DumpMode {
         }
         let originals = OriginalTiles.load(nextTo: mapURL)
 
-        func texture(_ t: Terrain) -> CGImage? {
-            if style == .original, let tex = originals?.texture(for: t) {
+        // Must pass the map position: terrain is drawn per position, and a
+        // dump that always used variant 0 verified a path the viewer does not
+        // take, which is how a broken detail layer got shipped twice.
+        func texture(_ t: Terrain, _ x: Int = 0, _ y: Int = 0) -> CGImage? {
+            if style == .original, let tex = originals?.texture(for: t, x: x, y: y) {
                 return tex.cgImage()
             }
             return TileArt.texture(for: t).cgImage()
@@ -36,8 +39,10 @@ public enum DumpMode {
         let tile = generateSeed == nil ? 16 : 4
         let cols = generateSeed == nil ? 64 : map.width
         let rows = generateSeed == nil ? 64 : map.height
-        let startX = max(0, map.width / 2 - cols / 2)
-        let startY = max(0, map.height / 2 - rows / 2)
+        // Allow aiming the dump, so a reported region can be reproduced.
+        let env = ProcessInfo.processInfo.environment
+        let startX = env["DUMP_X"].flatMap(Int.init) ?? max(0, map.width / 2 - cols / 2)
+        let startY = env["DUMP_Y"].flatMap(Int.init) ?? max(0, map.height / 2 - rows / 2)
         let w = cols * tile, h = (rows + 2) * tile
 
         guard let ctx = CGContext(
@@ -56,7 +61,7 @@ public enum DumpMode {
         for r in 0..<rows {
             for c in 0..<cols {
                 let t = map[startX + c, startY + r]
-                guard let img = texture(t) else { continue }
+                guard let img = texture(t, startX + c, startY + r) else { continue }
                 ctx.draw(img, in: CGRect(x: c * tile,
                                          y: (rows - 1 - r) * tile,
                                          width: tile, height: tile))

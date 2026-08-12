@@ -146,7 +146,11 @@ struct OriginalTiles {
         }
         guard let cg = ctx.makeImage() else { return nil }
         let tex = SKTexture(cgImage: cg)
+        // Nearest keeps the pixels crisp when magnified, which is the point of
+        // showing the original art at all. Mipmaps stop it falling apart in the
+        // band just above the overview threshold, where it is still minified.
         tex.filteringMode = .nearest
+        tex.usesMipmaps = true
         return tex
     }
 }

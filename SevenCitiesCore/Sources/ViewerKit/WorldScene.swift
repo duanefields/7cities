@@ -66,13 +66,19 @@ final class WorldScene: SKScene {
         return "\(terrain)#\(((y % 4 + 4) % 4) * 4 + ((x % 4 + 4) % 4))"
     }
 
-    /// Below this zoom a 16x16 tile lands on fewer than about six screen
-    /// pixels, and the original art turns to noise: peaks become specks, woods
-    /// become speckle, and thin river lines break up. Browsing the whole world
-    /// is exactly the case the original never had to draw, so below the
-    /// threshold we swap in flat terrain colours, which keeps coastlines and
-    /// rivers legible.
-    static let detailZoomThreshold: CGFloat = 0.6
+    /// Detail art is only drawn once a tile is at least its texture's own
+    /// size on screen.
+    ///
+    /// Below that the texture is minified, and with nearest-neighbour sampling
+    /// minification *drops* pixels rather than averaging them. A river is two
+    /// pixels wide inside its tile, so it survives in some tiles and vanishes
+    /// in others — which reads as a river breaking into fragments. Woods and
+    /// peaks thin out the same way. The flat overview has no fine detail to
+    /// lose, so it stays legible all the way out.
+    ///
+    /// An earlier 0.6 was still deep into minification and shipped exactly that
+    /// artifact.
+    static let detailZoomThreshold: CGFloat = 1.0
 
     private func buildOverviewMap() {
         var groups: [String: SKTileGroup] = [:]
