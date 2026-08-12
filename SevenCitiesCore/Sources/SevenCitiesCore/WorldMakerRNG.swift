@@ -78,3 +78,61 @@ public struct WorldMakerRNG: Sendable {
         return low
     }
 }
+
+/// Bounded draws, as the World Maker makes them.
+///
+/// Both are **rejection samplers**: they keep advancing the register until a
+/// value lands inside the range, rather than reducing one draw by modulo or
+/// scaling. That distinction is not cosmetic — rejection consumes a variable
+/// number of LFSR steps, so every later draw in the sequence depends on how
+/// many candidates were thrown away. Reproducing the original's worlds requires
+/// reproducing the waste.
+///
+/// Transcribed from `$22B4` and `$247B` in `game3`. Both are self-modifying
+/// there: `$22B4` writes its bounds into the operand bytes of its own two `CMP`
+/// instructions at `$22E8` and `$22EC`, which is why a plain reading of the
+/// listing shows `CMP #$FF` twice.
+extension WorldMakerRNG {
+
+    /// A byte in `from ..< below`, by rejection (`$22B4`).
+    ///
+    /// When `from >= below` this returns `from` without advancing the register,
+    /// matching the guard at `$22BA` (`CMP $22EC / BCS`).
+    ///
+    /// The bounds are two parameters rather than a `Range` deliberately. Swift's
+    /// `Range` traps at construction when inverted, so it cannot represent the
+    /// case the original explicitly handles — expressing these bounds as a
+    /// `Range` would impose an invariant the 6502 does not have and turn a
+    /// reachable path into a crash.
+    public mutating func nextByte(from lower: UInt8, below upper: UInt8) -> UInt8 {
+        guard lower < upper else { return lower }
+        while true {
+            let value = next()
+            if value >= lower && value < upper { return value }
+        }
+    }
+
+    /// A 16-bit value in `from ..< below`, by rejection (`$247B`).
+    ///
+    /// Two register advances per candidate, not one. The first supplies the low
+    /// byte; the second is drawn only for its **sign**, and the high byte is 1
+    /// when that draw is below `$80` and 0 otherwise (`LDA $CF / BMI / INX` at
+    /// `$24E1`). That caps the result at 511, which is all the map's 400 rows
+    /// need. A rejected candidate re-draws both.
+    ///
+    /// The original only short-circuits when the bounds are exactly equal, so an
+    /// inverted range spins forever. That hazard is preserved rather than
+    /// papered over — every caller derives its bounds from a landmass radius and
+    /// cannot invert them — but it is a hang, not merely a wrong answer, so a
+    /// new caller must not pass one.
+    public mutating func nextWord(from lower: UInt16, below upper: UInt16) -> UInt16 {
+        // $247F / $2487: equal bounds return the lower bound unsampled.
+        if lower == upper { return lower }
+        while true {
+            let low = next()
+            let high: UInt8 = next() < 0x80 ? 1 : 0
+            let value = UInt16(high) << 8 | UInt16(low)
+            if value >= lower && value < upper { return value }
+        }
+    }
+}
