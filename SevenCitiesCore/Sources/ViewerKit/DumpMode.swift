@@ -8,9 +8,9 @@ import SevenCitiesCore
 /// and there was no way to inspect it without a screen. This renders through
 /// the same texture path so a broken tile pipeline is visible in a file.
 @MainActor
-enum DumpMode {
+public enum DumpMode {
 
-    static func run(assetDirectory: URL, mapFile: String, style: TileStyle,
+    public static func run(assetDirectory: URL, mapFile: String, style: TileStyle,
                     out: URL, generateSeed: UInt16? = nil) -> Int32 {
         let mapURL = assetDirectory.appendingPathComponent(mapFile)
         let loaded: WorldMap?

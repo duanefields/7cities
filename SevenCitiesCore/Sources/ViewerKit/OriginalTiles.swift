@@ -97,7 +97,7 @@ struct OriginalTiles {
     }
 }
 
-enum TileStyle: String, CaseIterable {
+public enum TileStyle: String, CaseIterable {
     case original = "Original (C64)"
     case custom = "Custom"
 }

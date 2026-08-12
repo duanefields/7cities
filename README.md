@@ -35,6 +35,9 @@ mkdir -p d64
 make run
 ```
 
+Or skip all of that and use the app: **File ▸ Import Disk Images…** does the same thing from a
+file picker.
+
 `make` on its own lists the other targets. Side 2 carries the historical map; side 1 carries
 the terrain art, the fonts and the World Maker. Either can be supplied without the other.
 
@@ -93,33 +96,41 @@ The world is 256 x 400 tiles at roughly three miles each.
 Both the classic map and the original terrain art come from your own disks, with no emulator.
 The art is not a screenshot: the game draws terrain as redefined characters, and the tile
 bitmaps turned out to be static data inside its main program, so `extract.sh` reads them
-directly. If `assets/original_tiles.json` is missing the viewer falls back to the custom tiles
-and says so in its title bar.
+directly. If no art has been extracted the viewer falls back to the custom tiles and says so in
+its title bar.
 
 ## Opening it in Xcode
 
 ```bash
-open SevenCitiesCore/Package.swift
+open app/SevenCities.xcodeproj
 ```
 
-Xcode opens a Swift package as a project directly — schemes for `MapViewer`, `Extract` and the
-tests, with building, running and debugging as usual. There is deliberately **no `.xcodeproj`**
-in the repo: `swift package generate-xcodeproj` was deprecated and removed from SwiftPM, and a
-checked-in project file only drifts from `Package.swift`.
+Build and run. There is nothing to configure: no scheme arguments, no paths. The app keeps its
+assets in `~/Library/Application Support/SevenCities/assets`, generates a world if none are
+there, and has **File ▸ Import Disk Images…** for pulling the classic map and the original art
+off disks you own. You never need a terminal.
 
-Running the `MapViewer` scheme needs no setup — with no assets directory it generates a world.
-To point it at extracted assets instead, edit the scheme and pass the absolute path to `assets`
-as an argument. From the command line, `swift build` and `swift test` work as usual.
+The project is a deliberately thin wrapper: it owns the bundle, the menu bar and the launch,
+and depends on `SevenCitiesCore` as a **local Swift package**. All the behavior lives in the
+package's `ViewerKit` library, which the `MapViewer` command-line front end uses too, so the
+two cannot drift apart. Because the app target references the package rather than duplicating
+it, adding a file to the package needs no project edit.
+
+Prefer the package on its own? `open SevenCitiesCore/Package.swift` works as well, and
+`swift build` / `swift test` behave as usual.
 
 ## Layout
 
 ```text
 extract.sh          decode your disks into assets/
-Makefile            extract, run, test, build, clean
-SevenCitiesCore/    the Swift package
-  Sources/SevenCitiesCore   simulation and decoding, no UI
-  Sources/Extract           the disk extractor
-  Sources/MapViewer         the SpriteKit viewer
+Makefile            extract, run, test, build, app, clean
+app/                thin Xcode app wrapper — bundle and launch only
+  SevenCities.xcodeproj     depends on the package below, duplicates nothing
+SevenCitiesCore/    the Swift package, where everything actually lives
+  Sources/SevenCitiesCore   simulation, decoding and extraction, no UI
+  Sources/ViewerKit         the SpriteKit viewer, shared by the app and the CLI
+  Sources/Extract           the command-line extractor
+  Sources/MapViewer         command-line front end for the viewer
 tools/              Python research tools (not needed to build or run)
 NOTES.md            the reverse engineering record
 TODO.md             what is still missing

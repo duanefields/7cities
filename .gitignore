@@ -17,8 +17,11 @@ assets/
 # Swift
 .build/
 .swiftpm/
+# Generated project files drift; the hand-written app wrapper in app/ does not.
 *.xcodeproj
+!app/SevenCities.xcodeproj
 *.xcworkspace
+xcuserdata/
 DerivedData/
 
 # macOS
