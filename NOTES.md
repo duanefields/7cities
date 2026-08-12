@@ -1120,6 +1120,39 @@ The way to settle it without guessing is to **watch `$0800` during the load**
 rather than reason about the file: break after stage 1 and single-step, or dump
 `$0800-$94FF` at intervals and find the moment its `JSR` density jumps. Both
 of the readings above make a specific, different prediction about that moment.
+`tools/watch_unpack.py` runs exactly that experiment.
+
+#### What `game` is not — eliminated statically
+
+Each of these was tested against `game3` as a positive control (real 6502,
+938 `JSR` in 18 KB):
+
+| Hypothesis                    | Test                                          | Result |
+| :---------------------------- | :-------------------------------------------- | :----- |
+| Plain 6502 code               | opcode density                                | 66 `JSR`, 0 `AND #$0F` — no |
+| Plain graphics                | rendered hires and charset at several offsets | noise — no |
+| Constant XOR / any XOR key constant across a word | **differential crib search** on `GOLD`, `EXPEDITION`, `NATIVE`, `CREW`, `SHIP`, `VILLAGE`, `KING`, `SPAIN`, `FOOD` in ASCII, screen-code, screen+`$20` and high-bit PETSCII | 0 hits — no |
+| Bit transposition (8x8)       | transpose, re-score                           | 309 `JSR` vs 1837 expected — no |
+| Bit rotation `ROR 1..7`       | rotate, re-score                              | best 225 `JSR` — no |
+| Bit reversal, nibble swap     | ditto                                         | no |
+
+The differential crib is the strongest of these and worth keeping in the
+toolkit: XOR-ing a crib against itself cancels the key, so searching for the
+*difference pattern* `c[i] ^ c[i+1]` finds a known word under **any** constant
+key without ever guessing the key. Zero hits across ten words and four
+encodings rules out simple XOR much more thoroughly than the earlier
+"all 256 masks, scored by instruction density" sweep did — that sweep's scoring
+was also unsound here, since most of a memory image is not code and would score
+badly even under the correct mask.
+
+#### The one piece of positive structure
+
+`$8C00-$8FFF` is **1024 bytes of constant `$78`**, and `$8C00` is exactly the
+video matrix address in VIC bank `$8000` that the exploration view uses. A
+compressor would never emit 1024 identical bytes. Either `game` is a positional
+memory image containing an initialized screen, or the run is padding and the
+alignment is coincidence — it is 1024-aligned in file offset too, so this is
+suggestive rather than conclusive.
 
 ### The lesson, twice in one session
 
