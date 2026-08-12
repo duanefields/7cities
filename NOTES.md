@@ -952,4 +952,25 @@ Next leads, in order:
    `$C420`, so find its real entry and see what `$2C`/`$2D` point at.
 2. Check whether the depacker rides along in the loaded data itself rather than
    in the loader, e.g. a stub in the first sectors that expands the rest.
-3. The drive code uploaded by `$C29A`/`$C2A1` has not been looked at at all.
+3. ~~The drive code uploaded by `$C29A`/`$C2A1`~~ — **checked, and it is not
+   drive code.** Both routines just send bytes from the command string at
+   `$C2B9` (`"I0:" "#" "U1:2,0,01,00" "B-P:2,0"`) over the serial bus via
+   `CIOUT` (`$FFA8`): `$C29A` sends `Y = $10..$17`, `$C2A1` sends `Y = $04..$10`.
+   They transmit DOS commands, nothing more. No drive code is uploaded anywhere
+   in the loader, so this lead is dead.
+
+4. `$C25A` is the most promising remaining lead. It sets `$2C`/`$2D` to
+   `$0800` (low `#$00`, high from `$C003`), then manipulates the 6510 port:
+
+   ```text
+   $C263  LDA #$2E / STA $00        ; data direction register
+   $C267  LDA $01 / AND #$FE / STA $01   ; clear LORAM — bank out BASIC
+   $C26D  LDA #$2F / STA $00
+   $C271  LDY #$00 / STY $C2B8
+   $C276  LDA ($2C),Y ...
+   ```
+
+   So it reads back the loaded data at `$0800` with BASIC banked out. Given
+   `$C465` is a rolling checksum and `$C44D` a counter, this is most likely
+   verification — but it is the only routine that touches the loaded data in
+   bulk, so read it to the end before looking further afield.
