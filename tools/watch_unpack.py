@@ -32,7 +32,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DISK1 = f"{ROOT}/d64/7CITIES1.D64"
 LO, HI = 0x0800, 0x94FF
 SAMPLES, INTERVAL = 60, 3.0
-KEY = os.environ.get("WATCH_KEY", "F7")   # F7 plays, F1 runs the World Maker
+KEY = os.environ.get("WATCH_KEY", "F7")   # F7 plays, F3 runs the World Maker
+MAP = os.environ.get("WATCH_MAP")         # map disk to swap in after the keypress
+SWAP_AFTER = float(os.environ.get("WATCH_SWAP_AFTER", "6"))
 
 COMMON = {0xA9, 0xA2, 0xA0, 0x85, 0x8D, 0x20, 0x60, 0x4C, 0xAD, 0xA5, 0xE8,
           0xC8, 0xCA, 0x88, 0x29, 0xC9, 0xD0, 0xF0, 0x90, 0xB0, 0x91, 0xB1}
@@ -91,6 +93,16 @@ def main():
     else:
         raise SystemExit("never saw the menu band")
 
+    # F7 on its own dissolves the title and returns to the attract loop without
+    # loading, so it looks to check for a map disk first. `d64/HISTMAP.D64` is
+    # accepted as one (NOTES.md), so offer it a few seconds in.
+    if MAP:
+        time.sleep(SWAP_AFTER)
+        print(f"swapping in {os.path.basename(MAP)}", flush=True)
+        call("vice_disk_detach", unit=8)
+        time.sleep(0.5)
+        call("vice_disk_attach", unit=8, path=MAP)
+
     print(f"{'t':>6} {'match%':>8} {'JSR':>6} {'opcode%':>8}")
     rows = []
     for i in range(SAMPLES):
@@ -101,6 +113,22 @@ def main():
         dens = sum(1 for x in ram if x in COMMON) / len(ram) * 100
         print(f"{i * INTERVAL:6.0f} {match:8.2f} {jsr:6d} {dens:8.1f}", flush=True)
         rows.append((i * INTERVAL, match, jsr, dens))
+
+    # Identify whatever ended up in RAM, over a wider range than $0800-$94FF
+    # in case a stage loads high (the charset lives at $A800, for instance).
+    wide = dump(0x0800, 0xBFFF)
+    print("\nwhat is in RAM now:")
+    for name in ("game", "game2", "game3", "game4", "stage1"):
+        try:
+            f = open(f"{ROOT}/local/{name}.bin", "rb").read()
+        except FileNotFoundError:
+            continue
+        base = 0x1000 if name == "game4" else 0x0800
+        seg = wide[base - 0x0800:base - 0x0800 + len(f)]
+        n = min(len(f), len(seg))
+        if n:
+            same = sum(1 for a, b in zip(f[:n], seg[:n]) if a == b)
+            print(f"    vs {name:7s} at ${base:04X}: {same * 100 / n:6.2f}%")
 
     peak = max(rows, key=lambda r: r[1])
     print(f"\npeak match {peak[1]:.2f}% at t={peak[0]:.0f}s")
