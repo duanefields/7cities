@@ -53,6 +53,7 @@ def dump(lo, hi):
 
 
 def main():
+    from PIL import Image, ImageChops
     disk = open(f"{ROOT}/local/game.bin", "rb").read()
 
     for cp in call("vice_checkpoint_list")["checkpoints"]:
@@ -68,15 +69,31 @@ def main():
     time.sleep(25)
     warp(False)                      # the menu's poll window is short
 
-    # Matching a screenshot against a template picked the title *animation*
-    # rather than the menu, so F7 landed before anything was listening. Instead
-    # sample straight through and re-press every few seconds: pressing F7 when
-    # no menu is up costs nothing, and one of them lands.
+    # Detecting the menu is the whole difficulty. Matching the *full* screen
+    # against the template fires on the title animation, and re-pressing F7 on
+    # a timer misses the window because the title sequence loops. What is
+    # actually distinctive is the band holding the two "PRESS F_ TO ..." lines:
+    # comparing only rows 178-220 gives 0.00% difference on the menu and at
+    # least 6.26% on the credits, the finished title and mid-animation.
+    band = (0, 178, 384, 220)
+    tpl = Image.open(f"{ROOT}/local/menu_template.png").convert("L").crop(band)
+    scratch = f"{ROOT}/local/_watch.png"
+    for _ in range(900):                      # ~225s, several attract loops
+        call("vice_display_screenshot", path=scratch)
+        live = Image.open(scratch).convert("L").crop(band)
+        h = ImageChops.difference(tpl, live).histogram()
+        if sum(h[40:]) / sum(h) < 0.02:
+            print(f"menu detected; pressing {KEY}", flush=True)
+            call("vice_keyboard_key_press", key=KEY)
+            warp(True)          # the transition and load are glacial otherwise
+            break
+        time.sleep(0.25)
+    else:
+        raise SystemExit("never saw the menu band")
+
     print(f"{'t':>6} {'match%':>8} {'JSR':>6} {'opcode%':>8}")
     rows = []
     for i in range(SAMPLES):
-        if i % 3 == 0:
-            call("vice_keyboard_key_press", key=KEY)
         time.sleep(INTERVAL)
         ram = dump(LO, HI)
         match = sum(1 for a, b in zip(disk, ram) if a == b) / len(ram) * 100

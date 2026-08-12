@@ -12,27 +12,28 @@ engineering record; this holds the work.
       (`$0E20`, phases at `$2AE9`, `$2D23`, `$2E32`, `$3961`, `$3EAD`) and its
       RNG and arithmetic are already ported and verified against the original —
       the generation phases themselves are not.
-- [ ] **Settle what `game` is.** Still the gate on the game's rules. It is
-      36,098 bytes loading at `$0800` (so exactly `$0800-$94FF`), with 66 `JSR`
-      and zero `AND #$0F`, entropy 7.04 bits/byte, and it renders as noise as
-      both a bitmap and a charset — so it is neither code nor plain graphics.
+- [ ] **Settle what `game` is.** Still the gate on the game's rules.
 
-      Now established: the `$C000` loader is only the **first-stage** loader and
-      contains no decompressor. It stores raw sectors verbatim
-      (`JSR $FFA5 / STA ($2C),Y`), page-aligned, sectors 0-19 per track from
-      track 1 sector 0. Whatever loads `game` is not it.
+      Measured, not inferred: pressing F3 at the title menu loads the World
+      Maker, and RAM `$0800..` then matches `game3` in **18,430 of 18,432
+      bytes (99.99%)**, the two differences being runtime self-modification.
+      **The load path does not transform files.**
 
-      Two live readings, which make different predictions:
+      That constrains `game` hard. It is 36,096 bytes loading at `$0800`, the
+      same size and address as the 36 KB of real code (1114 `JSR`) dumped from
+      `$0800-$94FF` in an earlier session. Equal size **rules out compression**,
+      so if `game` becomes that code the transform is an in-place cipher. But
+      differential crib searches — which cancel the key rather than guess it —
+      find nothing for either an XOR key or an additive key, across 10 words and
+      4 encodings.
 
-      1. `game` is packed, and a depacker in stage 1 (or a later stage) expands
-         it in place at `$0800`.
-      2. `game` is never loaded, and the code seen at `$0800-$94FF` in RAM comes
-         from other stages — `game` would then be a decoy.
-
-      Settle it by watching `$0800` during the load — dump `$0800-$94FF` at
-      intervals and find the moment `JSR` density jumps — rather than by
-      inferring from the file. A previous attempt to argue this from the loader
-      alone reached the wrong answer; see NOTES.md.
+      Next experiment: run the **F7** path with a map disk. F7 alone dissolves
+      the title and returns to the attract loop without loading anything, which
+      suggests it checks for a map disk first. `d64/HISTMAP.D64` is accepted as
+      one (see NOTES.md), so attach it at the prompt and sample `$0800-$94FF`
+      through the load with `tools/watch_unpack.py`. Either `game`'s bytes
+      appear at `$0800` and are then transformed in place — locating the cipher
+      — or they never appear and `game` is a decoy.
 - [x] ~~**Extract stage 1.**~~ Done, statically, no emulator.
       `tools/extract_stage.py` lifts tracks 1-3 to `$0800-$33FF`: real 6502 plus
       the title text and the Ozark Softscape credits. Load address confirmed two

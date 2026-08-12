@@ -1157,6 +1157,63 @@ encodings rules out simple XOR much more thoroughly than the earlier
 was also unsound here, since most of a memory image is not code and would score
 badly even under the correct mask.
 
+#### Measured: files load verbatim (`game3` at 99.99%)
+
+`tools/watch_unpack.py` was run against the live game. Pressing **F3** at the
+title menu loads the World Maker, and sampling `$0800-$94FF` through the load
+shows `JSR` density climbing `210 -> 696 -> 948`. Comparing RAM afterwards:
+
+| RAM `$0800..` vs | Match |
+| :--------------- | ----: |
+| `game3`          | **18,430 / 18,432 = 99.99%** |
+| `game`           | 68 / 18,432 = 0.37% (chance) |
+| stage 1          | 82 / 11,264 = 0.73% (chance) |
+
+The two differing bytes are runtime self-modification. So **the load path does
+not transform anything** — a DOS file's bytes arrive in RAM unchanged. That is
+now measured, not inferred, and it is consistent with the `$C000` loader's
+`STA ($2C),Y` storing raw.
+
+This constrains `game` hard. It is the same size as, and loads to the same
+address as, the 36 KB of real code (1114 `JSR`) that a previous session dumped
+from `$0800-$94FF`. **Equal size rules out compression** — a compressor's output
+is not the same length as its input. So if `game` becomes that code, the
+transform is an in-place **cipher**, not a depacker.
+
+But the two obvious ciphers are eliminated by differential crib searches, which
+cancel the key without ever guessing it:
+
+- **XOR key**: search for `c[i] ^ c[i+1]` matching the crib's own XOR pattern —
+  0 hits, 10 words x 4 encodings.
+- **Additive key**: search for `c[i+1] - c[i]` matching the crib's difference
+  pattern — 0 hits, same words and encodings.
+
+Both are key-length agnostic and would fire on any key constant across a single
+word. Neither fires.
+
+#### Getting the menu detection right
+
+Worth recording because two runs were wasted on it. Matching a **full**
+screenshot against `menu_template.png` locks onto the title *animation*, and the
+title sequence **loops**, so pressing on a timer misses the window. What works
+is comparing only the band holding the two `PRESS F_ TO ...` lines, rows
+`178-220`:
+
+| Screen        | Band difference |
+| :------------ | --------------: |
+| menu          | **0.00%**       |
+| credits       | 6.26%           |
+| title done    | 6.26%           |
+| mid-animation | 6.94%           |
+
+Threshold 2%, polled every 0.25s. Also: keep warp **off** while waiting for the
+menu, then turn it **on** immediately after the keypress — the post-keypress
+transition is otherwise glacial, and a first attempt concluded "nothing loaded"
+when it had simply not waited long enough.
+
+Note the menu says **`PRESS F3`**, not F1; the static decode left the digit
+undecodable.
+
 #### The one piece of positive structure
 
 `$8C00-$8FFF` is **1024 bytes of constant `$78`**, and `$8C00` is exactly the
