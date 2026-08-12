@@ -70,6 +70,9 @@ enum TileArt {
 
     nonisolated(unsafe) private static var flatCache: [Terrain: SKTexture] = [:]
 
+    /// Called when the palette changes, since the cached textures bake it in.
+    static func clearCaches() { flatCache.removeAll() }
+
     static func texture(for terrain: Terrain) -> SKTexture {
         // Draw into a bitmap context and build the texture from the finished
         // CGImage. Creating an SKTexture from an NSImage that is still

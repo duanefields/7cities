@@ -117,6 +117,18 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
         worldItem.submenu = worldMenu
         main.addItem(worldItem)
 
+        let paletteItem = NSMenuItem()
+        let paletteMenu = NSMenu(title: "Palette")
+        for p in OriginalTiles.C64Palette.allCases {
+            let item = NSMenuItem(title: p.rawValue, action: #selector(pickPalette(_:)),
+                                  keyEquivalent: "")
+            item.target = self
+            item.representedObject = p.rawValue
+            paletteMenu.addItem(item)
+        }
+        paletteItem.submenu = paletteMenu
+        main.addItem(paletteItem)
+
         let tilesItem = NSMenuItem()
         let tilesMenu = NSMenu(title: "Tiles")
         for style in TileStyle.allCases {
@@ -138,7 +150,8 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
         for menu in NSApp.mainMenu?.items ?? [] {
             for item in menu.submenu?.items ?? [] {
                 guard let tag = item.representedObject as? String else { continue }
-                item.state = (tag == tileStyle.rawValue) ? .on : .off
+                item.state = (tag == tileStyle.rawValue
+                              || tag == OriginalTiles.palette.rawValue) ? .on : .off
             }
         }
     }
@@ -187,6 +200,18 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
         var generator = WorldGenerator(seed: seed)
         generated = generator.generate()
         mapChoice = .generated(seed: seed)
+        reload()
+    }
+
+    /// The C64 emits composite video, so every palette is a model of it and
+    /// none is definitive — VICE's own default is one, Pepto and Colodore are
+    /// others. Rather than keep guessing which looks right, offer them.
+    @objc private func pickPalette(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String,
+              let p = OriginalTiles.C64Palette.allCases.first(where: { $0.rawValue == raw })
+        else { return }
+        OriginalTiles.palette = p
+        TileArt.clearCaches()
         reload()
     }
 

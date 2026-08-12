@@ -40,26 +40,56 @@ struct OriginalTiles {
     let height: Int
     let tiles: [String: Tile]
 
-    /// The C64 palette, with the four colours the terrain actually uses
-    /// **measured from a VICE frame of the running game** rather than chosen.
+    /// Which rendering of the C64's 16 colours to use.
     ///
-    /// This was got wrong twice by picking a published palette and arguing
-    /// about it. Pepto renders colour 7 as a dull olive and Colodore as a
-    /// bright lemon; the emulator shows `#EFEB5F`. Sampling a real frame — and
-    /// taking the brightest member of each cluster, since VICE darkens
-    /// alternate scanlines — settles it. The game sets `$D021 = $07` in every
-    /// view, so plains are colour 7 and the only question was ever how to
-    /// render it.
-    ///
-    /// Taken from a native VICE screenshot, which has no CRT filter and holds
-    /// exactly five colours — so these are exact, not a cluster estimate.
-    /// The rest of the table is Pepto, since nothing here uses those entries.
-    static let c64: [NSColor] = [
-        (3, 3, 3), (255, 255, 255), (104, 55, 43), (112, 164, 178),
-        (111, 61, 134), (101, 216, 53), (53, 40, 121), (255, 255, 73),
-        (111, 79, 37), (67, 57, 0), (154, 103, 89), (68, 68, 68),
-        (108, 108, 108), (154, 210, 132), (118, 136, 255), (149, 149, 149),
-    ].map { NSColor(srgbRed: $0.0 / 255, green: $0.1 / 255, blue: $0.2 / 255, alpha: 1) }
+    /// There is no single right answer, which is why this went back and forth
+    /// three times before becoming a setting. The hardware emits a composite
+    /// signal, not RGB, so every palette is a model of it: Pepto and Colodore
+    /// are attempts at physical accuracy, while VICE's default — confusingly
+    /// named "internal" — is a vivid approximation. Comparing against a VICE
+    /// screenshot therefore measures whichever palette VICE was set to, not the
+    /// machine.
+    public enum C64Palette: String, CaseIterable, Sendable {
+        case viceInternal = "VICE (internal)"
+        case pepto = "Pepto (PAL)"
+        case colodore = "Colodore"
+
+        var colors: [(Int, Int, Int)] {
+            switch self {
+            // Measured from a native VICE screenshot, which has no CRT filter
+            // and held exactly five colours, so these four are exact for it.
+            case .viceInternal: [
+                (3, 3, 3), (255, 255, 255), (104, 55, 43), (112, 164, 178),
+                (111, 61, 134), (101, 216, 53), (53, 40, 121), (255, 255, 73),
+                (111, 79, 37), (67, 57, 0), (154, 103, 89), (68, 68, 68),
+                (108, 108, 108), (154, 210, 132), (118, 136, 255), (149, 149, 149),
+            ]
+            case .pepto: [
+                (0, 0, 0), (255, 255, 255), (104, 55, 43), (112, 164, 178),
+                (111, 61, 134), (88, 141, 67), (53, 40, 121), (184, 199, 111),
+                (111, 79, 37), (67, 57, 0), (154, 103, 89), (68, 68, 68),
+                (108, 108, 108), (154, 210, 132), (108, 94, 181), (149, 149, 149),
+            ]
+            case .colodore: [
+                (0, 0, 0), (255, 255, 255), (129, 51, 56), (117, 206, 200),
+                (142, 60, 151), (86, 172, 77), (46, 44, 155), (237, 241, 113),
+                (142, 80, 41), (85, 56, 0), (196, 108, 113), (74, 74, 74),
+                (123, 123, 123), (169, 255, 159), (112, 109, 235), (178, 178, 178),
+            ]
+            }
+        }
+    }
+
+    /// The palette the viewer draws with. Defaults to VICE's own default, since
+    /// that is what a screenshot from an unconfigured emulator shows.
+    nonisolated(unsafe) public static var palette: C64Palette = .viceInternal
+
+    static var c64: [NSColor] {
+        palette.colors.map {
+            NSColor(srgbRed: CGFloat($0.0) / 255, green: CGFloat($0.1) / 255,
+                    blue: CGFloat($0.2) / 255, alpha: 1)
+        }
+    }
 
     static func load(nextTo mapURL: URL) -> OriginalTiles? {
         let url = mapURL.deletingLastPathComponent()
