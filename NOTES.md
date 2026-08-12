@@ -184,10 +184,277 @@ The table at `$2286` holds exactly three records before the sentinel:
 00 00 01 02 00 06 FE
 ```
 
-Small magnitudes with an `FF` that reads as -1 — consistent with signed direction or motion
-vectors, which is what a plate tectonics model would start from. Working hypothesis: the
-generator picks one of three plate configurations at random. **Not yet confirmed** — decoding
-these six fields is the next task.
+**Correction: these are not 7-byte records, and the `FF` is not -1.** The earlier reading came
+from noticing the `x7` stride and assuming the stride was the record size. It is not. Following
+the actual read order settles it:
+
+```text
+$2158  LDA $2286,X / CMP #$FE / BEQ done
+$2162  STA $54     ; field 1
+$2164  INX / LDA $2286,X / STA $43    ; field 2
+$216A  INX / LDA $2286,X / STA $55    ; field 3
+$2170  INX / STX $56                  ; remember where we are
+...
+$227A  LDX $56 / JMP $2158            ; and read the *next* three
+```
+
+So the table is three **command sequences of 3-byte commands**, each terminated by `$FE`. The
+`x7` only picks which sequence to start at, and each sequence happens to be two commands plus
+the sentinel. Parsed that way all three land exactly on `$FE`, which a wrong stride would not do
+three times out of three:
+
+| Seq | Command 1        | Command 2        |
+| :-- | :--------------- | :--------------- |
+| 0   | `00 00 02`       | `02 00 02`       |
+| 1   | `00 FF 01`       | `02 00 02`       |
+| 2   | `00 00 01`       | `02 00 06`       |
+
+The three fields are **(size class, flags, count)**:
+
+- **size class** (`$54`) is only tested for zero (`$2175`): 0 selects radius `$46` = 70, anything
+  else selects `$0A` = 10. So class 0 is a continent and class 2 is an island.
+- **flags** (`$43`) is a bitfield read with `BIT`, never as a number — which is what rules out
+  the signed-vector reading. Only bit 7 is used, at `$21B0` and `$2231`.
+- **count** (`$55`) is the repeat count, decremented at `$2270`.
+
+Which makes the three world configurations:
+
+| Seq | Reading                                             |
+| :-- | :-------------------------------------------------- |
+| 0   | 2 continents + 2 islands                            |
+| 1   | 1 continent (flag bit 7 set) + 2 islands            |
+| 2   | 1 continent + 6 islands, islands in a latitude band |
+
+### Verified against the original (`tools/wm_config.py`)
+
+This is a falsifiable prediction, so it was tested rather than left as a reading. The tool patches
+the ten bytes at `$2146` that draw the configuration (`LDA #config` followed by `NOP`s, leaving
+the `STA $57` in place), runs the land-mass phase headlessly to `$280A`, and flood-fills the land
+mask. All three configurations produce exactly what the table predicts:
+
+| Config | Predicted | Built | Blob areas                             |
+| :----- | :-------- | :---- | :------------------------------------- |
+| 0      | 2 + 2     | 2 + 2 | 17353, 16603, 427, 381                 |
+| 1      | 1 + 2     | 1 + 2 | 27756, 438, 407                        |
+| 2      | 1 + 6     | 1 + 6 | 15346, 519, 508, 456, 422, 417, 387    |
+
+Config 1 is the interesting one, and it is the strongest single piece of evidence that the flags
+byte is a bitfield and not a signed vector: its command has **count 1** and yet it always builds
+**two** continents. That is flag bit 7 doing exactly what `$2231` says it does — place a second
+landmass at `x - $4E`, `y + size * 2 + size / 8`.
+
+**Whether the pair merges is seed-dependent**, so count the land, not the blobs. One seed gave a
+single 27,756-cell mass — about twice a normal continent, rendering as two continents touching
+corner to corner — while seed `$1234` leaves them separate, for four masses rather than three.
+The fixed offset puts them adjacent; the coastline walker decides whether they actually touch.
+
+Config 2's islands all land in the lower half, matching the `$2208` latitude clamp. Its blob count
+comes out at 8 rather than the expected 7 because the walker sheds the occasional detached speck;
+the `blobs()` helper counts every connected region, including one-cell ones.
+
+**Force the configuration by patching, not by poking a register.** Setting `A` at a checkpoint on
+`$2150` looks surgical and silently does not work: `$57` reads back as 1 whatever is written,
+because the phase is entered more than once and the checkpoint catches a later pass. Three runs
+were read wrong before the patched-constant approach settled it. Worse, the first pass of the
+experiment appeared to "work" — three runs returned the three predicted shapes, just permuted —
+which is what an uncontrolled random draw looks like when the sample is this small. Getting all
+three distinct by chance has probability 6/27, about 22%.
+
+Sequence 1's flag bit 7 makes `$2231` test a **second position** offset from the first before
+accepting either — `$22`-`$24` are saved to `$47`-`$49`, shifted by `$4E` in x and by
+`size * 2 + size / 8` in y, retested, then restored. That is a paired landmass: two continents
+placed as a unit at a fixed offset. Sequence 2 is special-cased at `$2208` (`LDA $57 / CMP #$02`)
+to clamp its continent's y range to 110..220 instead of the full map.
+
+### Placement
+
+Rejection sampling, not a growth model. Per landmass:
+
+```text
+x        = random($21 .. $FE - $21)          ; $2220, via $22B4
+y        = random($21 + 2 .. $0185 - $21)    ; $2229, via $247B, 16-bit
+if $22F7 rejects: retry, up to 256 times ($52 wraps at $2281)
+```
+
+`$22B4` is `random(lo ..< hi)` by rejection, and it is **self-modifying**: `STA $22E8` and
+`STX $22EC` patch the operands of the two `CMP` instructions at `$22E7` and `$22EB`. Read as
+written, those look like `CMP #$FF` twice; they are the bounds. `$247B` is the same idea over 16
+bits for y. Both inline the LFSR from `$0AE2` rather than calling it.
+
+`$22F7` is the accept/reject test, and it is **not an area test** despite sitting where one would
+be. It samples a **cross** through the bounding box: three horizontal lines at rows `y - size`,
+`y` and `y + size` scanning columns left to right, then three vertical lines at columns
+`x - size`, `x` and `x + size` scanning top to bottom. Any sampled cell already set rejects the
+position. Two landmasses can therefore overlap substantially without either noticing — a property
+of the original's output, not something to fix.
+
+Ported as `LandMassPhase.isClear`, verified against the original across 18 positions
+(`tools/areatest_reference.py`). Three things bite when transcribing it:
+
+- **Both scans are do-while**, not while. The body always runs once, even when the bounds are
+  already crossed, and `INC` before `BCC` means neither scan samples its far edge. Writing them
+  as `while col <= right` is wrong twice over.
+- **The bounds clamp asymmetrically.** The right edge becomes `$FE` only if `x + size` carries out
+  of a byte; the bottom is clamped to `$8E` only once `y + size` crosses 256, putting the
+  effective floor at row 398.
+- **`$62` is not set by `$22F7`.** It holds the shift count (5) that turns a row number into an
+  address, and the *phase* sets it at `$2130`. A harness that calls `$22F7` directly must set it
+  too — without it the address arithmetic is garbage, which is invisible against an all-zero or
+  near-solid mask and wrong everywhere else.
+
+The last of those wasted a fixture. A first attempt used a uniformly random 12.5%-density mask and
+came back 32 cases, **every one blocked** — which is what a cross sampling ~840 cells will always
+do at any plausible density, and which no correct-versus-broken port could be distinguished by. A
+fixture with only one outcome is not a test. `LandMassPhaseTests` now asserts the fixture contains
+both, so that failure cannot recur silently.
+
+`$1B5F`/`$1BD9` is **not** the draw, despite sitting where a draw would. It appends
+`(y, size, class)` to a registry at `$033C` (the cassette buffer) indexed by `$64`, and bumps
+`$A9` for each island. Later phases — rivers, villages — read that registry. `$23D3` is the
+routine that actually fills, via the rasterizer at `$15AD`, with shape parameters computed by
+`$1731` from the radius (`$0F` = `size * 5/7`, `$13` = `size * 3/8`, `$12` = `size * 1.44`, plus
+reciprocals `$10` and `$11`). `$15AD` itself is not yet read.
+
+### Two buffers, both based at `$5700`
+
+The generator uses two different addressings of the same base, and confusing them would wreck a
+port:
+
+| Helper  | Shift | Stride | Cell    | Mask table                          |
+| :------ | :---- | :----- | :------ | :---------------------------------- |
+| `$141C` | 5     | 32 B   | 1 bit   | `$13D3` = `80 40 20 10 08 04 02 01` |
+| `$0FAE` | 7     | 128 B  | 4 bits  | `$0FD1` = `F0 0F`                   |
+
+`$141C` builds a **land/water mask**, 32 bytes per row; `$142F` splits x into `x >> 3` for the
+byte and `x & 7` for the mask index, and `$1B4E` is the bit test. The mask table bytes are
+confirmed in the file. The two writes of `$80`/`$40` into `$13D3`/`$13D4` at `$0E3x` are
+restores — a later phase clobbers the first two entries to mask two bits at a time.
+
+`$0FAE` addresses **the map proper**: 128 bytes per row, one nibble per cell, 256 cells wide.
+That is exactly the layout `MapDecoder` reads off a finished map disk, arrived at from the other
+direction entirely, which is what makes the identification safe.
+
+**The 1-bit reading is confirmed visually** (`tools/wm_landmask.py`). Dumping `$5700` at the end
+of the land-mass phase and rendering it both ways is decisive: at 32 bytes per row it is
+continents with jagged coastlines, and at 128 bytes per row the same data comes out as the same
+continents repeated four times across, which is just the wrong stride. No statistics needed — and
+on this project statistics have repeatedly supported conclusions that turned out to be wrong.
+
+Land coverage varies with the configuration and matches the radii: about 15-18% for the
+single-continent configs and about 30-34% for the two-continent one, against
+`pi x 70^2 / (256 x 400)` = 15% per continent. Do not treat any single figure as *the* coverage
+— the configuration is drawn at random unless it is patched.
+
+At 400 rows the mask is 12,800 bytes (`$5700`-`$88FF`); the nibble map at 128 bytes per row would
+be 51,200 and does not fit in a C64 at all. That is consistent with the note already in
+`wm_trace.py` — the finished map is assembled **on disk**, not in RAM, which is why generation
+takes about 18 minutes. `$2C14` bounds its row counter at `#$D0` = 208, and 208 x 128 = 26,624
+fits at `$5700`-`$BEFF` under I/O, so 208 rows is most likely the band height. **Not yet
+established:** whether the bands overwrite the mask in place and in which direction. Break on
+writes to `$5700` during a headless run to settle it.
+
+### `$15AD` is a coastline walker, not a blob fill
+
+Worth saying before anyone tries to port it as "draw an ellipse and roughen it". `$15AD` is a
+state machine:
+
+- `$1A` is the state, 0..4, advanced at `$1631` and wound back at `$1646`.
+- `$46` is a step counter that wraps at `#$C9` = 201, clearing `$2B` with it.
+- Each step writes a **12-byte record** through `($02),Y` — nine bytes copied from `$2C`-`$34`,
+  then `$14`, `$15`, `$1A`. So the coast is emitted as a trail of segments, not rasterized
+  directly.
+- `$1654` does `STX $1657`, where X is `$E6` or `$C6` — **`INC zp` and `DEC zp` opcodes**. It
+  patches the instruction at `$1657` so the following loop walks `$15` toward `$B0` from either
+  direction. Disassemble this region as data-plus-code or the listing lies to you.
+
+The shape parameters from `$1731` feed this walker rather than any ellipse equation, which fits
+the manual's claim of a geological model and fits the irregular coastlines the game actually
+produces. Porting it means transcribing the state machine literally, self-modification included,
+the same way the RNG and the divide were done.
+
+#### What the walker is made of
+
+Enough of the pieces are now identified to describe the mechanism:
+
+| Routine | What it does                                                                 |
+| :------ | :--------------------------------------------------------------------------- |
+| `$289D` | `$29:$2A += $20` — advance the mask row pointer one row down                  |
+| `$1B4C` | test the mask bit at column `$14` (`$1B4E` is the entry with X already set)   |
+| `$13E0` | address a point **relative to the current heading**, negating by `$1A`        |
+| `$1728` | `$13E0` then `ORA $13D3,X / STA ($29),Y` — **plot**, the only mask write      |
+| `$16BB` | pointer to `$9100 + $46 * 12` — the record ring, 201 entries of 12 bytes      |
+| `$1476` | evaluate a candidate step; carry set rejects it                               |
+| `$1648` | span fill between `$15` and `$B0`, with the self-modified `INC`/`DEC`         |
+
+So the walker is a **turtle**: position in `$22`/`$23:$24`, heading in `$1A` (0-3, used by `$13E0`
+to rotate its offsets), step counter `$46` wrapping at 201, and a ring of 201 twelve-byte records
+at `$9100` recording the trail.
+
+`$1476` is where the coastline gets its shape. `$1D` (0-8) encodes one of nine directions, split
+into an x delta from `$1D mod 3` and a y delta from `$1D div 3`, both looked up in the signed table
+at `$13DA` (`01 FF 00 00 FF 01`, i.e. +1/-1/0). The candidate is then scored by a **3x3
+neighborhood scan** — nine counters at `$35`, filled by `$1B4E` across and `$289D` down — and
+rejected unless at least two neighbors are already land. That neighbor-count rule is what makes
+coastlines jagged and self-similar instead of smooth.
+
+`$13DA` overlaps the tail of the bit-mask table at `$13D3` (`80 40 20 10 08 04 02 01`), so the
+`$01` at `$13DA` does double duty as both the last bit mask and the first delta. Do not "tidy"
+that into two separate tables without checking; the overlap may be deliberate.
+
+`$1666` temporarily patches `$229B`, `$229C` and `$22AF` — addresses **inside the data that
+follows the `$2286` command table** — to `$0C`, then restores them to `$77`, `$EC`, `$49`. Those
+bytes are operands of something, not part of the command table proper.
+
+**Still open:** the walker's states and its output consumer, what `$2C14` is (a neighbor-scan
+smoothing pass over `$14`/`$15`, not a disk writer), and the band structure.
+
+### Do not scope this port by static reachability
+
+Walking calls and branches from `$23D3` reaches **7,924 of the program's 8,152 instructions**, 97%
+of `game3`, and the land-mass phase entry `$212A` reaches exactly the same set. That is not a
+disassembly artifact. The path is real:
+
+```text
+$15AD ... -> $194A -> $1900 -> JMP $2473 -> JMP $20A3   (World Maker init)
+      -> falls through to $212A -> ... -> $280A -> ... -> $0DB5 JSR $0E20
+```
+
+The edge is a **panic path**. `$1900` is an ordinary mask-walking routine, but its first four
+instructions are a bounds guard on `$2A`, the high byte of the working row pointer:
+
+```text
+$1900  LDA $2A / CMP #$50 / BCS $1909     ; below the buffer?
+$1906  JMP $2473                          ; -> STA $D01A (kill raster IRQ), JMP $20A3
+$1909  CMP #$91 / BCS $1906               ; above it?
+$190D  ...the actual work...
+```
+
+The mask lives at `$5700`-`$88FF`, so `$50` and `$91` bracket it with room to spare. **If the
+coastline walker runs off the buffer, the World Maker disables interrupts and starts the entire
+generation over.** That is worth knowing on its own — a run that looks hung may be regenerating,
+not stuck — and it is probably part of why generation takes about 18 minutes.
+
+Measured coverage shows `$1900` executing 1,156 times in a single phase, so the guard is passed
+constantly and the restart is rare. Do not read the `JMP` as the routine's purpose; an earlier
+version of this note did exactly that, on the strength of a breadth-first path rather than the
+four instructions above it.
+
+One such edge is enough to make essentially every routine "reachable" from every other, so any
+question of the form "what does this phase depend on" is unanswerable from the call graph.
+
+Measure coverage instead — `tools/wm_coverage.py` puts a non-halting checkpoint
+(`stop=False`, which still counts hits) on every `JSR` target, runs the phase between `$212A` and
+`$280A`, and reports which routines actually ran. Routine granularity is enough to scope a port
+and keeps it to a couple of hundred probes instead of per-instruction tracing.
+
+**Result: 64 of 207 routines execute.** That is the real size of the land-mass port, against 207
+by call graph. The phase also completes in about 7 seconds under warp with all 207 probes armed,
+so this is a fast experiment to re-run per configuration.
+
+The hot ones are the primitives already identified — `$142F` (144,659 calls) and `$1B4E`
+(103,249) are the mask address and bit test, then the multiply and divide, then `$141C`. The
+walker's own body (`$15AD`, `$16BB`, `$16BF`, `$1728`, `$1731`, `$178A`, `$19CC`, `$1A00`,
+`$1B3B`) is the substantial unread block.
 
 ### Arithmetic helpers (ported)
 
@@ -274,6 +541,35 @@ running hardware. Consequences:
   after startup. The run becomes fully deterministic and sector-for-sector comparison against
   the Swift port works.
 
+### Done: the land-mass phase is reproducible (`tools/wm_deterministic.py`)
+
+The plan above works, with one change — patch the **seeding site** rather than writing `$CD`/`$CF`
+after startup, so the seed does not depend on catching the right moment:
+
+    $20CB  LDA $D41B / STA $CD / LDA $D41B / STA $CF   ->  LDA #hi / STA $CD / LDA #lo / STA $CF
+    $2406  LDA $D41B / ADC $CD / STA $CD               ->  NOPs
+    $2146  JSR $0AE2 .. JSR $0A6E                      ->  LDA #config
+
+Those are the only hardware reads that matter. `game3` touches hardware in exactly seven places:
+the SID noise rig at `$2090`/`$2093`/`$2098`, the two seed reads, the IRQ stir, and `$0A49`
+(`LDA $D012`) — which is a raster sync that spins until scanline `$FE` and always returns the
+same value, so it needs no patch.
+
+Verified: the same `(seed, config)` reproduces all 12,800 bytes of the mask exactly, and both a
+different seed and a different configuration change it. The phase is now a pure function of
+`(seed, config)`.
+
+**The IRQ handler is not in `local/game3.disasm.lst`.** It is reached through the IRQ vector,
+never by `JSR` or `JMP`, so recursive descent never walks it — which is why `grep`-ing the listing
+for `$D41B` finds only two of the three reads. The listing has gaps wherever control arrives by
+vector. Verify bytes against `game3.bin` itself, not the listing.
+
+**Fixtures are digests, not masks.** A land mask is 12,800 bytes of map produced by Ozark
+Softscape's generator, and this project does not ship map data; the existing fixtures are numeric
+behavior of general-purpose routines, which is a different kind of thing. `landmass_reference.json`
+carries a SHA-256 per case plus land-cell count and blob areas — a bit-exact test, diagnosable on
+failure, and no game content. Full masks go to `local/wm_masks/`, which is gitignored.
+
 ### Done: RNG ported and verified
 
 `SevenCitiesCore/Sources/SevenCitiesCore/WorldMakerRNG.swift` is a literal transcription.
@@ -281,6 +577,28 @@ running hardware. Consequences:
 writes a fixture; the Swift tests assert an exact match on both output and internal state.
 Confirmed non-vacuous by mutation: changing the four `ROL A` rotates to three produces 949
 recorded failures.
+
+### Done: the bounded draws ported and verified
+
+`$22B4` (8-bit) and `$247B` (16-bit) are transcribed into `WorldMakerRNG` as `nextByte(from:below:)`
+and `nextWord(from:below:)`, with `tools/randrange_reference.py` capturing reference output from
+the original across 4 seeds — 40 byte cases replayed as sequences, 24 word cases from fresh seeds.
+
+Three things that had to be right:
+
+- **They are rejection samplers, and the waste matters.** Each rejected candidate still advances
+  the LFSR, so a port that reduced one draw by modulo would produce plausible values and
+  desynchronize every later draw. The byte fixture is deliberately a *sequence* from one seeding
+  rather than independent cases, so it tests that the same candidates get thrown away.
+- **`$247B` consumes two advances per candidate.** The first supplies the low byte; the second is
+  drawn only for its sign, and the high byte is 1 when that draw is below `$80`, else 0
+  (`LDA $CF / BMI / INX` at `$24E1`). Results are therefore capped at 511 — exactly enough for 400
+  rows, and a strong hint the 9-bit shape is deliberate.
+- **The bounds are two parameters, not a `Range`.** Swift's `Range` traps at construction when
+  inverted, so it cannot represent `lo > hi` — which `$22BA` explicitly handles by returning `lo`.
+  Modelling these bounds as a `Range` would impose an invariant the 6502 does not have and convert
+  a reachable path into a crash. Two of the three tests failed this way before the signature
+  changed; the type system was reporting a real mismatch, not being awkward.
 
 ### Headless World Maker (works — `tools/wm_trace.py`)
 
@@ -333,6 +651,21 @@ which bytes land in which sector, and in what order rows are produced.
   corrupts the state between calls, so the driver runs under `SEI`.
 - **Poll for the BASIC `READY.` prompt** (screen codes `18 5 1 4 25 46` at `$0400`) before
   typing; a `SYS` sent earlier is dropped.
+- **To wait for a checkpoint, poll its `hit_count`.** Neither obvious alternative works, and
+  both fail *quietly*, which is what makes this expensive:
+  - `vice_ping` reports `execution: paused` for reasons unrelated to checkpoints, so a ping loop
+    announces a halt that never happened and RAM gets read mid-phase. Runs were misread this way
+    as stopping at `$22DB`, `$2385` and `$236C` — all inside the placement loop, none of them a
+    checkpoint. `wm_trace.py` still waits this way and its snapshots deserve re-checking.
+  - The PC is readable while the CPU is running and simply never equals the target when sampled,
+    so waiting for a match spins until the timeout.
+
+  `hit_count` is unambiguous: zero until the checkpoint fires, nonzero after.
+- **Prefer patching code over setting registers at a checkpoint.** Forcing a value by stopping at
+  an instruction and writing a register assumes the stop happened where you think it did, and
+  when it did not the run still completes and returns plausible numbers. Patching the
+  instructions that compute the value makes the result independent of timing, and a read-back of
+  the patched bytes verifies it took.
 
 ## Driving VICE (hard-won, reusable)
 

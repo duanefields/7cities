@@ -12,6 +12,46 @@ engineering record; this holds the work.
       (`$0E20`, phases at `$2AE9`, `$2D23`, `$2E32`, `$3961`, `$3EAD`) and its
       RNG and arithmetic are already ported and verified against the original —
       the generation phases themselves are not.
+      The land-mass phase is now read in detail **and verified against the
+      original**: the `$2286` table is three **command sequences** of
+      `(size class, flags, count)`, and forcing each one with
+      `tools/wm_config.py` builds exactly the predicted 2+2, 1+2 and 1+6
+      landmasses. Placement is rejection sampling, and the land mask is 1 bit
+      per cell at `$5700`, 32 B/row, confirmed visually by
+      `tools/wm_landmask.py`. What remains there is the coastline walker at
+      `$15AD`. See NOTES.md.
+- [x] ~~**Make the land-mass phase reproducible.**~~ **Done.** Patching the
+      seeding site at `$20CB`, the raster IRQ's entropy stir at `$2406` and the
+      configuration draw at `$2146` makes it a pure function of
+      `(seed, config)`: the same pair reproduces all 12,800 bytes of the mask
+      across separate emulator boots. `tools/wm_deterministic.py`, with
+      `--fixtures` to capture `landmass_reference.json` (digests only — the
+      mask is map data and is not committed).
+- [ ] **Port the land-mass phase to Swift.** The oracle now exists, so this is
+      testable end to end: same seed and config, same 12,800 bytes. Measured
+      coverage says the phase executes **64 of the program's 207 routines**
+      (`tools/wm_coverage.py`), which is the real size of the job.
+      Done so far: the bounded draws `$22B4`/`$247B` and the placement test
+      `$22F7`, both ported and verified against the original; the `LandMask`
+      buffer and the command table as `LandMassPhase.configurations`.
+      Still needed: the placement loop itself (including the paired-placement
+      retest at `$2231`), and the coastline walker.
+- [ ] **Transliterate the coastline walker at `$15AD`.** The one thing between
+      here and a complete land-mass phase. A state machine (`$1A` = state,
+      `$46` = step counter wrapping at 201) emitting 12-byte segment records,
+      with a self-modified `INC`/`DEC` opcode at `$1657`. It has only one call
+      site, so it is not shared machinery. **Transcribe it literally rather
+      than trying to understand it first** — that is how the RNG, the divide
+      and the cipher went, and the fixture will prove it.
+- [ ] **Confirm the band structure.** The finished map is assembled on disk —
+      51,200 bytes of nibbles will not fit in a C64 — and `$2C14` bounds its
+      row counter at 208, which is very likely the band height. Still unknown:
+      whether bands overwrite the 1-bit mask at `$5700` in place, and in which
+      direction. Break on writes to `$5700` in a headless run.
+- [ ] **Re-check `wm_trace.py`'s phase snapshots.** It waits for checkpoints by
+      polling `vice_ping` for "paused", which fires for unrelated reasons — the
+      same bug that misread three runs of `wm_config.py`. Its snapshots may have
+      been taken mid-phase. Port it to poll `hit_count` and re-run.
 - [x] ~~**Settle what `game` is.**~~ **Solved: it is enciphered, not packed.**
       Watching the live game showed F7 loading it verbatim into `$0800-$94FF`
       (99.60% match) and then transforming it in place, 36,096 bytes in and out.
