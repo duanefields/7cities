@@ -40,8 +40,30 @@ COMMON = {0xA9, 0xA2, 0xA0, 0x85, 0x8D, 0x20, 0x60, 0x4C, 0xAD, 0xA5, 0xE8,
           0xC8, 0xCA, 0x88, 0x29, 0xC9, 0xD0, 0xF0, 0x90, 0xB0, 0x91, 0xB1}
 
 
+FKEYS = ("F1", "F3", "F5", "F7")
+
+
 def warp(on):
     call("vice_machine_config_set", resources={"WarpMode": 1 if on else 0})
+
+
+def release_all():
+    """Let go of every function key.
+
+    `vice_keyboard_key_press` does **not** release. A press left F3 held
+    (CIA1 `port_b` = `$DF` with `port_a` = `$FE`, which is row 0 bit 5 = F3),
+    so every subsequent boot re-triggered the World Maker the instant the menu
+    appeared, no matter how cleanly the machine was reset. Two runs were lost
+    to it before the CIA state gave it away.
+    """
+    for k in FKEYS:
+        call("vice_keyboard_key_release", key=k)
+
+
+def tap(key, hold=0.12):
+    call("vice_keyboard_key_press", key=key)
+    time.sleep(hold)
+    call("vice_keyboard_key_release", key=key)
 
 
 def dump(lo, hi):
@@ -54,44 +76,74 @@ def dump(lo, hi):
     return bytes(out)
 
 
-def main():
-    from PIL import Image, ImageChops
-    disk = open(f"{ROOT}/local/game.bin", "rb").read()
+BAND = (0, 178, 384, 220)
 
+
+def boot():
+    """Hard reset and autostart disk 1.
+
+    **`vice_machine_reset` does not take while the machine is running.** Two
+    runs were lost to this: the reset reported "Machine power cycled", the
+    autostart followed, and the machine carried on in the World Maker from the
+    previous run with `PC` still inside `$0800-$4FFF`. Pausing first and then
+    resetting lands at `$E5CF`, the KERNAL input loop, with the BASIC screen up.
+    Always pause before reset.
+    """
     for cp in call("vice_checkpoint_list")["checkpoints"]:
         call("vice_checkpoint_delete", checkpoint_num=cp["checkpoint_num"])
-    call("vice_execution_run")
     warp(True)
-    call("vice_machine_reset", mode="hard")
-    time.sleep(3)
+    release_all()
     call("vice_disk_detach", unit=8)
-    time.sleep(1)
+    time.sleep(0.5)
+    call("vice_execution_pause")
+    call("vice_machine_reset", mode="hard")
+    call("vice_execution_run")
+    time.sleep(3)
     call("vice_disk_attach", unit=8, path=DISK1)
+    time.sleep(1)
     call("vice_autostart", path=DISK1)
     time.sleep(25)
     warp(False)                      # the menu's poll window is short
 
-    # Detecting the menu is the whole difficulty. Matching the *full* screen
-    # against the template fires on the title animation, and re-pressing F7 on
-    # a timer misses the window because the title sequence loops. What is
-    # actually distinctive is the band holding the two "PRESS F_ TO ..." lines:
-    # comparing only rows 178-220 gives 0.00% difference on the menu and at
-    # least 6.26% on the credits, the finished title and mid-animation.
-    band = (0, 178, 384, 220)
-    tpl = Image.open(f"{ROOT}/local/menu_template.png").convert("L").crop(band)
-    scratch = f"{ROOT}/local/_watch.png"
-    for _ in range(900):                      # ~225s, several attract loops
+
+def wait_for_menu(tpl, scratch, polls=700):
+    """Poll for the menu band. Returns True if it appeared."""
+    from PIL import Image, ImageChops
+    for _ in range(polls):
         call("vice_display_screenshot", path=scratch)
-        live = Image.open(scratch).convert("L").crop(band)
+        live = Image.open(scratch).convert("L").crop(BAND)
         h = ImageChops.difference(tpl, live).histogram()
         if sum(h[40:]) / sum(h) < 0.02:
-            print(f"menu detected; pressing {KEY}", flush=True)
-            call("vice_keyboard_key_press", key=KEY)
-            warp(True)          # the transition and load are glacial otherwise
+            return True
+        time.sleep(0.2)
+    return False
+
+
+def main():
+    from PIL import Image
+    disk = open(f"{ROOT}/local/game.bin", "rb").read()
+
+    # Detecting the menu is the whole difficulty. Matching the *full* screen
+    # against the template fires on the title animation, and re-pressing on a
+    # timer misses the window because the title sequence loops. What is
+    # distinctive is the band holding the two "PRESS F_ TO ..." lines: rows
+    # 178-220 differ by 0.00% on the menu and at least 6.26% on the credits,
+    # the finished title and mid-animation.
+    tpl = Image.open(f"{ROOT}/local/menu_template.png").convert("L").crop(BAND)
+    scratch = f"{ROOT}/local/_watch.png"
+
+    for attempt in range(3):
+        print(f"boot attempt {attempt + 1}", flush=True)
+        boot()
+        if wait_for_menu(tpl, scratch):
             break
-        time.sleep(0.25)
+        print("  no menu; rebooting", flush=True)
     else:
-        raise SystemExit("never saw the menu band")
+        raise SystemExit("never saw the menu band after 3 boots")
+
+    print(f"menu detected; pressing {KEY}", flush=True)
+    tap(KEY)
+    warp(True)              # the transition and load are glacial otherwise
 
     # F7 on its own dissolves the title and returns to the attract loop without
     # loading, so it looks to check for a map disk first. `d64/HISTMAP.D64` is

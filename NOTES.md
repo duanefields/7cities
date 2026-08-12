@@ -42,7 +42,7 @@ Both images are standard 35-track D64s (174,848 bytes, no error info).
 | :---------- | :------------- | ------: | :--------------------------------------------- |
 | `ea`        | `$02A8`        |     102 | BASIC stub, `LOAD"EA",8,1`                     |
 | `ea` + `$9D` | `$C000-$C9FF` |   2,560 | EA fastloader / raw sector reader              |
-| `game`      | —              |  36,096 | Not code and **not used by the loader** — see below |
+| `game`      | `$0800-$94FF`  |  36,096 | Main program, **enciphered** — solved, see below |
 | `game2`     | `$0800-$21FF`  |   6,656 | Old World / court sequence plus the text table |
 | `game3`     | `$0800-$4FFF`  |  18,432 | World Maker plus disk formatter; 100% code     |
 | `game4`     | `$1000-$23FF`  |   5,120 | Pure tabular data, ~3-byte period. Unidentified |
@@ -1091,137 +1091,75 @@ and are now simply unremarkable: `DECRYPT2` unmasks small regions inside the
 loader's own bytecode, and there was never a packed payload for a page XOR to
 decode.
 
-### What `game` is, and is not
+### Solved: `game` is enciphered with a fixed byte substitution
 
-`game` remains the open problem. Re-extracted by following the sector chain and
-stripping link bytes, it is **36,098 bytes loading at `$0800`** — so it occupies
-exactly `$0800-$94FF`, which is precisely the range `dump_game.py` dumps.
+`game` is the main program — 36,096 bytes loading at `$0800`, so `$0800-$94FF`.
+On disk it is not 6502 (66 `JSR`, zero `AND #$0F`). It is **enciphered**, and
+the cipher is now recovered exactly.
 
-That matters, because it means the old comparison was **correctly aligned after
-all**. `game` really does load where the dump reads, so the 0.00% positional
-match against unpacked RAM is real evidence and not an artifact. Withdrawing it
-was a mistake, made by arguing from "the `$C000` loader doesn't load `game`" —
-true — to "so nothing loads it / nothing is packed" — which does not follow.
-Stage 1 is 11 KB; `game` is 36 KB; they are different things, and stage 1
-evidently loads `game` by a mechanism not yet found.
+#### What the live game does
 
-What is actually known about `game`:
+`tools/watch_unpack.py` samples `$0800-$94FF` through the load after F7:
 
-| Property                | Value                                              |
-| :---------------------- | :------------------------------------------------- |
-| Load address            | `$0800`, i.e. `$0800-$94FF`                         |
-| `JSR` count             | 66 in 36 KB — cannot be 6502 code                   |
-| `AND #$0F` count        | 0 — likewise impossible                             |
-| Entropy                 | 7.04 bits/byte across all 256 values                |
-| Rendered as hires/chars | noise, no structure — **not** plain graphics either |
-| Most common bytes       | `$AA $CA $78 $41 $25 $2D`                           |
+```text
+    t   match% vs game.bin    JSR    opcode%
+    0        34.57             47       5.9     loading
+    3        68.23             64       8.1     loading
+    6        99.60             66      11.0     loaded VERBATIM
+    9         0.00           1114      27.3     transformed in place
+```
 
-`$AA` leading suggested multicolor graphics, but rendering it at several
-offsets produces no recognizable image, so that is ruled out too.
+So `game` is loaded byte for byte and then transformed **in place**, 36,096
+bytes in and 36,096 out. **Equal size rules out compression** — this is a
+cipher, and there is no depacker in the ordinary sense.
 
-So exactly one of these is true, and which one is not yet settled:
+#### Recovering the cipher
 
-1. `game` is packed or encrypted and something unpacks it in place at `$0800` —
-   a depacker exists, and it is in stage 1 or in another stage, not in the
-   `$C000` loader.
-2. `game` is never loaded at all, and the `$0800-$94FF` code seen in RAM comes
-   from other stages entirely — in which case `game` may be a decoy, and the
-   0.00% match is comparing against something unrelated after all.
+`tools/catch_decrypt.py` polls a small window until it stops matching the file,
+**pauses the machine on the spot**, and dumps `$0800-$94FF`. Pausing matters:
+a dump taken even seconds later is contaminated, because the running game
+immediately zeroes buffers and writes variables.
 
-The way to settle it without guessing is to **watch `$0800` during the load**
-rather than reason about the file: break after stage 1 and single-step, or dump
-`$0800-$94FF` at intervals and find the moment its `JSR` density jumps. Both
-of the readings above make a specific, different prediction about that moment.
-`tools/watch_unpack.py` runs exactly that experiment.
+That gives a complete known-plaintext pair, and the cipher is the simplest
+thing consistent with it: **a fixed, position-independent byte substitution**.
+The table reproduces the plaintext from the ciphertext with **zero errors over
+`$0800-$8BFF`** — 33,792 bytes, all 256 input values, 256 distinct outputs.
 
-#### What `game` is not — eliminated statically
+Above `$8C00` the comparison is meaningless: `$8C00` is the video matrix and
+`$8D00-$94FF` is work buffers, and the game overwrites them within the ~0.15s
+before the pause. That is the whole of the 4.26% apparent mismatch — 1,539
+bytes, essentially all of them in those pages.
 
-Each of these was tested against `game3` as a positive control (real 6502,
-938 `JSR` in 18 KB):
+The substitution is a bijection but is **not** affine over GF(2) or mod 256,
+and does not factor into any short composition of `EOR`/`ADC`/`SBC`, nor into
+subtract-then-bit-permute. It is kept as a table in `tools/decrypt_game.py`.
+The table is regular enough to suggest a closed form exists — within a row,
+`out = r ^ ((r & 4) << 1)` with `r = ($A - lo) & $F` — but the full-byte rule
+has not been found, and the generating routine is not in RAM either (the table
+does not appear anywhere in `$9500-$FFFF`, so the decryptor computes it).
 
-| Hypothesis                    | Test                                          | Result |
-| :---------------------------- | :-------------------------------------------- | :----- |
-| Plain 6502 code               | opcode density                                | 66 `JSR`, 0 `AND #$0F` — no |
-| Plain graphics                | rendered hires and charset at several offsets | noise — no |
-| Constant XOR / any XOR key constant across a word | **differential crib search** on `GOLD`, `EXPEDITION`, `NATIVE`, `CREW`, `SHIP`, `VILLAGE`, `KING`, `SPAIN`, `FOOD` in ASCII, screen-code, screen+`$20` and high-bit PETSCII | 0 hits — no |
-| Bit transposition (8x8)       | transpose, re-score                           | 309 `JSR` vs 1837 expected — no |
-| Bit rotation `ROR 1..7`       | rotate, re-score                              | best 225 `JSR` — no |
-| Bit reversal, nibble swap     | ditto                                         | no |
+Note the loader's own `DECRYPT2` VM primitive at `$C5B1` is a *different*
+cipher and decrypts the loader's bytecode, not the game:
 
-The differential crib is the strongest of these and worth keeping in the
-toolkit: XOR-ing a crib against itself cancels the key, so searching for the
-*difference pattern* `c[i] ^ c[i+1]` finds a known word under **any** constant
-key without ever guessing the key. Zero hits across ten words and four
-encodings rules out simple XOR much more thoroughly than the earlier
-"all 256 masks, scored by instruction density" sweep did — that sweep's scoring
-was also unsound here, since most of a memory image is not code and would score
-badly even under the correct mask.
+```text
+$C5B3  LDA ($2C,X) / EOR $28 / STA ($2C,X)   ; two bytes per call
+$C5C7  LDA $2D / EOR #$7F / STA $28          ; key = page ^ $7F
+```
 
-#### Measured: files load verbatim (`game3` at 99.99%)
+That is the per-page XOR ruled out for `game` long ago, and correctly so.
 
-`tools/watch_unpack.py` was run against the live game. Pressing **F3** at the
-title menu loads the World Maker, and sampling `$0800-$94FF` through the load
-shows `JSR` density climbing `210 -> 696 -> 948`. Comparing RAM afterwards:
+#### Verification
 
-| RAM `$0800..` vs | Match |
-| :--------------- | ----: |
-| `game3`          | **18,430 / 18,432 = 99.99%** |
-| `game`           | 68 / 18,432 = 0.37% (chance) |
-| stage 1          | 82 / 11,264 = 0.73% (chance) |
+Decrypting `game` with the table yields `JSR=1117`, `RTS=381`, `LDA #=1018`,
+`AND #$0F=290` — a normal 6502 profile — and readable game text, e.g. at
+`$153E`:
 
-The two differing bytes are runtime self-modification. So **the load path does
-not transform anything** — a DOS file's bytes arrive in RAM unchanged. That is
-now measured, not inferred, and it is consistent with the `$C000` loader's
-`STA ($2C),Y` storing raw.
+```text
+CAUTIOUS  MODERATE  RECKLESS
+```
 
-This constrains `game` hard. It is the same size as, and loads to the same
-address as, the 36 KB of real code (1114 `JSR`) that a previous session dumped
-from `$0800-$94FF`. **Equal size rules out compression** — a compressor's output
-is not the same length as its input. So if `game` becomes that code, the
-transform is an in-place **cipher**, not a depacker.
-
-But the two obvious ciphers are eliminated by differential crib searches, which
-cancel the key without ever guessing it:
-
-- **XOR key**: search for `c[i] ^ c[i+1]` matching the crib's own XOR pattern —
-  0 hits, 10 words x 4 encodings.
-- **Additive key**: search for `c[i+1] - c[i]` matching the crib's difference
-  pattern — 0 hits, same words and encodings.
-
-Both are key-length agnostic and would fire on any key constant across a single
-word. Neither fires.
-
-#### Getting the menu detection right
-
-Worth recording because two runs were wasted on it. Matching a **full**
-screenshot against `menu_template.png` locks onto the title *animation*, and the
-title sequence **loops**, so pressing on a timer misses the window. What works
-is comparing only the band holding the two `PRESS F_ TO ...` lines, rows
-`178-220`:
-
-| Screen        | Band difference |
-| :------------ | --------------: |
-| menu          | **0.00%**       |
-| credits       | 6.26%           |
-| title done    | 6.26%           |
-| mid-animation | 6.94%           |
-
-Threshold 2%, polled every 0.25s. Also: keep warp **off** while waiting for the
-menu, then turn it **on** immediately after the keypress — the post-keypress
-transition is otherwise glacial, and a first attempt concluded "nothing loaded"
-when it had simply not waited long enough.
-
-Note the menu says **`PRESS F3`**, not F1; the static decode left the digit
-undecodable.
-
-#### The one piece of positive structure
-
-`$8C00-$8FFF` is **1024 bytes of constant `$78`**, and `$8C00` is exactly the
-video matrix address in VIC bank `$8000` that the exploration view uses. A
-compressor would never emit 1024 identical bytes. Either `game` is a positional
-memory image containing an initialized screen, or the run is padding and the
-alignment is coincidence — it is 1024-aligned in file offset too, so this is
-suggestive rather than conclusive.
+**The main program can now be decrypted with no emulator.** This unblocks the
+game rules and the terrain art, both of which live inside it.
 
 ### The lesson, twice in one session
 

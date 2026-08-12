@@ -12,28 +12,25 @@ engineering record; this holds the work.
       (`$0E20`, phases at `$2AE9`, `$2D23`, `$2E32`, `$3961`, `$3EAD`) and its
       RNG and arithmetic are already ported and verified against the original —
       the generation phases themselves are not.
-- [ ] **Settle what `game` is.** Still the gate on the game's rules.
-
-      Measured, not inferred: pressing F3 at the title menu loads the World
-      Maker, and RAM `$0800..` then matches `game3` in **18,430 of 18,432
-      bytes (99.99%)**, the two differences being runtime self-modification.
-      **The load path does not transform files.**
-
-      That constrains `game` hard. It is 36,096 bytes loading at `$0800`, the
-      same size and address as the 36 KB of real code (1114 `JSR`) dumped from
-      `$0800-$94FF` in an earlier session. Equal size **rules out compression**,
-      so if `game` becomes that code the transform is an in-place cipher. But
-      differential crib searches — which cancel the key rather than guess it —
-      find nothing for either an XOR key or an additive key, across 10 words and
-      4 encodings.
-
-      Next experiment: run the **F7** path with a map disk. F7 alone dissolves
-      the title and returns to the attract loop without loading anything, which
-      suggests it checks for a map disk first. `d64/HISTMAP.D64` is accepted as
-      one (see NOTES.md), so attach it at the prompt and sample `$0800-$94FF`
-      through the load with `tools/watch_unpack.py`. Either `game`'s bytes
-      appear at `$0800` and are then transformed in place — locating the cipher
-      — or they never appear and `game` is a decoy.
+- [x] ~~**Settle what `game` is.**~~ **Solved: it is enciphered, not packed.**
+      Watching the live game showed F7 loading it verbatim into `$0800-$94FF`
+      (99.60% match) and then transforming it in place, 36,096 bytes in and out.
+      Equal size rules out compression. `tools/catch_decrypt.py` freezes the
+      machine at that instant for a clean plaintext, and the cipher is a fixed
+      byte substitution that reproduces `$0800-$8BFF` with **zero errors**.
+      `tools/decrypt_game.py` now decrypts the main program with no emulator.
+- [ ] **Disassemble the decrypted main program.** This is where the game's rules
+      live — movement and pace, the Old World and the court, natives and trade,
+      scoring — and where the terrain charset generator must be, since the
+      charset at `$A800` is built at runtime and appears nowhere on either disk.
+      `local/game_decrypted.bin` is the starting point.
+- [ ] **Find the closed form of the cipher, or the routine that computes it.**
+      A nicety, not a blocker. The table is a bijection but not affine over
+      GF(2) or mod 256, and does not factor into short `EOR`/`ADC`/`SBC`
+      compositions. It does not appear anywhere in `$9500-$FFFF`, so the
+      decryptor computes it rather than looking it up. Its structure looks
+      deliberate — within a row, `out = r ^ ((r & 4) << 1)` with
+      `r = ($A - lo) & $F` — so a closed form probably exists.
 - [x] ~~**Extract stage 1.**~~ Done, statically, no emulator.
       `tools/extract_stage.py` lifts tracks 1-3 to `$0800-$33FF`: real 6502 plus
       the title text and the Ozark Softscape credits. Load address confirmed two
