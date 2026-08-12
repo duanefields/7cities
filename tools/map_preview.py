@@ -24,37 +24,46 @@ BLOCK = 16
 BLOCKS_PER_ROW = 8       # source row stride $80 = 128 tiles / 16 per block
 PADDING = 0x01          # untouched filler outside the map proper
 
-# Each byte holds TWO horizontally adjacent tiles, high nibble first. This is
-# why the address calculator at $0EE4 multiplies the low nibble by 2, and why
-# values pair up the way they do: $BB is two land tiles, $00 two ocean, and
-# $B0 / $0B are land+ocean — a coastline, nibble-swapped for which side the
-# water is on. The map is therefore 256 tiles wide, not 128.
+# Each byte holds TWO horizontally adjacent tiles. Confirmed from the cell
+# primitives at $0FAE / $0FEA / $0FD3:
 #
-# Nibble semantics, established by diffing the map buffer at $5700 across
-# generation phases (see tools/wm_trace.py):
+#   cell(col, row) = $5700 + row * 128 + (col >> 1)
+#   even col -> high nibble, odd col -> low nibble (mask table at $0FD1 = F0,0F)
 #
-#   land-mass phase writes  $00, $BB, $B0, $0B      -> ocean, land, coastline
-#   terrain phase writes    $11, $BC, $CB, $CC, ... -> shelf and terrain classes
-#   village phase writes    $BF, $FB, $FC, $CF, ... -> sites (F = marker nibble)
+# so the map is 256 tiles wide by 400 tall.
+#
+# Nibble meanings. Cross-checked against an independent community dump of the
+# historical map, which agrees on every continent, island chain, river course
+# and mountain range.
+#
+# Note $2D23 uses $0F as a scratch fill value but unfills it ($0F -> $00), so
+# surviving F cells are native villages, matching the reference dump's red
+# squares and the village phase writing $BF/$FB/$FC/$CF.
 NIBBLE = {
-    0x0: (12, 34, 102),     # ocean            (confirmed: land-mass phase)
-    0x1: (30, 60, 140),     # continental shelf / shallows
-    0xB: (74, 150, 64),     # land / plain     (confirmed: land-mass phase)
-    0xC: (150, 160, 70),    # ? scrub or hills
-    0xD: (140, 120, 80),    # ? highland
-    0xE: (130, 130, 135),   # ? mountain
-    0xF: (240, 240, 240),   # ? site marker    (village phase)
-    0x2: (60, 120, 190),
-    0x3: (90, 170, 210),
-    0x4: (110, 140, 200),
-    0x5: (200, 170, 90),
-    0x6: (80, 150, 170),
-    0x7: (100, 160, 120),
-    0x8: (120, 170, 90),
-    0x9: (170, 180, 80),
-    0xA: (190, 150, 70),
+    0x0: (12, 34, 102),     # ocean            confirmed: land-mass phase writes it
+    0x1: (30, 60, 140),     # continental shelf / shallows, rings every coast
+    0x2: (60, 120, 190),    # sparse coastal fringe
+    0x3: (90, 170, 210),    # rare, 86% ocean-adjacent — inlet or harbor?
+    0x4: (110, 140, 200),   # rare, isolated
+    0x5: (120, 170, 230),   # river
+    0x6: (120, 170, 230),   # river
+    0x7: (120, 170, 230),   # river
+    0x8: (120, 170, 230),   # river
+    0x9: (120, 170, 230),   # river
+    0xA: (120, 170, 230),   # river
+    0xB: (74, 150, 64),     # plain / grassland  confirmed: land-mass phase
+    0xC: (46, 110, 46),     # forest — eastern North America and the Amazon
+    0xD: (140, 120, 90),    # mountain — the Rockies/Andes spine, unmistakable
+    0xE: (90, 140, 60),     # tropical class, Mexico/Central America; jungle?
+    0xF: (200, 40, 40),     # native village — isolated single cells
 }
 UNKNOWN = (230, 60, 200)
+
+# Nibbles 5-A form dendritic branching networks matching the Mississippi,
+# Amazon and Parana. Six distinct values for one feature strongly suggests
+# flow DIRECTION is encoded per tile — which fits a game where rivers are the
+# main travel route inland.
+RIVERS = set(range(0x5, 0x0B))
 
 
 def sectors(path, first_track=13):

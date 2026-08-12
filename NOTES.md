@@ -420,31 +420,52 @@ single tiles still produced a recognizable map because a 2:1 horizontal squash
 of the Americas still looks like the Americas — which is exactly why it went
 unnoticed for several passes.
 
-### Terrain semantics, from phase diffs
+### Cell addressing (confirmed from `$0FAE` / `$0FEA` / `$0FD3`)
 
-Established by dumping the map buffer at `$5700` at each phase boundary
-(`tools/wm_trace.py`) and diffing:
+```text
+cell(col, row) = $5700 + row * 128 + (col >> 1)
+even col -> high nibble, odd col -> low nibble
+mask table at $0FD1 = $F0, $0F
+```
 
-| Phase     | Nibbles written              | Meaning                          |
-| :-------- | :--------------------------- | :------------------------------- |
-| Land mass | `0`, `B`                     | ocean, land — and `B0`/`0B` coast |
-| Terrain   | `1`, `C`, `D`, and `B` pairs | shelf/shallows plus terrain class |
-| Villages  | `F` paired with `B`/`C`      | sites; `F` reads as a marker      |
+`$0FEA` reads a cell (shifting the high nibble down), `$0FD3` read-modify-writes
+one nibble. So the map is **256 x 400 tiles**, 16 possible values per tile.
 
-Confirmed: `0` = ocean, `B` = land. The land-mass phase writes only
-`$00`, `$BB`, `$B0`, `$0B`.
+### Terrain nibbles
 
-The terrain phase overwrites both ocean and land, and `$11` is by far its most
-common write (1580 of 3439 changed bytes) — nibble `1` renders as the
-continental shelf ringing every landmass, which fits.
+Established three ways: diffing the map buffer across generation phases, the
+spatial signature of each value, and the 16 `JSR $0FD3` write sites. Then
+cross-checked against an independent community dump of the historical map,
+which agrees on every continent, island chain, river course and mountain range.
 
-Nibbles `C`, `D`, `E` are terrain classes whose exact meaning is still
-inferred, not confirmed; reading `$2AE9`, `$2D23`, `$2E32`, `$3961`, `$3EAD`
-would settle them. Rivers are visible as fine lines through the continents,
-written by the `RUNNING RIVERS,TRIBUTARIES` phase inside that subtree.
+| Nibble | Meaning              | Evidence                                        |
+| :----: | :------------------- | :---------------------------------------------- |
+| `0`    | ocean                | land-mass phase writes it; 59% of the map       |
+| `1`    | shelf / shallows     | rings every coast; terrain phase's biggest write |
+| `2`    | sparse coastal fringe | thin, hugs coastlines                          |
+| `3`,`4` | rare special sites  | 14 and 19 cells total; unidentified             |
+| `5`-`A` | **rivers**          | dendritic networks matching Mississippi, Amazon, Parana |
+| `B`    | plain / grassland    | land-mass phase writes it; 21% of the map       |
+| `C`    | forest               | eastern North America and the Amazon basin      |
+| `D`    | mountain             | continuous Rockies/Andes spine — unmistakable   |
+| `E`    | tropical class       | Mexico, Central America, northern South America; jungle? |
+| `F`    | **native village**   | isolated single cells; 353 of them              |
 
-With nibble decoding the palette covers **100%** of tiles on both disks — there
-are no unexplained values left.
+Two things worth care:
+
+- **`F` is not a scratch marker.** `$2D23` does use `$0F` as a temporary fill
+  value, but it unfills it (`$0F` -> `$00`) on the second call, so surviving
+  `F` cells are villages. This matches the reference dump's red squares and the
+  village phase writing `$BF`/`$FB`/`$FC`/`$CF`.
+- **Six distinct river values** for one feature strongly suggests flow
+  **direction** is encoded per tile — which fits a game where rivers are the
+  main route inland, and where the manual stresses that a moderate pace on a
+  river covers as much ground as a reckless pace on land.
+
+Write sites, for porting the terrain phase: `$2AAB`(2) `$2B8C`(3) `$2C28`(B)
+`$2CE5`(2) `$2CFE`(1) `$2D1B`(1) `$2D75`(F scratch) `$2E0E`(B) `$2EAB`(C)
+`$2F47`(D) `$2F7D`(E) `$3115`(D) `$327C`(B) `$3E4B`(E), plus two
+register-sourced writes at `$332C` and `$343E`.
 
 ## Manual (`docs/Seven Cities of Gold.pdf`)
 
