@@ -30,3 +30,4 @@ __pycache__/
 
 # generated map disks
 BLANKMAP*.D64
+HISTMAP.D64

@@ -98,11 +98,18 @@ Recovered from `game2`: rank ladder (`CAPTAIN`, `CAPTAIN GENERAL`, `VICE GOVERNO
 `GOVERNOR`, `GOVERNOR GENERAL`, `VICEROY`), skill levels (`OBSERVER (DEMO)`, `NOVICE`,
 `JOURNEYMAN`, `MASTER`), Old World locations (`SHIP PALACE PUB HOME OUTFIT`), court dialogue.
 
-## Solved: font
+## Solved: font (exact)
 
-A custom 8x8 set in **ASCII order** starting with space at index 0 — not PETSCII order. Lives
-in the raw track region of disk 1, near offset 4600 of the tracks 1-10 stream. Exact offset
-still needs pinning down.
+96 glyphs, 8x8, in **ASCII order** starting with space — not PETSCII order, which is why the
+game's text tables index it as `character = ASCII - $20`.
+
+**Offset 4714 (`$126A`)** of the raw stream from disk 1 tracks 1-10, ending at 5482.
+`tools/extract_font.py` pulls it to `local/font.png` and `local/font.json`, and verifies the
+offset rather than trusting it: glyph 0 must be blank and all 26 letters must have ink in rows
+1-6 with a blank row 7. Currently 26/26.
+
+Glyph indices 64-95 are not ASCII letters but custom symbols — likely UI or terrain icons,
+not yet identified.
 
 ## Solved: what makes a valid map disk
 
@@ -675,3 +682,33 @@ That region is still only partly explored.
 
 The display is hires bitmap at 8x8 pixels per map cell, so each terrain type
 needs 8 bytes of pattern plus a color nibble pair in the video matrix.
+
+
+## Map of disk 1's raw region (tracks 1-10, sectors 0-19)
+
+51,200 bytes. Content lives only in roughly the first 11 KB; everything past ~11,300 is a
+repeating filler pattern.
+
+| Offset        | Contents                                            |
+| :------------ | :-------------------------------------------------- |
+| 0 - ~1,800    | vertical stripe patterns                            |
+| ~1,800 - 4,700| dense graphics                                      |
+| **4,714**     | **font**, 96 glyphs, ends 5,482                     |
+| 5,482 - ~11,300 | dense dithered patterns — terrain tile candidates  |
+| ~11,300+      | filler                                              |
+
+## Open: terrain tile bitmaps
+
+Still not identified. The region after the font is full of dithered 8-byte patterns that are
+plausible hires terrain texture, but forest cannot be told from mountain by eye, and there are
+far more patterns (~6 KB) than the 16 terrain types need at 8 bytes each. Likely several
+variants per terrain type, mixed with other graphics.
+
+The reliable way to settle it is to capture the game's own rendering and match tiles against
+it. That needs the game to accept a map disk.
+
+**`d64/HISTMAP.D64`** is an attempt at that: a copy of `7CITIES2.D64` with its BAM and
+directory rewritten to look like a World Maker output (name `map`, id `ea`, 0 entries, BAM
+showing 2/683). Untested — the boot automation failed to sync its keypress on the attempt
+made, and emulator UI automation has repeatedly been the least productive activity in this
+project. Worth one careful manual try.
