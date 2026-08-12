@@ -1,0 +1,554 @@
+{
+ "description": "Positions chosen by the land-mass placement loop, read at $1B5F in the original 6502. Coordinates and radii only \u2014 no map data.",
+ "cases": [
+  {
+   "seed": 4660,
+   "config": 0,
+   "placements": [
+    {
+     "radius": 70,
+     "sizeClass": 0,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 166,
+     "yLow": 94,
+     "yHigh": 0,
+     "b0": 70,
+     "y": 94
+    },
+    {
+     "radius": 70,
+     "sizeClass": 0,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 89,
+     "yLow": 247,
+     "yHigh": 0,
+     "b0": 70,
+     "y": 247
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 187,
+     "yLow": 14,
+     "yHigh": 0,
+     "b0": 10,
+     "y": 14
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 190,
+     "yLow": 92,
+     "yHigh": 1,
+     "b0": 10,
+     "y": 348
+    }
+   ]
+  },
+  {
+   "seed": 4660,
+   "config": 1,
+   "placements": [
+    {
+     "radius": 70,
+     "sizeClass": 0,
+     "flags": 255,
+     "pairOffset": 48,
+     "x": 166,
+     "yLow": 94,
+     "yHigh": 0,
+     "b0": 70,
+     "y": 94
+    },
+    {
+     "radius": 82,
+     "sizeClass": 0,
+     "flags": 255,
+     "pairOffset": 255,
+     "x": 119,
+     "yLow": 178,
+     "yHigh": 0,
+     "b0": 70,
+     "y": 178
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 24,
+     "yLow": 0,
+     "yHigh": 1,
+     "b0": 10,
+     "y": 256
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 114,
+     "yLow": 80,
+     "yHigh": 0,
+     "b0": 10,
+     "y": 80
+    }
+   ]
+  },
+  {
+   "seed": 4660,
+   "config": 2,
+   "placements": [
+    {
+     "radius": 70,
+     "sizeClass": 0,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 166,
+     "yLow": 199,
+     "yHigh": 0,
+     "b0": 70,
+     "y": 199
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 87,
+     "yLow": 122,
+     "yHigh": 0,
+     "b0": 10,
+     "y": 122
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 231,
+     "yLow": 46,
+     "yHigh": 1,
+     "b0": 10,
+     "y": 302
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 86,
+     "yLow": 58,
+     "yHigh": 0,
+     "b0": 10,
+     "y": 58
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 97,
+     "yLow": 63,
+     "yHigh": 1,
+     "b0": 10,
+     "y": 319
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 52,
+     "yLow": 77,
+     "yHigh": 1,
+     "b0": 10,
+     "y": 333
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 144,
+     "yLow": 23,
+     "yHigh": 1,
+     "b0": 10,
+     "y": 279
+    }
+   ]
+  },
+  {
+   "seed": 48879,
+   "config": 0,
+   "placements": [
+    {
+     "radius": 71,
+     "sizeClass": 0,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 109,
+     "yLow": 104,
+     "yHigh": 0,
+     "b0": 70,
+     "y": 104
+    },
+    {
+     "radius": 70,
+     "sizeClass": 0,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 120,
+     "yLow": 34,
+     "yHigh": 1,
+     "b0": 70,
+     "y": 290
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 238,
+     "yLow": 44,
+     "yHigh": 0,
+     "b0": 10,
+     "y": 44
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 36,
+     "yLow": 122,
+     "yHigh": 0,
+     "b0": 10,
+     "y": 122
+    }
+   ]
+  },
+  {
+   "seed": 48879,
+   "config": 1,
+   "placements": [
+    {
+     "radius": 71,
+     "sizeClass": 0,
+     "flags": 255,
+     "pairOffset": 6,
+     "x": 109,
+     "yLow": 104,
+     "yHigh": 0,
+     "b0": 70,
+     "y": 104
+    },
+    {
+     "radius": 75,
+     "sizeClass": 0,
+     "flags": 255,
+     "pairOffset": 255,
+     "x": 105,
+     "yLow": 231,
+     "yHigh": 0,
+     "b0": 70,
+     "y": 231
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 83,
+     "yLow": 53,
+     "yHigh": 0,
+     "b0": 10,
+     "y": 53
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 23,
+     "yLow": 77,
+     "yHigh": 1,
+     "b0": 10,
+     "y": 333
+    }
+   ]
+  },
+  {
+   "seed": 48879,
+   "config": 2,
+   "placements": [
+    {
+     "radius": 71,
+     "sizeClass": 0,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 109,
+     "yLow": 113,
+     "yHigh": 0,
+     "b0": 70,
+     "y": 113
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 25,
+     "yLow": 63,
+     "yHigh": 0,
+     "b0": 10,
+     "y": 63
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 41,
+     "yLow": 146,
+     "yHigh": 0,
+     "b0": 10,
+     "y": 146
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 36,
+     "yLow": 223,
+     "yHigh": 0,
+     "b0": 10,
+     "y": 223
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 178,
+     "yLow": 142,
+     "yHigh": 0,
+     "b0": 10,
+     "y": 142
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 234,
+     "yLow": 137,
+     "yHigh": 0,
+     "b0": 10,
+     "y": 137
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 10,
+     "yLow": 199,
+     "yHigh": 0,
+     "b0": 10,
+     "y": 199
+    }
+   ]
+  },
+  {
+   "seed": 1,
+   "config": 0,
+   "placements": [
+    {
+     "radius": 70,
+     "sizeClass": 0,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 119,
+     "yLow": 29,
+     "yHigh": 1,
+     "b0": 70,
+     "y": 285
+    },
+    {
+     "radius": 71,
+     "sizeClass": 0,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 147,
+     "yLow": 83,
+     "yHigh": 0,
+     "b0": 70,
+     "y": 83
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 206,
+     "yLow": 19,
+     "yHigh": 0,
+     "b0": 10,
+     "y": 19
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 25,
+     "yLow": 42,
+     "yHigh": 0,
+     "b0": 10,
+     "y": 42
+    }
+   ]
+  },
+  {
+   "seed": 1,
+   "config": 1,
+   "placements": [
+    {
+     "radius": 70,
+     "sizeClass": 0,
+     "flags": 255,
+     "pairOffset": 36,
+     "x": 119,
+     "yLow": 141,
+     "yHigh": 0,
+     "b0": 70,
+     "y": 141
+    },
+    {
+     "radius": 62,
+     "sizeClass": 0,
+     "flags": 255,
+     "pairOffset": 255,
+     "x": 84,
+     "yLow": 242,
+     "yHigh": 0,
+     "b0": 70,
+     "y": 242
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 61,
+     "yLow": 34,
+     "yHigh": 0,
+     "b0": 10,
+     "y": 34
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 150,
+     "yLow": 138,
+     "yHigh": 0,
+     "b0": 10,
+     "y": 138
+    }
+   ]
+  },
+  {
+   "seed": 1,
+   "config": 2,
+   "placements": [
+    {
+     "radius": 70,
+     "sizeClass": 0,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 119,
+     "yLow": 141,
+     "yHigh": 0,
+     "b0": 70,
+     "y": 141
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 211,
+     "yLow": 78,
+     "yHigh": 1,
+     "b0": 10,
+     "y": 334
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 30,
+     "yLow": 162,
+     "yHigh": 0,
+     "b0": 10,
+     "y": 162
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 179,
+     "yLow": 31,
+     "yHigh": 1,
+     "b0": 10,
+     "y": 287
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 240,
+     "yLow": 229,
+     "yHigh": 0,
+     "b0": 10,
+     "y": 229
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 123,
+     "yLow": 29,
+     "yHigh": 1,
+     "b0": 10,
+     "y": 285
+    },
+    {
+     "radius": 10,
+     "sizeClass": 2,
+     "flags": 0,
+     "pairOffset": 255,
+     "x": 17,
+     "yLow": 18,
+     "yHigh": 0,
+     "b0": 10,
+     "y": 18
+    }
+   ]
+  }
+ ]
+}

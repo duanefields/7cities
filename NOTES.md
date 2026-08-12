@@ -293,7 +293,27 @@ three distinct by chance has probability 6/27, about 22%.
 Sequence 1's flag bit 7 makes `$2231` test a **second position** offset from the first before
 accepting either — `$22`-`$24` are saved to `$47`-`$49`, shifted by `$4E` in x and by
 `size * 2 + size / 8` in y, retested, then restored. That is a paired landmass: two continents
-placed as a unit at a fixed offset. Sequence 2 is special-cased at `$2208` (`LDA $57 / CMP #$02`)
+placed as a unit.
+
+**The pair's horizontal offset is drawn, not fixed** (an earlier note here said fixed). `$4E` comes
+from `$2186`: `$0ACB($0F) + 1`, redrawn while it lands on 1, where `$0F` is `radius * 5 / 7`. Only
+the vertical offset, `2 * radius + radius / 8`, is constant. Measured values of `$4E` include 48
+and 6 for radius 70.
+
+Two draws happen at `$2186` and `$2193` **regardless of whether their results are used**: `$4E` is
+overwritten with `$FF` at `$21B4` when the command is not paired, and the `$B1`/`$B2` coin flip is
+overwritten at `$21A8` for islands. Both still advance the LFSR, so a port that skips them
+desynchronizes every later draw.
+
+The bounds differ for a paired command too, in two places that are easy to miss — `xLower` becomes
+`$4E + radius` and `yUpper` becomes `$0185 - (3 * radius + radius / 8)`, reserving room to the left
+and below for the partner. `LandMassPhase.bounds` models both; an earlier version of that code
+modelled neither.
+
+`$0ACB` is worth distinguishing from `$22B4`: it takes **one** draw and reduces it modulo the limit
+by repeated subtraction, self-modifying the operand of its own `CMP` and `SBC` at `$0AD9`, and
+returns 0 for a limit below 2. `$22B4` rejects and redraws instead. Different routines, different
+LFSR consumption, both used in the same loop. Sequence 2 is special-cased at `$2208` (`LDA $57 / CMP #$02`)
 to clamp its continent's y range to 110..220 instead of the full map.
 
 ### Placement
@@ -338,9 +358,37 @@ do at any plausible density, and which no correct-versus-broken port could be di
 fixture with only one outcome is not a test. `LandMassPhaseTests` now asserts the fixture contains
 both, so that failure cannot recur silently.
 
+### `$B0` is the radius; `$21` is scratch
+
+Both are written together at `$217B` (`STX $21 / STX $B0`), which makes them look interchangeable.
+They are not. Captured at every registration across 9 seed/config pairs, `$B0` is **always** exactly
+`$46` or `$0A`, while `$21` drifts — 71, 82, 75, 62 all appear. Use `$B0` wherever the command's
+nominal radius is meant.
+
+`$22F7` reads `$21`, not `$B0`, so the placement test is run at the drifted value. Why `$21` is
+already 71 at the *first* registration for some seeds is **not yet explained** — nothing between
+`$217B` and `$226A` appears to write it, and `$1731` only writes `$0F`-`$13`, `$25` and `$02`/`$03`.
+Worth settling before trusting a placement port, because a one-unit difference in radius shifts
+every bound the test computes.
+
+### Two call sites register landmasses, and the second is inside the walker
+
+`$1B5F` is reached from `$226A` in the placement loop and from `$1866` inside the walker. Counting
+hits separates them:
+
+| Config | `$226A` | `$1866` |
+| :----- | ------: | ------: |
+| 0      | 4       | 0       |
+| 1      | 3       | 1       |
+
+So a paired command registers **once** from the placement loop, and its partner is registered later
+from inside the walker — which is why configuration 1 yields four registrations from three commands,
+and why that fourth entry carries a drifted `$21` (82) alongside `$B0` = 70.
+
 `$1B5F`/`$1BD9` is **not** the draw, despite sitting where a draw would. It appends
 `(y, size, class)` to a registry at `$033C` (the cassette buffer) indexed by `$64`, and bumps
-`$A9` for each island. Later phases — rivers, villages — read that registry. `$23D3` is the
+`$A9` for each island. Note the copy loop at `$1BE1` runs **once**, not twice: `LDX #$01` then
+`DEX / BNE` exits immediately, so it stores `$22` and never `$21`. Later phases — rivers, villages — read that registry. `$23D3` is the
 routine that actually fills, via the rasterizer at `$15AD`, with shape parameters computed by
 `$1731` from the radius (`$0F` = `size * 5/7`, `$13` = `size * 3/8`, `$12` = `size * 1.44`, plus
 reciprocals `$10` and `$11`). `$15AD` itself is not yet read.

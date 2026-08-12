@@ -50,25 +50,60 @@ public enum LandMassPhase {
 
     // MARK: - Placement bounds
 
-    /// Horizontal range a landmass origin may occupy (`$21B8`).
-    ///
-    /// `x` runs from `size` to `$FE - size`, keeping the whole mass on the map.
-    public static func xRange(radius: UInt8) -> (lower: UInt8, upper: UInt8) {
-        (radius, 0xFE &- radius)
+    /// The window a landmass origin may be drawn from.
+    public struct Bounds: Sendable, Equatable {
+        public let xLower: UInt8, xUpper: UInt8
+        public let yLower: UInt16, yUpper: UInt16
     }
 
-    /// Vertical range a landmass origin may occupy (`$21B8`, 16-bit).
+    /// Bounds for one placement (`$21B8` and `$21CD`).
     ///
-    /// `y` runs from `size + 2` to `$0185 - size` — 389 minus the radius, which
-    /// is where the map's 400-row height shows up in the arithmetic.
+    /// The unpaired case is the simple one: `x` in `radius ..< $FE - radius` and
+    /// `y` in `radius + 2 ..< $0185 - radius`, which keeps the mass on the map
+    /// and is where the 400-row height shows up in the arithmetic.
     ///
-    /// Configuration 2 overrides this for its single continent, clamping to
-    /// 110...220 (`$2208`: `LDA $57 / CMP #$02`), which is why its islands all
-    /// land in the lower half.
-    public static func yRange(radius: UInt8, config: Int, continent: Bool)
-        -> (lower: UInt16, upper: UInt16) {
-        if config == 2 && continent { return (0x6E, 0xDC) }
-        return (UInt16(radius) &+ 2, 0x0185 &- UInt16(radius))
+    /// **The paired case moves two of the four bounds**, and missing either puts
+    /// the second landmass off the map:
+    ///
+    /// - `xLower` becomes `pairOffset + radius`, because the partner is placed
+    ///   at `x - pairOffset` and needs room to the left.
+    /// - `yUpper` becomes `$0185 - (3 * radius + radius / 8)` rather than
+    ///   `$0185 - radius`, because the partner sits `2 * radius + radius / 8`
+    ///   further down.
+    ///
+    /// Configuration 2 then overrides both vertical bounds for its continent,
+    /// clamping to `110 ..< 220` (`$2202`/`$2208`), which is why its islands all
+    /// end up in the lower half of the map.
+    public static func bounds(radius: UInt8, paired: Bool, pairOffset: UInt8,
+                              config: Int) -> Bounds {
+        let xUpper = 0xFE &- radius
+        var xLower = radius
+        var yLower = UInt16(radius) &+ 2
+        var yUpper = 0x0185 &- UInt16(radius)
+
+        if paired {
+            xLower = pairOffset &+ radius
+            let spread = UInt16(radius) &* 3 &+ UInt16(radius) / 8
+            yUpper = 0x0185 &- spread
+        }
+        // $2202: only continents, and only in configuration 2.
+        if radius >= 0x46 && config == 2 {
+            yLower = 0x6E
+            yUpper = 0xDC
+        }
+        return Bounds(xLower: xLower, xUpper: xUpper,
+                      yLower: yLower, yUpper: yUpper)
+    }
+
+    /// Where a paired landmass's partner goes, relative to the first (`$223E`).
+    ///
+    /// The vertical offset is fixed at `2 * radius + radius / 8`; the horizontal
+    /// one is **not** fixed — `pairOffset` is drawn at `$2186` from
+    /// `$0ACB(radius * 5 / 7) + 1`, redrawn while it comes out as 1. Both
+    /// positions must pass ``isClear`` before either is accepted.
+    public static func partner(x: UInt8, y: UInt16, radius: UInt8,
+                               pairOffset: UInt8) -> (x: UInt8, y: UInt16) {
+        (x &- pairOffset, y &+ UInt16(radius) &* 2 &+ UInt16(radius) / 8)
     }
 
     // MARK: - The placement test

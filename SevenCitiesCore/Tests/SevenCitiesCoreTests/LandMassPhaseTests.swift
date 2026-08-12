@@ -95,17 +95,58 @@ func radiiMatch() {
 func placementBoundsAreOnMap() {
     for continent in [true, false] {
         let r = LandMassPhase.radius(continent: continent)
-        let x = LandMassPhase.xRange(radius: r)
-        #expect(x.lower == r)
-        #expect(Int(x.upper) == 0xFE - Int(r))
-
-        let y = LandMassPhase.yRange(radius: r, config: 0, continent: continent)
-        #expect(y.lower == UInt16(r) + 2)
-        #expect(y.upper == 389 - UInt16(r))
+        let b = LandMassPhase.bounds(radius: r, paired: false, pairOffset: 0xFF,
+                                     config: 0)
+        #expect(b.xLower == r)
+        #expect(Int(b.xUpper) == 0xFE - Int(r))
+        #expect(b.yLower == UInt16(r) + 2)
+        #expect(b.yUpper == 389 - UInt16(r))
     }
-    // Configuration 2 clamps its continent to a middle band.
-    let clamped = LandMassPhase.yRange(radius: 0x46, config: 2, continent: true)
-    #expect(clamped == (110, 220))
+}
+
+/// The paired case moves two bounds, not none. Missing either would put the
+/// partner landmass off the map.
+@Test("Paired placement reserves room for the partner")
+func pairedBoundsReserveRoom() {
+    let r: UInt8 = 0x46                       // 70
+    let offset: UInt8 = 20
+    let solo = LandMassPhase.bounds(radius: r, paired: false, pairOffset: offset,
+                                    config: 0)
+    let pair = LandMassPhase.bounds(radius: r, paired: true, pairOffset: offset,
+                                    config: 0)
+
+    // Room to the left for a partner at x - pairOffset.
+    #expect(pair.xLower == offset + r)
+    #expect(pair.xLower > solo.xLower)
+    // Room below for a partner 2r + r/8 further down.
+    #expect(pair.yUpper == 389 - (UInt16(r) * 3 + UInt16(r) / 8))
+    #expect(pair.yUpper < solo.yUpper)
+    // The other two are unchanged.
+    #expect(pair.xUpper == solo.xUpper)
+    #expect(pair.yLower == solo.yLower)
+}
+
+@Test("Configuration 2 clamps its continent to a middle band")
+func configTwoClampsContinent() {
+    let continent = LandMassPhase.bounds(radius: 0x46, paired: false,
+                                         pairOffset: 0xFF, config: 2)
+    #expect(continent.yLower == 110)
+    #expect(continent.yUpper == 220)
+
+    // Islands are not clamped — the check at $2202 is on the radius.
+    let island = LandMassPhase.bounds(radius: 0x0A, paired: false,
+                                      pairOffset: 0xFF, config: 2)
+    #expect(island.yLower == 12)
+    #expect(island.yUpper == 379)
+}
+
+/// The partner's vertical offset is fixed; the horizontal one is drawn.
+@Test("A paired landmass sits down and to the left of its partner")
+func partnerOffset() {
+    let (px, py) = LandMassPhase.partner(x: 150, y: 200, radius: 0x46,
+                                         pairOffset: 20)
+    #expect(px == 130)                          // x - pairOffset
+    #expect(py == 200 + 140 + 8)                // y + 2r + r/8
 }
 
 @Test("An empty mask accepts anything")
