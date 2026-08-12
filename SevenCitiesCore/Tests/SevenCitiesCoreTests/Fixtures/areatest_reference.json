@@ -1,0 +1,133 @@
+{
+ "description": "Placement test $22F7 from the original 6502. The mask is built from the blobs listed here, not captured \u2014 no game data.",
+ "blobs": [
+  {
+   "x": 30,
+   "y": 40,
+   "width": 20,
+   "height": 20
+  },
+  {
+   "x": 150,
+   "y": 60,
+   "width": 40,
+   "height": 30
+  },
+  {
+   "x": 200,
+   "y": 150,
+   "width": 10,
+   "height": 10
+  }
+ ],
+ "cases": [
+  {
+   "x": 128,
+   "y": 300,
+   "radius": 70,
+   "clear": true
+  },
+  {
+   "x": 100,
+   "y": 350,
+   "radius": 10,
+   "clear": true
+  },
+  {
+   "x": 60,
+   "y": 300,
+   "radius": 10,
+   "clear": true
+  },
+  {
+   "x": 35,
+   "y": 150,
+   "radius": 10,
+   "clear": true
+  },
+  {
+   "x": 40,
+   "y": 50,
+   "radius": 10,
+   "clear": false
+  },
+  {
+   "x": 128,
+   "y": 60,
+   "radius": 70,
+   "clear": false
+  },
+  {
+   "x": 170,
+   "y": 75,
+   "radius": 10,
+   "clear": false
+  },
+  {
+   "x": 205,
+   "y": 155,
+   "radius": 5,
+   "clear": false
+  },
+  {
+   "x": 30,
+   "y": 150,
+   "radius": 120,
+   "clear": false
+  },
+  {
+   "x": 128,
+   "y": 255,
+   "radius": 70,
+   "clear": true
+  },
+  {
+   "x": 128,
+   "y": 256,
+   "radius": 70,
+   "clear": true
+  },
+  {
+   "x": 128,
+   "y": 257,
+   "radius": 70,
+   "clear": true
+  },
+  {
+   "x": 0,
+   "y": 0,
+   "radius": 10,
+   "clear": true
+  },
+  {
+   "x": 254,
+   "y": 398,
+   "radius": 10,
+   "clear": true
+  },
+  {
+   "x": 128,
+   "y": 128,
+   "radius": 1,
+   "clear": true
+  },
+  {
+   "x": 128,
+   "y": 128,
+   "radius": 0,
+   "clear": true
+  },
+  {
+   "x": 245,
+   "y": 379,
+   "radius": 10,
+   "clear": true
+  },
+  {
+   "x": 10,
+   "y": 255,
+   "radius": 10,
+   "clear": true
+  }
+ ]
+}
