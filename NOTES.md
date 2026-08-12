@@ -1281,6 +1281,67 @@ Still open: which of `$3FA8`, `$37C2`, `$400E` or `$3FE3` actually composes a
 terrain glyph. `$37C2` is the only unconditional call in the per-frame body and
 is the place to start.
 
+### Solved: the terrain tiles, statically
+
+The exploration view draws terrain as **redefined characters**, which is why the
+charset appears nowhere on either disk. But only the *charset* is assembled at
+runtime — the tile **bitmaps are static data inside the main program**, so once
+`game` is decrypted they can be read straight out. `tools/extract_tiles_static.py`
+does it with no emulator.
+
+#### How the view is built
+
+```text
+$3107  12x12 grid of unique character codes into the video matrix at $8CAE,
+       code = $70 + row + col * $0C; color RAM filled with $08
+       ($08 = multicolor flag + color 0)
+$31B4  $B1/$B2 -> the charset glyph region ($AB80 for buffer B); walk 6x6 map
+       tiles, advancing $C0 per tile column and $10 per tile row
+$58B8  per tile: read the map byte at ($86),Y with Y=$30; low nibble is the base
+       terrain, high nibble an overlay; dispatch through the table at $5529
+```
+
+The strides are the proof the layout is right: one tile is **2x2 characters**,
+so a tile column step is `2 * $0C = 24` codes = `$C0` bytes and a tile row step
+is `2` codes = `$10` bytes. 6x6 tiles x 4 glyphs = 144 = the 12x12 grid, and
+codes `$70-$FF` are exactly 144 glyphs at `$A380-$A7FF`.
+
+#### The dispatch table at `$5529`
+
+Sixteen 2-byte pointers, indexed by terrain value — and it lines up exactly with
+the terrain enum recovered independently from the game's own name table at
+`$1566`, which is a good independent check on both.
+
+| Value | Terrain | Pattern |
+| :---- | :------ | :------ |
+| `$0`, `$2` | deep / shallow water | `$94B0` — a RAM buffer the game animates |
+| `$1`  | medium water | `$94D8` — likewise |
+| `$3`  | ship | `$5833` |
+| `$4`-`$A` | river junction, WE, NW, SW, NS, NE, SE | `$5563` + `$20` each |
+| `$B`-`$F` | plain, forest, mountain, swamp, village | `$563B`, `$5653`, `$568B`, `$571B`, `$5753` |
+
+The seven river patterns being exactly `$20` apart is the giveaway that 32 bytes
+is one tile. Water is the exception: it points into RAM because it animates, via
+the `EOR #$55` pass at `$4057`.
+
+#### Palette
+
+From the setup at `$32C0` and the raster IRQ at `$2250`, which copies shadow
+bytes into the VIC registers (`$02C8` -> `$D021`, `$02C5` -> `$D023`, and
+`$02F4` -> `$D018`, the charset buffer flip):
+
+| Bits | Register | Value | Meaning |
+| :--- | :------- | :---- | :------ |
+| `00` | `$D021`  | `$07` | yellow — plains |
+| `01` | `$D022`  | `$0E` | light blue — water |
+| `10` | `$D023`  | `$05` | green — vegetation |
+| `11` | color RAM | `$08 & $07` = 0 | black — rock and outlines |
+
+Rendered, these are unmistakably the original art: a black mountain peak, green
+forest clusters, a swamp dither, a village hut, the ship with masts, and every
+river connection. This is the classic tileset as **algorithm plus data** rather
+than captured pixels, which is what makes it shippable.
+
 ### The lesson, twice in one session
 
 The genuine result here — the loader's data path, and stage 1 extracted

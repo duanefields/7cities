@@ -42,9 +42,23 @@ engineering record; this holds the work.
       track/sector digits or its `$C003`/`$C004`/`$C005` parameters directly, so
       the re-entry protocol has not been found. This is the same question as
       "what loads `game`".
-- [ ] **Fill in the missing original tiles.** Rivers, villages and a clean
-      mountain were absent from the captured frame and are reconstructed.
-      Capturing more demo frames would replace them with the original's pixels.
+- [x] ~~**Fill in the missing original tiles.**~~ ~~**Identify the exploration
+      view's composition step.**~~ **Both solved, statically.** The view draws
+      terrain as redefined characters, but only the *charset* is built at
+      runtime — the tile bitmaps are static data in the main program. Decrypt
+      `game` and `tools/extract_tiles_static.py` reads all 16 straight out, no
+      emulator and no captured pixels. One tile is 2x2 characters (32 bytes);
+      the dispatch table at `$5529` gives the pattern per terrain value and
+      matches the enum from `$1566`. Water is the exception — it points at a RAM
+      buffer because it animates. See NOTES.md for the layout and palette.
+- [ ] **Wire the static tiles into the extractor and viewer.** `extract.sh`
+      should emit the original tileset from the user's own disks so the viewer
+      defaults to classic art without needing a captured frame. This replaces
+      `local/original_tiles.json`, which came from a screenshot and had
+      reconstructed rivers, villages and mountain.
+- [ ] **Animate water.** Entries `$0`/`$1`/`$2` point at RAM buffers driven by
+      the `EOR #$55` pass at `$4057`, which swaps multicolor pixel pairs. Worth
+      reproducing for fidelity.
 - [ ] **Identify the exploration view's composition step.** The original draws
       terrain procedurally into redefined characters rather than from a tile
       atlas; reproducing that exactly is a separate job from drawing our own.
