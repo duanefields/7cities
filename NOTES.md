@@ -1199,6 +1199,48 @@ routines at `$0CF3` and `$0D13` are 1 KB fills of `$A380-$A7FF` and
 `$AB80-$AFFF`, so there appear to be two screen buffers rather than the single
 `$8C00` matrix recorded earlier for the exploration view.
 
+### The exploration view and its double-buffered charset
+
+Recovered from the decrypted program. **Correction to the earlier note** that
+recorded charset `$A800` from a live `$D018` = `$3B`: that was one frame of a
+pair. The program never writes `$3B` as an immediate — it writes `$38` and then
+flips a bit, because the terrain charset is **double buffered**.
+
+Setup at `$2C41`:
+
+```text
+$2C54  LDA #$35 / STA $01        ; bank out BASIC and KERNAL, keep I/O
+$2C64  LDA $DD00 / AND #$FC / ORA #$01 / STA $DD00   ; VIC bank $8000-$BFFF
+$2C6E  LDA #$38 / STA $D018      ; matrix $8C00, charset $A000
+$2C73  STA $02F4                 ; remember it — this is the buffer variable
+$2C81  LDA #$17 / STA $D011      ; 24 rows
+```
+
+The two charset buffers are `$A000-$A7FF` and `$A800-$AFFF`, and `$02F4` holds
+the live `$D018`. The buffer base pages are a two-entry table at **`$0A2A`**:
+`$A3`, `$AB` — i.e. the glyph region actually rewritten is `$A380-$A7FF` and
+`$AB80-$AFFF`, charset indices `$70-$FF`. That matches the two 1 KB fill
+routines at `$0CF3` and `$0D13`, and it matches the river glyphs sitting at
+`$80-$AF` in the charset dump.
+
+`$4062` is the animator, and it is self-modifying — it reads a base page from
+`$0A2A,Y`, patches it into the operands of its own load and store, then walks
+the region:
+
+```text
+$4062  LDY $AF / LDX $0A2A,Y
+$4067  STX $408E / STX $4093     ; patch the $A380 loop's page
+$406D  INX
+$406E  STX $407A / STX $407F     ; patch the $A400 loop's page
+$4076  LDA $A400,Y / EOR #$55 / STA $A400,Y / INY / BNE   ; 4 pages
+$408C  LDA $A380,Y / EOR #$55 / STA $A380,Y / INY / BPL   ; 128 bytes
+```
+
+`EOR #$55` flips the low bit of every 2-bit multicolor pixel, swapping
+background against `$D022` and `$D023` against color RAM — so this is the
+shimmer/animation pass over terrain, not the generator. The generator itself is
+still not located.
+
 ### The lesson, twice in one session
 
 The genuine result here — the loader's data path, and stage 1 extracted
