@@ -1342,6 +1342,69 @@ forest clusters, a swamp dither, a village hut, the ship with masts, and every
 river connection. This is the classic tileset as **algorithm plus data** rather
 than captured pixels, which is what makes it shippable.
 
+### Correction: terrain rendering is position-dependent
+
+Checked against the community reference map (c64-wiki, 4080x6400 = 255x400 tiles
+at 16px, i.e. the same 16x16 tiles). Two separate conclusions, and they point
+opposite ways.
+
+**The map decode is right.** Per-tile counts against the reference:
+
+| Terrain  | Reference | Ours   |
+| :------- | --------: | -----: |
+| plain    |    22,120 | 21,897 |
+| forest   |     6,249 |  6,266 |
+| mountain |     2,516 |  2,540 |
+| swamp    |     1,172 |  1,189 |
+
+Nothing is missing from the decode.
+
+**The tile rendering is wrong**, and structurally so. `TerrainTiles` reads one
+fixed 32-byte pattern per terrain, but the original composes terrain **from the
+tile's map position**. Three classes, from the dispatch at `$5913`:
+
+```text
+$5913  CPY #$0D / BEQ $5922      ; mountain  -> variant path
+$5917  CPY #$0C / BCC $5941      ; < 12      -> straight copy
+$591B  CPY #$0F / BCS $5941      ; >= 15     -> straight copy
+$591F  JMP $598A                 ; forest, swamp -> composed from motifs
+```
+
+- **Straight copy (`$5941`)** — water, rivers, plain, ship, village. Copies 16
+  bytes per character column, two columns, destination advancing by `$58B3`
+  between them. Source is 32 sequential bytes: **bytes 0-15 are the left
+  character column, 16-31 the right**, which confirms the unpack we already use.
+- **Mountain (`$5922`)** — the pointer is advanced before copying:
+  `ptr += (x & 3)`, then `ptr += T[x & 1] + T[y & 1]` where `T` at `$58B4` is
+  `00 24 48 6C`. So a mountain's appearance depends on where it sits, which is
+  how peaks join into ranges. Rendering variant 0 everywhere gives the
+  "half mountains and little corners" look.
+- **Forest and swamp (`$598A`)** — index a 64-entry table at `$54E9` by
+  `((y & 3) * 4 + (x & 3)) * 4`, then scatter motifs at offsets from `$58AB`.
+  That is why a wood reads as many individual trees rather than a repeated tile.
+
+Evidence the model is real: the reference's mountain tile matches our data
+**exactly** (zero differing pixels) at pointer + 2, and no offset at all
+reproduces forest or swamp, whose bitmaps do not exist verbatim anywhere in the
+program. A first attempt at the full mountain formula reproduces only 56 of 400
+sampled tiles exactly, so `$5922`/`$597E` need reading to the end.
+
+**Consequence for the port:** a 16-entry tile atlas cannot reproduce the
+original. Tiles must be selected per position — mountain has at most 12 variants
+(`x&3` times three offsets), forest and swamp 16 each (`x&3`, `y&3`) — so the
+asset should become variants plus an index rule, not one bitmap per terrain.
+
+#### The reference map's annotations are not game data
+
+The reference carries markings the game never draws: **red squares** over 208
+tiles and **white circles** over 66. Neither color can come from the exploration
+renderer, whose whole palette is yellow, light blue, green and black, and the
+terrain vocabulary from the game's own name table at `$1566` has exactly 16
+entries with no such thing. They are the map author's annotations — the red
+squares mark villages. What the white circles mark is unknown; their tile
+coordinates fall in a regular grid, which suggests region markers rather than
+anything on the map.
+
 ### The lesson, twice in one session
 
 The genuine result here — the loader's data path, and stage 1 extracted
