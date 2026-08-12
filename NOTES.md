@@ -1016,6 +1016,22 @@ at `$106F` with the same `ROL x4 / AND #$02 / EOR / ROL / ROL` shape as the
 World Maker RNG. Pages `$08-$0F` are `4C 0C` filler; code starts around
 `$1000`, which is why the entry is `$1038`.
 
+The `$0800` load address is not assumed, it is measured two independent ways:
+
+- **JSR coherence.** Of the 47 `JSR` targets that land inside the stage, 68%
+  point at a byte that is a common opcode. The neighboring load addresses
+  score 19%, 26%, 30% and 47%.
+- **Self-modifying code.** `$1058 STA $1066` patches the operand of
+  `$1065 CMP #$65`, and `$1077 STA $1086` patches the operand of
+  `$1085 EOR #$85`. Both land exactly where they must, which only happens at
+  the right base.
+
+Note that the entry `$1038` disassembles as `ADC $14 / CMP $14 / BNE / RTS`,
+which is not a plausible handoff target — so `$C2B5`'s operand is evidently a
+**per-load parameter too**, like `$C003`/`$C004`/`$C005`, and `$1038` is the
+entry of whichever stage loaded last before the dump. Stage 1's own entry is
+still unknown.
+
 The decisive confirmation is the text at `$1DE0-$1EF0`, stored as **screen
 codes offset by `$20`** (subtract `$20`, then `$01-$1A` are `A-Z`):
 
