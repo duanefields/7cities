@@ -765,8 +765,13 @@ So there is no fixed 16-entry tile atlas to extract. What a previous dump
 captured was one frame's rendered content.
 
 Live colors during exploration: `$D021`=`$7` yellow (land), `$D022`=`$E` light
-blue (water), `$D023`=`$5` green (vegetation), color RAM `$8` orange (trunks,
-rock, ship). Multicolor bit pairs select bg0/bg1/bg2/fg.
+blue (water), `$D023`=`$5` green (vegetation). Multicolor bit pairs select
+bg0/bg1/bg2/fg.
+
+**Color RAM in multicolor char mode:** bit 3 is the *multicolor flag*, not part
+of the color. Every viewport cell here holds `$8`, which means "multicolor on,
+foreground = 0" — **black**. Masking with `& $0F` instead of `& $07` renders
+ship, tree trunks and mountains orange when they should be black.
 
 **Consequence for the port.** The renderer cannot be a straight tilemap of 16
 terrain images. The original composes a scene from the surrounding map cells,
