@@ -1161,6 +1161,44 @@ CAUTIOUS  MODERATE  RECKLESS
 **The main program can now be decrypted with no emulator.** This unblocks the
 game rules and the terrain art, both of which live inside it.
 
+### Inside the decrypted main program
+
+Entry is `$0800 JMP $2D35`. Text is **high-bit PETSCII** (as in `game2`), not
+the screen-code-plus-`$20` form stage 1 uses. `AND #$55` masking of charset
+bytes and per-glyph rendering confirm the terrain charset really is built at
+runtime rather than stored.
+
+Recovered so far, which is what a port needs to match:
+
+| Address   | Content                                                          |
+| :-------- | :--------------------------------------------------------------- |
+| `$15D6`   | `OPTIONS`, `VIEW MAP`, `DROP STUFF OFF`, `RESUME MOVEMENT`        |
+| `$1674`   | `OPTIONS`, `OFFER GIFTS`, `AMAZE THE NATIVES`, `TRADE`, `RESUME MOVEMENT` |
+| `$1A13`   | `YOU HAVE DISCOVERED`, `THE MOUTH`/`SOURCE OF A MINOR ...`        |
+| `$1A61`   | `DEEP CANYONS`, `BROAD PLAINS`, `RICH PRAIRIES`, `A GREAT LAKE`, `GIANT FORESTS`, `LUSH JUNGLES`, `VAST MOUNTAINS`, `TOWERING TREES` |
+| `$1B07`   | month names                                                       |
+| `$1B27`   | `THE EXPEDITION IS ON LAND`                                       |
+| `$153E`   | `CAUTIOUS`, `MODERATE`, `RECKLESS` (screen-code encoding here)     |
+
+The native-interaction verbs (`OFFER GIFTS`, `AMAZE THE NATIVES`, `TRADE`) and
+the discovery vocabulary are exactly the systems `TODO.md` lists as not started,
+and they are now readable.
+
+Charset leads, not yet followed to a conclusion:
+
+```text
+$14C9  LDA #$C1 / STA $91
+$14CD  JSR $0805 ; INC $91 ; CMP #$DB ; BNE  -> 26 glyphs, $C1-$DA
+$14D8  LDY #$50
+$14DA  LDA $AA00,Y / AND #$55 / STA $AA00,Y   ; multicolor bit masking
+$14E2  LDA $AA80,Y / AND #$55 / STA $AA80,Y
+```
+
+`$0805` is the character printer (it dispatches on `$80`/`$A0` ranges). The
+routines at `$0CF3` and `$0D13` are 1 KB fills of `$A380-$A7FF` and
+`$AB80-$AFFF`, so there appear to be two screen buffers rather than the single
+`$8C00` matrix recorded earlier for the exploration view.
+
 ### The lesson, twice in one session
 
 The genuine result here — the loader's data path, and stage 1 extracted
