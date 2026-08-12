@@ -53,15 +53,18 @@ enum TileArt {
         case .mountain: c64[0x00]
         case .village: c64[0x02]
         }
-        let side = 8
-        let image = NSImage(size: NSSize(width: side, height: side))
-        image.lockFocus()
-        color.setFill()
-        NSRect(x: 0, y: 0, width: side, height: side).fill()
-        image.unlockFocus()
-        guard let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
-            return texture(for: terrain)
-        }
+        // Must match the tile cell exactly. An 8-point texture in a 32-point
+        // cell left the background showing between tiles, which read as a grid
+        // of dots once zoomed out.
+        let side = Int(size)
+        guard let ctx = CGContext(
+            data: nil, width: side, height: side, bitsPerComponent: 8,
+            bytesPerRow: side * 4, space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return texture(for: terrain) }
+        ctx.setFillColor(color.cgColor)
+        ctx.fill(CGRect(x: 0, y: 0, width: side, height: side))
+        guard let cg = ctx.makeImage() else { return texture(for: terrain) }
         let tex = SKTexture(cgImage: cg)
         tex.filteringMode = .nearest
         flatCache[terrain] = tex
