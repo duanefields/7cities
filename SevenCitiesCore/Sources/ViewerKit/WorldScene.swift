@@ -23,6 +23,7 @@ final class WorldScene: SKScene {
 
     private var position2D: (x: Int, y: Int)
     private var zoom: CGFloat = 3.0 { didSet { applyZoom() } }
+    private var overviewMap: SKTileMapNode?
     private var follow = true
 
     init(map: WorldMap, style: TileStyle, originals: OriginalTiles?, size: CGSize) {
@@ -39,6 +40,7 @@ final class WorldScene: SKScene {
     required init?(coder: NSCoder) { fatalError() }
 
     override func didMove(to view: SKView) {
+        buildOverviewMap()
         buildTileMap()
 
         explorer.fillColor = NSColor(srgbRed: 1.0, green: 0.85, blue: 0.2, alpha: 1)
@@ -62,6 +64,39 @@ final class WorldScene: SKScene {
     private func variantKey(_ terrain: Terrain, x: Int, y: Int) -> String {
         guard style == .original else { return String(describing: terrain) }
         return "\(terrain)#\(((y % 4 + 4) % 4) * 4 + ((x % 4 + 4) % 4))"
+    }
+
+    /// Below this zoom a 16x16 tile lands on fewer than about six screen
+    /// pixels, and the original art turns to noise: peaks become specks, woods
+    /// become speckle, and thin river lines break up. Browsing the whole world
+    /// is exactly the case the original never had to draw, so below the
+    /// threshold we swap in flat terrain colours, which keeps coastlines and
+    /// rivers legible.
+    static let detailZoomThreshold: CGFloat = 0.6
+
+    private func buildOverviewMap() {
+        var groups: [String: SKTileGroup] = [:]
+        for terrain in Terrain.allCases {
+            let group = SKTileGroup(tileDefinition:
+                SKTileDefinition(texture: TileArt.flatTexture(for: terrain)))
+            group.name = String(describing: terrain)
+            groups[String(describing: terrain)] = group
+        }
+        let set = SKTileSet(tileGroups: Array(groups.values))
+        let node = SKTileMapNode(tileSet: set, columns: map.width, rows: map.height,
+                                 tileSize: CGSize(width: TileArt.size, height: TileArt.size))
+        node.anchorPoint = .zero
+        node.position = .zero
+        for y in 0..<map.height {
+            let row = map.height - 1 - y
+            for x in 0..<map.width {
+                node.setTileGroup(groups[String(describing: map[x, row])],
+                                  forColumn: x, row: y)
+            }
+        }
+        node.zPosition = 0.5
+        overviewMap = node
+        addChild(node)
     }
 
     private func buildTileMap() {
@@ -118,6 +153,9 @@ final class WorldScene: SKScene {
 
     private func applyZoom() {
         cam.setScale(1.0 / zoom)
+        let overview = zoom < Self.detailZoomThreshold
+        overviewMap?.isHidden = !overview
+        tileMap?.isHidden = overview
         // Keep the explorer marker a readable size on screen at any zoom.
         explorer.setScale(max(0.35, 1.0 / zoom))
     }

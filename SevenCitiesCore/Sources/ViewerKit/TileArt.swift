@@ -35,6 +35,41 @@ enum TileArt {
         }
     }
 
+    /// A single flat colour per terrain, for the zoomed-out overview.
+    ///
+    /// Detailed art cannot survive being drawn a few pixels wide — the useful
+    /// thing at that scale is the shape of the coast, the rivers and the
+    /// mountain ranges, not individual trees. Colours are the original's own
+    /// multicolour palette, so the overview still reads as the same world.
+    static func flatTexture(for terrain: Terrain) -> SKTexture {
+        if let cached = flatCache[terrain] { return cached }
+        let c64 = OriginalTiles.c64
+        let color: NSColor = switch terrain {
+        case .deepWater, .mediumWater, .shallowWater, .ship: c64[0x0E]
+        case .riverJunction, .riverWE, .riverNW, .riverSW,
+             .riverNS, .riverNE, .riverSE: c64[0x0E].blended(withFraction: 0.25, of: c64[0x07]) ?? c64[0x0E]
+        case .plain: c64[0x07]
+        case .forest, .swamp: c64[0x05]
+        case .mountain: c64[0x00]
+        case .village: c64[0x02]
+        }
+        let side = 8
+        let image = NSImage(size: NSSize(width: side, height: side))
+        image.lockFocus()
+        color.setFill()
+        NSRect(x: 0, y: 0, width: side, height: side).fill()
+        image.unlockFocus()
+        guard let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            return texture(for: terrain)
+        }
+        let tex = SKTexture(cgImage: cg)
+        tex.filteringMode = .nearest
+        flatCache[terrain] = tex
+        return tex
+    }
+
+    nonisolated(unsafe) private static var flatCache: [Terrain: SKTexture] = [:]
+
     static func texture(for terrain: Terrain) -> SKTexture {
         // Draw into a bitmap context and build the texture from the finished
         // CGImage. Creating an SKTexture from an NSImage that is still
