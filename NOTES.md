@@ -908,9 +908,48 @@ that XORs two bytes in place with a key equal to the pointer's high byte
   so the unpacked code must live elsewhere. That comparison should be redone
   once the destination is known.
 
-### The way in
+### The bytecode reads cleanly
 
-Implement the VM in Python — 20 handlers, all present and plain — and run the
-loader's bytecode. That reveals what it decrypts, where it puts it, and how the
-game file is finally expanded, entirely statically. Every emulator-driven
-attempt on this project has been slower and less reliable than reading the code.
+`tools/vmdis.py` disassembles it. The bytecode begins **six bytes after each
+`JSR $C482`** — the dispatcher points at the return address and starts at
+`Y = 4`. Empirically that is the only alignment giving long runs of valid
+opcodes (27, 21 and 33 from three of the four entry sites).
+
+What the loader's program actually does:
+
+```text
+$C033  LDA $02F0 / SUBI #$9D / JNZ $C3CE    ; tamper check on KERNAL vectors
+$C03B  LDA $02D4 / SUB $C002 / JNZ $C3CE    ; second tamper check
+$C047  LDI #$30 / STA $C2C7 / STA $C2C8     ; seed the "U1:2,0,01,00" digits
+$C062  LDI #$00 / STA $2C, LDI #$21 / STA $2D
+$C06C  loop pages $21..$A0 calling SYS $C07D
+$C095  loop pages $CA..$D0 calling SYS $C07D
+$C0AB  SETNAM / SETLFS / OPEN, then LISTEN / SECOND / UNLSTN
+$C100  prints "ERROR" via CHROUT
+```
+
+`SYS $C07D` is a **RAM test**, not a decryptor — it writes a byte and reads it
+back. `$C465` is a rolling checksum over `($2C)`; `$C44D` a counter.
+
+So the loader's bytecode is a tamper check, a memory test and the disk I/O
+driver. It also seeds the drive command string decoded in the very first
+session: the whole loader is one program.
+
+### Still unsolved: what transforms `game.prg`
+
+`DECRYPT2` (opcode `$0F`) **is** used, at `$C445`-`$C448` — four consecutive
+calls, so eight bytes per pass. But it does not decode the game file:
+
+**A per-page XOR was ruled out exhaustively.** All 256 masks were tried against
+four plausible load addresses (`$0800`, `$0000`, `$2100`, `$1000`), scoring for
+known plaintext and instruction density. Nothing. So whatever `DECRYPT2`
+unmasks is a small region — a key, a stub, or the drive code — and `game.prg`
+itself is transformed some other way, consistent with its 7.04 bits/byte.
+
+Next leads, in order:
+
+1. Read `$C445`'s surrounding bytecode properly — it did not align from
+   `$C420`, so find its real entry and see what `$2C`/`$2D` point at.
+2. Check whether the depacker rides along in the loaded data itself rather than
+   in the loader, e.g. a stub in the first sectors that expands the rest.
+3. The drive code uploaded by `$C29A`/`$C2A1` has not been looked at at all.
