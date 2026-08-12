@@ -11,7 +11,7 @@ resolution with smooth scrolling and native conveniences.
 The game itself — trade, natives, the court, scoring — is not started. See `TODO.md`.
 
 ![The viewer showing the Gulf of Mexico and the Caribbean, drawn with the original C64 terrain
-art](images/viewer-classic-map.png)
+art](images/viewer-classic-map.webp)
 
 The classic map and the terrain art above both came out of the original disks — the art is not
 a screenshot of the game, but the game's own tile data, read out of its main program and
