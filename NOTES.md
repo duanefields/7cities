@@ -1424,18 +1424,35 @@ Plains really are a bright yellow. The game sets `$D021 = $07` in every view, so
 the only question was ever how to render color 7, and a screenshot answers it in
 a way that palette arguments do not.
 
-#### Water is not flat — still to do
+#### The specks in deep water are yellow, and the palette is exact
 
-The same frame shows two distinct blues dithered together across open water,
-plus **white specks in deep water**. Our renderer draws water as one flat color,
-so both are missing.
+A **native VICE screenshot** — written by the emulator itself, so no CRT filter
+and no display colour management — contains exactly five colours, which makes
+the palette above exact rather than estimated:
 
-Two blues plus white cannot come from the four-color set the land tiles use
-(`$D021` yellow, `$D022`, `$D023`, color RAM black), so **color RAM must be set
-per terrain** rather than uniformly to `$08` as the fill at `$3158` suggests.
-That is the thread to pull: find where water characters get their color RAM
-value, and the deep/medium/shallow distinction and the shore shapes at charset
-`$40-$5F` should follow.
+```text
+#030303  black    #7688FF  light blue    #FFFF49  yellow
+#65D835  green    #FFFFFF  white (0.09%)
+```
+
+The earlier reading of "two blues dithered together" was the CRT filter
+darkening alternate scanlines, not the game. There is one blue.
+
+Sampling an open-water region away from the ship shows the specks are
+**yellow**, not white: 94.6% blue against 0.086% `#FFFB41`. Water is drawn as
+`$55` — every pixel pair `01`, i.e. `$D022` light blue — and the specks are
+where a pair is `00` instead, letting `$D021` yellow through. The only white in
+the frame is the ship marker, which is a sprite.
+
+Colour RAM is filled uniformly with `$08` across the viewport by the loop at
+`$3158`, so bit pattern `11` is black everywhere and nothing is per-terrain.
+That closes the question the previous note opened.
+
+What is still missing is the water *pattern*: the speckling lives in the RAM
+buffer at `$94B0` that the game animates, not in any static data, so it cannot
+be extracted the way the land tiles were. Reproducing it means porting the
+animation rather than reading bytes. The deep/medium/shallow distinction and the
+shore shapes at charset `$40-$5F` are still unexamined.
 
 ### The lesson, twice in one session
 

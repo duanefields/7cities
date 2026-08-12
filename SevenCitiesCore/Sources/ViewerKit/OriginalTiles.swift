@@ -51,12 +51,14 @@ struct OriginalTiles {
     /// view, so plains are colour 7 and the only question was ever how to
     /// render it.
     ///
+    /// Taken from a native VICE screenshot, which has no CRT filter and holds
+    /// exactly five colours — so these are exact, not a cluster estimate.
     /// The rest of the table is Pepto, since nothing here uses those entries.
     static let c64: [NSColor] = [
-        (0, 0, 0), (255, 255, 255), (104, 55, 43), (112, 164, 178),
-        (111, 61, 134), (91, 187, 91), (53, 40, 121), (239, 235, 95),
+        (3, 3, 3), (255, 255, 255), (104, 55, 43), (112, 164, 178),
+        (111, 61, 134), (101, 216, 53), (53, 40, 121), (255, 255, 73),
         (111, 79, 37), (67, 57, 0), (154, 103, 89), (68, 68, 68),
-        (108, 108, 108), (154, 210, 132), (133, 143, 252), (149, 149, 149),
+        (108, 108, 108), (154, 210, 132), (118, 136, 255), (149, 149, 149),
     ].map { NSColor(srgbRed: $0.0 / 255, green: $0.1 / 255, blue: $0.2 / 255, alpha: 1) }
 
     static func load(nextTo mapURL: URL) -> OriginalTiles? {
