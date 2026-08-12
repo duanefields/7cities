@@ -1,14 +1,21 @@
 #!/usr/bin/env python3
-"""Locate the routine that unpacks game.prg.
+"""SUPERSEDED — there is no depacker. Kept only as a record of the attempt.
 
-The on-disk `game` file matches its in-RAM form in 0.00% of bytes, and no chunk
-of the unpacked code appears anywhere on either disk image, so it is genuinely
-transformed rather than merely stored in a different order.
+This hunted a decompressor on the premise that `game` was packed. It is not
+packed: it is the same size in RAM as on disk and is transformed by a **fixed
+byte substitution**, recovered in full and now implemented statically in
+`decrypt_game.py` and `SevenCitiesCore/GameCipher.swift`. Nothing here is on any
+current path.
 
-Strategy: set a write watchpoint inside the game's memory range and let the
-machine tell us who writes there. The fastloader writes once as it streams
-sectors in; the depacker writes again with different data. Collecting the
-distinct program counters that store to one address separates them.
+The watchpoint strategy below also never fired, which is worth remembering
+before reaching for watchpoints again in this project.
+
+Original description follows.
+
+    Set a write watchpoint inside the game's memory range and let the machine
+    tell us who writes there. The fastloader writes once as it streams sectors
+    in; the depacker writes again with different data. Collecting the distinct
+    program counters that store to one address separates them.
 """
 import os
 import sys

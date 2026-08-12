@@ -1,9 +1,19 @@
 #!/usr/bin/env python3
-"""Dump the main game binary from RAM after it has unpacked itself.
+"""Dump the main game binary from RAM. Largely superseded — see below.
 
-`game.prg` is packed on disk — 36 KB containing only 66 JSR and zero
-`AND #$0F`, against 938 JSR in the 18 KB `game3`. So it cannot be disassembled
-statically. Boot the game under vice-mcp, let it unpack, and read RAM instead.
+`game` is not *packed*, it is **enciphered**: same size on disk as in RAM,
+transformed in place by a fixed byte substitution. That substitution is now
+recovered, so the binary can be obtained statically with `decrypt_game.py` and
+no emulator. Prefer that.
+
+This is still useful for one thing: dumping RAM *after the game has been
+running*, which shows initialized buffers and live state that the static
+decryption cannot. Note the two differ above `$8C00`, where screen memory and
+work buffers are overwritten immediately.
+
+The original premise — 36 KB containing only 66 JSR and zero `AND #$0F` against
+938 JSR in the 18 KB `game3` — was right that the file is not 6502, and wrong
+that it must therefore be compressed.
 
 Menu input goes through the KERNAL buffer (`vice_keyboard_key_press`), and the
 title screen only polls while its menu text is displayed, so the F7 press is

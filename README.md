@@ -60,9 +60,25 @@ build or play:**
 | Pillow      | the 9 that render or compare images (`pip install pillow`) |
 | [vice-mcp](https://github.com/barryw/vice-mcp) | the 8 that drive the emulator |
 
-`vice-mcp` is a fork of VICE with an MCP server built in — Homebrew's VICE will not work. Only
-the differential-verification tools need it; everything the build and the extractor do is
-static.
+`vice-mcp` is a fork of VICE with an MCP server built in — Homebrew's VICE will not work.
+
+### What the emulator is still for
+
+Nothing on the build, extract or run path. Everything a user does is static. It is needed for
+exactly two things:
+
+- **Differential verification.** `rng_reference.py` and `arith_reference.py` execute the
+  original 6502 and capture its output as test fixtures, which the Swift tests then assert
+  against. Those fixtures are committed, so you only need the emulator to regenerate or extend
+  them — which is how the World Maker phases and the game rules will be verified as they are
+  ported.
+- **Re-deriving the cipher.** The substitution table in `GameCipher` was recovered from a
+  known-plaintext pair captured live by `catch_decrypt.py`. Its closed form was never found and
+  the generating routine is not in RAM, so the table **cannot currently be re-derived
+  statically**. If you would rather not take it on trust, that is the tool that reproduces it.
+
+Some tools in `tools/` are superseded and say so at the top — `find_depacker.py` chased a
+depacker that turned out not to exist, and `dump_game.py` predates the static decryption.
 
 ## What the viewer does
 
