@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """Render a Seven Cities of Gold map disk to a PNG.
 
-The map is stored *blocked*, not row-major. The World Maker's sector-write
-loop at $0F54 gathers 16 bytes from each of 16 source rows spaced $80 apart,
-so every 256-byte sector is a 16x16 tile block. Blocks tile left-to-right,
-16 per row, giving a 256-tile-wide map.
+The map is stored *blocked* and *packed*, which took several passes to get
+right. Every 256-byte sector is a 16x16 block of bytes; blocks tile 8 per row
+(the source row stride is $80 = 128 tiles, and a block is 16 wide); a sector is
+split into left and right column halves rather than being row-major; and every
+byte holds two horizontally adjacent tiles as nibbles. The finished map is
+256 tiles wide by 400 tall.
 
-Getting this wrong is why row-major renderings smeared land into horizontal
-streaks and why no stride search ever found a peak.
+Reading it as row-major bytes smeared land into horizontal streaks and made
+every stride search fail, because there is no single row stride to find.
 """
 import collections
 import os
@@ -22,33 +24,37 @@ BLOCK = 16
 BLOCKS_PER_ROW = 8       # source row stride $80 = 128 tiles / 16 per block
 PADDING = 0x01          # untouched filler outside the map proper
 
-# Terrain palette.
+# Each byte holds TWO horizontally adjacent tiles, high nibble first. This is
+# why the address calculator at $0EE4 multiplies the low nibble by 2, and why
+# values pair up the way they do: $BB is two land tiles, $00 two ocean, and
+# $B0 / $0B are land+ocean — a coastline, nibble-swapped for which side the
+# water is on. The map is therefore 256 tiles wide, not 128.
 #
-# Confirmed: $00 is ocean and $BB is land — those are what the land-mass phase
-# writes, verified by diffing a disk before and after that phase.
+# Nibble semantics, established by diffing the map buffer at $5700 across
+# generation phases (see tools/wm_trace.py):
 #
-# The rest is structural inference, not yet confirmed against the terrain
-# phase: values group by HIGH NIBBLE ($Bx, $Cx, $Dx, $Ex), which reads as a
-# terrain class with the low nibble carrying a variant. Colored as a plausible
-# elevation ramp so the map is legible; treat the specific assignments as
-# provisional.
-PALETTE = {
-    0x00: (12, 34, 102),      # ocean (confirmed)
-    0x01: (198, 178, 120),    # padding outside the map
-    0x4B: (90, 90, 120),      # per-sector marker
-    0x0B: (64, 164, 223),     # ? shallows / river
-    0x11: (32, 62, 138),      # ? deeper or secondary water
-    0x80: (120, 170, 90),     # ? grassland
+#   land-mass phase writes  $00, $BB, $B0, $0B      -> ocean, land, coastline
+#   terrain phase writes    $11, $BC, $CB, $CC, ... -> shelf and terrain classes
+#   village phase writes    $BF, $FB, $FC, $CF, ... -> sites (F = marker nibble)
+NIBBLE = {
+    0x0: (12, 34, 102),     # ocean            (confirmed: land-mass phase)
+    0x1: (30, 60, 140),     # continental shelf / shallows
+    0xB: (74, 150, 64),     # land / plain     (confirmed: land-mass phase)
+    0xC: (150, 160, 70),    # ? scrub or hills
+    0xD: (140, 120, 80),    # ? highland
+    0xE: (130, 130, 135),   # ? mountain
+    0xF: (240, 240, 240),   # ? site marker    (village phase)
+    0x2: (60, 120, 190),
+    0x3: (90, 170, 210),
+    0x4: (110, 140, 200),
+    0x5: (200, 170, 90),
+    0x6: (80, 150, 170),
+    0x7: (100, 160, 120),
+    0x8: (120, 170, 90),
+    0x9: (170, 180, 80),
+    0xA: (190, 150, 70),
 }
-# High-nibble terrain classes, low nibble = variant.
-NIBBLE_RAMP = {
-    0xB: (74, 150, 64),       # land / plain (confirmed for $BB)
-    0xC: (150, 160, 70),      # ? scrub / hills
-    0xD: (140, 120, 80),      # ? highland
-    0xE: (130, 130, 135),     # ? mountain
-    0xF: (235, 235, 240),     # ? peak / marker
-}
-UNKNOWN = (230, 60, 200)      # loud magenta: still unmapped
+UNKNOWN = (230, 60, 200)
 
 
 def sectors(path, first_track=13):
@@ -136,41 +142,43 @@ def roll_columns(img, w, h, blocks=1):
     return bytes(out)
 
 
-def render(path, dest, scale=3, first_track=13, roll=1):
+def expand_nibbles(img, w, h):
+    """Split each byte into its two tiles, high nibble first."""
+    width = w * 2
+    out = bytearray(width * h)
+    for y in range(h):
+        row = img[y * w:(y + 1) * w]
+        o = y * width
+        for x, byte in enumerate(row):
+            out[o + x * 2] = byte >> 4
+            out[o + x * 2 + 1] = byte & 0x0F
+    return bytes(out), width
+
+
+def render(path, dest, scale=2, first_track=13, roll=1):
     secs = sectors(path, first_track)
     img, w, h = deblock(secs)
     img, w, h, top = crop_to_map(img, w, h)
     img = roll_columns(img, w, h, roll)
+    img, w = expand_nibbles(img, w, h)
 
     counts = collections.Counter(img)
-
-    def color(v):
-        if v in PALETTE:
-            return PALETTE[v]
-        base = NIBBLE_RAMP.get(v >> 4)
-        if base is None:
-            return None
-        # low nibble shades the class slightly, so variants stay visible
-        k = (v & 0x0F) - 8
-        return tuple(max(0, min(255, c + k * 5)) for c in base)
-
-    unknown = {v: n for v, n in counts.items() if color(v) is None}
-
+    unknown = {v: n for v, n in counts.items() if v not in NIBBLE}
     flat = []
     for i in range(256):
-        flat.extend(color(i) or UNKNOWN)
+        flat.extend(NIBBLE.get(i, UNKNOWN))
     im = Image.frombytes("P", (w, h), img)
     im.putpalette(flat)
     im.convert("RGB").resize((w * scale, h * scale), Image.NEAREST).save(dest)
 
     print(f"{os.path.basename(path)}: {len(secs)} sectors -> {w}x{h} tiles "
-          f"(cropped from row {top}) -> {dest}")
-    known = sum(n for v, n in counts.items() if v not in unknown)
-    print(f"  palette covers {100 * known / sum(counts.values()):.1f}% of cells")
+          f"(cropped from byte-row {top}) -> {dest}")
+    known = sum(n for v, n in counts.items() if v in NIBBLE)
+    print(f"  palette covers {100 * known / sum(counts.values()):.1f}% of tiles")
     if unknown:
         top5 = sorted(unknown.items(), key=lambda kv: -kv[1])[:5]
-        print("  unmapped values: " +
-              ", ".join(f"${v:02X}x{n}" for v, n in top5))
+        print("  unmapped nibbles: " +
+              ", ".join(f"${v:X}x{n}" for v, n in top5))
 
 
 if __name__ == "__main__":

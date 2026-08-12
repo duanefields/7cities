@@ -32,7 +32,7 @@ against the original before it is trusted.
 | :---------------------------- | :--------------------------------------------------------- |
 | Fastloader / disk sector order | Solved — read directly from the loader's command string    |
 | Text and font extraction       | Solved                                                     |
-| Map disk format                | **Solved** — 16x16 blocked sectors; renders as the Americas |
+| Map disk format                | **Solved** — blocked sectors, nibble tiles, 256x400 map     |
 | World Maker RNG                | **Ported and verified** against the original 6502          |
 | Multiply / divide helpers      | **Ported and verified** against the original 6502          |
 | World Maker generation phases  | Mapped; land-mass phase entry located, data not yet decoded |

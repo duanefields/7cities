@@ -408,20 +408,43 @@ the Brazilian bulge.
 completely; reading the code that writes the format solved it. Instrument the
 producer, do not infer from the product.
 
-## Open: terrain value semantics
+## Solved: tiles are nibbles — the map is 256 wide
 
-Confirmed: `$00` is ocean and `$BB` is land, from diffing a disk either side of
-the land-mass phase.
+Each byte holds **two horizontally adjacent tiles, high nibble first**. This is
+why `$0EE4` multiplies the low nibble by 2, and why the byte values pair up the
+way they do: `$BB` is two land tiles, `$00` two ocean, and `$B0` / `$0B` are
+land+ocean — a coastline, nibble-swapped for which side the water is on.
 
-The remaining values group by **high nibble** (`$Bx`, `$Cx`, `$Dx`, `$Ex`), which
-reads as a terrain class with the low nibble as a variant. The preview tool
-colors them as an elevation ramp, which produces a plausible map, but the
-specific assignments are **inference, not confirmed**. Confirming them means
-reading the terrain phase (`$2AE9`, `$2D23`, `$2E32`, `$3961`, `$3EAD`).
+So the finished map is **256 x 400 tiles**, not 128 x 400. Rendering bytes as
+single tiles still produced a recognizable map because a 2:1 horizontal squash
+of the Americas still looks like the Americas — which is exactly why it went
+unnoticed for several passes.
 
-A band of still-unmapped values (`$20`, `$A0`, `$A9`, `$10`, `$8D`) sits across
-the upper part of the historical map and renders as magenta. Not yet identified;
-possibly an index or the Old World's own encoding.
+### Terrain semantics, from phase diffs
+
+Established by dumping the map buffer at `$5700` at each phase boundary
+(`tools/wm_trace.py`) and diffing:
+
+| Phase     | Nibbles written              | Meaning                          |
+| :-------- | :--------------------------- | :------------------------------- |
+| Land mass | `0`, `B`                     | ocean, land — and `B0`/`0B` coast |
+| Terrain   | `1`, `C`, `D`, and `B` pairs | shelf/shallows plus terrain class |
+| Villages  | `F` paired with `B`/`C`      | sites; `F` reads as a marker      |
+
+Confirmed: `0` = ocean, `B` = land. The land-mass phase writes only
+`$00`, `$BB`, `$B0`, `$0B`.
+
+The terrain phase overwrites both ocean and land, and `$11` is by far its most
+common write (1580 of 3439 changed bytes) — nibble `1` renders as the
+continental shelf ringing every landmass, which fits.
+
+Nibbles `C`, `D`, `E` are terrain classes whose exact meaning is still
+inferred, not confirmed; reading `$2AE9`, `$2D23`, `$2E32`, `$3961`, `$3EAD`
+would settle them. Rivers are visible as fine lines through the continents,
+written by the `RUNNING RIVERS,TRIBUTARIES` phase inside that subtree.
+
+With nibble decoding the palette covers **100%** of tiles on both disks — there
+are no unexplained values left.
 
 ## Manual (`docs/Seven Cities of Gold.pdf`)
 
