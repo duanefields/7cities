@@ -12,23 +12,38 @@ engineering record; this holds the work.
       (`$0E20`, phases at `$2AE9`, `$2D23`, `$2E32`, `$3961`, `$3EAD`) and its
       RNG and arithmetic are already ported and verified against the original —
       the generation phases themselves are not.
-- [x] ~~**Write the depacker.**~~ **There is no depacker — nothing is packed.**
-      The loader ignores the directory entirely: it issues raw `U1:` block reads
-      from track 1 sector 0, sectors 0-19 per track, and stores every byte
-      verbatim (`JSR $FFA5 / STA ($2C),Y`). The file named `game` that looked
-      encrypted is simply not the program and is never loaded. See NOTES.md.
+- [ ] **Settle what `game` is.** Still the gate on the game's rules. It is
+      36,098 bytes loading at `$0800` (so exactly `$0800-$94FF`), with 66 `JSR`
+      and zero `AND #$0F`, entropy 7.04 bits/byte, and it renders as noise as
+      both a bitmap and a charset — so it is neither code nor plain graphics.
 
-      `tools/extract_stage.py` now lifts a stage straight off a disk image with
-      no emulator. Stage 1 (tracks 1-3, `$0800-$33FF`, entry `$1038`) yields
-      real 6502 and the title text, credits included.
-- [ ] **Extract the remaining stages.** Stage 1 is out; the game proper, the
-      World Maker and the terrain art are on the other code tracks (11-17 and
-      23-25). Pin down which `--skip` goes with which load by reading the
-      callers of `JSR $C003` in stage 1 — each sets a start page, end page and
-      checksum in `$C003`/`$C004`/`$C005` before re-entering the loader.
+      Now established: the `$C000` loader is only the **first-stage** loader and
+      contains no decompressor. It stores raw sectors verbatim
+      (`JSR $FFA5 / STA ($2C),Y`), page-aligned, sectors 0-19 per track from
+      track 1 sector 0. Whatever loads `game` is not it.
 
-      This is what unblocks the original tiles and the game rules, and it is now
-      a static disassembly job rather than an emulator job.
+      Two live readings, which make different predictions:
+
+      1. `game` is packed, and a depacker in stage 1 (or a later stage) expands
+         it in place at `$0800`.
+      2. `game` is never loaded, and the code seen at `$0800-$94FF` in RAM comes
+         from other stages — `game` would then be a decoy.
+
+      Settle it by watching `$0800` during the load — dump `$0800-$94FF` at
+      intervals and find the moment `JSR` density jumps — rather than by
+      inferring from the file. A previous attempt to argue this from the loader
+      alone reached the wrong answer; see NOTES.md.
+- [x] ~~**Extract stage 1.**~~ Done, statically, no emulator.
+      `tools/extract_stage.py` lifts tracks 1-3 to `$0800-$33FF`: real 6502 plus
+      the title text and the Ozark Softscape credits. Load address confirmed two
+      independent ways. `tools/survey_stages.py` scores load addresses for other
+      regions, and `tools/vmtrace.py` disassembles the loader's bytecode.
+- [ ] **Find how stages after the first are loaded.** Stage 1's entry point is
+      still unknown (the `$1038` in a RAM dump is a per-load parameter belonging
+      to whichever stage loaded last). Nothing in stage 1 writes the loader's
+      track/sector digits or its `$C003`/`$C004`/`$C005` parameters directly, so
+      the re-entry protocol has not been found. This is the same question as
+      "what loads `game`".
 - [ ] **Fill in the missing original tiles.** Rivers, villages and a clean
       mountain were absent from the captured frame and are reconstructed.
       Capturing more demo frames would replace them with the original's pixels.

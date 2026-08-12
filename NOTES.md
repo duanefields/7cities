@@ -949,21 +949,19 @@ So the loader's bytecode is a tamper check, a memory test and the disk I/O
 driver. It also seeds the drive command string decoded in the very first
 session: the whole loader is one program.
 
-### Resolved: there is no depacker, and nothing was ever packed
+### The loader does not transform anything — but `game` is still unexplained
 
-**The whole "packed game" premise was wrong.** There is no depacker because
-there is no compression. The game is stored on disk as plain 6502, and the
-loader copies it into RAM byte for byte.
+**Scope note, written after briefly getting this wrong in both directions.**
+What follows about the `$C000` loader is verified. The conclusion "therefore
+nothing is packed" that was drawn from it is **not**, and was withdrawn within
+the same session. See "What `game` is, and is not" below for the honest state.
 
-The mistake was comparing the wrong two things. `local/game.bin` was extracted
-by following the **DOS directory and sector-link chain** for the file named
-`game`. The loader never opens that file, never reads the directory, and never
-follows a sector chain. It issues raw `U1:` block reads and walks **track 1
-sector 0 onward, sectors 0-19 per track**. So `game.bin` and a RAM dump are
-different byte sequences by construction, and every conclusion drawn from
-comparing them — 0.00% positional match, 7.04 bits/byte "entropy", "compressed,
-not merely masked" — was an artifact of that misalignment, not evidence of
-anything.
+The `$C000` loader is only the **first-stage** loader. It ignores the directory
+completely: it issues raw `U1:` block reads and walks **track 1 sector 0
+onward, sectors 0-19 per track**, storing whole sectors page-aligned. It loads
+stage 1 and hands off. It never touches the file named `game`, and it has no
+decompressor in it anywhere. Everything after stage 1 is loaded by some other
+mechanism that has not been identified yet.
 
 #### How the loader actually moves data
 
@@ -1081,13 +1079,60 @@ and are now simply unremarkable: `DECRYPT2` unmasks small regions inside the
 loader's own bytecode, and there was never a packed payload for a page XOR to
 decode.
 
-#### The lesson, again
+### What `game` is, and is not
 
-This is the fourth time in this project that a statistical attack on a data
-format produced confident nonsense — here, an entire fictitious compression
-scheme complete with an entropy measurement — and reading the code that moves
-the bytes settled it in one pass. The rule holds without exception so far:
-**instrument the producer, do not infer from the product.**
+`game` remains the open problem. Re-extracted by following the sector chain and
+stripping link bytes, it is **36,098 bytes loading at `$0800`** — so it occupies
+exactly `$0800-$94FF`, which is precisely the range `dump_game.py` dumps.
+
+That matters, because it means the old comparison was **correctly aligned after
+all**. `game` really does load where the dump reads, so the 0.00% positional
+match against unpacked RAM is real evidence and not an artifact. Withdrawing it
+was a mistake, made by arguing from "the `$C000` loader doesn't load `game`" —
+true — to "so nothing loads it / nothing is packed" — which does not follow.
+Stage 1 is 11 KB; `game` is 36 KB; they are different things, and stage 1
+evidently loads `game` by a mechanism not yet found.
+
+What is actually known about `game`:
+
+| Property                | Value                                              |
+| :---------------------- | :------------------------------------------------- |
+| Load address            | `$0800`, i.e. `$0800-$94FF`                         |
+| `JSR` count             | 66 in 36 KB — cannot be 6502 code                   |
+| `AND #$0F` count        | 0 — likewise impossible                             |
+| Entropy                 | 7.04 bits/byte across all 256 values                |
+| Rendered as hires/chars | noise, no structure — **not** plain graphics either |
+| Most common bytes       | `$AA $CA $78 $41 $25 $2D`                           |
+
+`$AA` leading suggested multicolor graphics, but rendering it at several
+offsets produces no recognizable image, so that is ruled out too.
+
+So exactly one of these is true, and which one is not yet settled:
+
+1. `game` is packed or encrypted and something unpacks it in place at `$0800` —
+   a depacker exists, and it is in stage 1 or in another stage, not in the
+   `$C000` loader.
+2. `game` is never loaded at all, and the `$0800-$94FF` code seen in RAM comes
+   from other stages entirely — in which case `game` may be a decoy, and the
+   0.00% match is comparing against something unrelated after all.
+
+The way to settle it without guessing is to **watch `$0800` during the load**
+rather than reason about the file: break after stage 1 and single-step, or dump
+`$0800-$94FF` at intervals and find the moment its `JSR` density jumps. Both
+of the readings above make a specific, different prediction about that moment.
+
+### The lesson, twice in one session
+
+The genuine result here — the loader's data path, and stage 1 extracted
+statically — came from reading the code that moves the bytes, as always.
+
+But the *wrong* result came the same way, and that is the part worth recording.
+Having proved something specific and true about the `$C000` loader, it was
+tempting to let it settle a much larger question it did not actually touch.
+Verifying the loader says nothing about a file the loader never sees. **Check
+that the thing you proved is the thing you needed**, and re-derive a headline
+claim from the artifact itself before overturning a prior conclusion — reading
+`game`'s own load address and size would have caught this immediately.
 
 4. `$C25A` is the most promising remaining lead. It sets `$2C`/`$2D` to
    `$0800` (low `#$00`, high from `$C003`), then manipulates the 6510 port:
