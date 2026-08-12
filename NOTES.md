@@ -375,7 +375,7 @@ bytes $80-$FF : right 8 columns of all 16 rows
 ```
 
 Reading it row-major scrambles the columns inside every block — the map is
-roughly recognisable but visibly corrupted.
+roughly recognizable but visibly corrupted.
 
 **Buffer address**, from `$0EE4` with `$62` = 7:
 
