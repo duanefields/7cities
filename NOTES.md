@@ -448,7 +448,7 @@ which agrees on every continent, island chain, river course and mountain range.
 | `B`    | plain / grassland    | land-mass phase writes it; 21% of the map       |
 | `C`    | forest               | eastern North America and the Amazon basin      |
 | `D`    | mountain             | continuous Rockies/Andes spine — unmistakable   |
-| `E`    | tropical class       | Mexico, Central America, northern South America; jungle? |
+| `E`    | unidentified terrain | clumped, 29% self-adjacent, neighbours plain and forest, not mountains; swamp or desert more likely than jungle |
 | `F`    | **native village**   | isolated single cells; 353 of them              |
 
 Two things worth care:
@@ -457,10 +457,14 @@ Two things worth care:
   value, but it unfills it (`$0F` -> `$00`) on the second call, so surviving
   `F` cells are villages. This matches the reference dump's red squares and the
   village phase writing `$BF`/`$FB`/`$FC`/`$CF`.
-- **Six distinct river values** for one feature strongly suggests flow
-  **direction** is encoded per tile — which fits a game where rivers are the
-  main route inland, and where the manual stresses that a moderate pace on a
-  river covers as much ground as a reckless pace on land.
+- **Rivers are connection masks, not flow direction.** Each of `5`-`A` encodes
+  which *two* neighbours the tile links to — exactly the six ways to choose 2
+  directions from 4, each measured at a clean ~49/49 split:
+
+  | `5` W-E | `8` N-S | `6` N-W | `7` S-W | `9` N-E | `A` S-E |
+  | :------ | :------ | :------ | :------ | :------ | :------ |
+
+  Two-way links only, which is why junctions get their own value (`4`).
 
 Write sites, for porting the terrain phase: `$2AAB`(2) `$2B8C`(3) `$2C28`(B)
 `$2CE5`(2) `$2CFE`(1) `$2D1B`(1) `$2D75`(F scratch) `$2E0E`(B) `$2EAB`(C)
@@ -545,3 +549,26 @@ Differential testing against VICE. Drive the original with a scripted input trac
 `vice_joystick_set`, snapshot game-state RAM each turn with `vice_memory_read`, and assert
 `SevenCitiesCore` matches byte-for-byte. That turns "did we get the rules right" from an
 opinion into a failing test.
+
+## Open: does one map cell equal one drawn tile?
+
+Unresolved, and it matters for the renderer's design.
+
+Each cell is one 4-bit terrain code, and the community dump draws one glyph per
+cell. But the manual's scale figures do not reconcile with a 1:1 tilemap. An
+exploration screen is **120 miles per side**. At ~40 cells across that is 3
+miles per cell, making the whole 256x400 map only ~768 x 1,200 miles — far too
+small for the Americas at roughly 9,000 miles north to south. Working the other
+way, 400 cells over 9,000 miles is ~22 miles per cell, which puts only ~5 cells
+across a 120-mile screen.
+
+Three possibilities, undecided:
+
+- the exploration view draws each cell as a large multi-character tile
+- the game generates finer detail procedurally from the coarse map
+- the mile figures are flavor rather than geometry
+
+The renderer is in `game.prg`, the 36 KB main binary, which is still completely
+unexamined — all work so far has been in `game3`. Settle this before designing
+the SpriteKit renderer: a procedural-detail surface is a very different job
+from a straight tilemap.
