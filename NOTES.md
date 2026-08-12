@@ -42,7 +42,7 @@ Both images are standard 35-track D64s (174,848 bytes, no error info).
 | :---------- | :------------- | ------: | :--------------------------------------------- |
 | `ea`        | `$02A8`        |     102 | BASIC stub, `LOAD"EA",8,1`                     |
 | `ea` + `$9D` | `$C000-$C9FF` |   2,560 | EA fastloader / raw sector reader              |
-| `game`      | `$0800-$94FF`  |  36,096 | Main game — **packed on disk**, see below       |
+| `game`      | —              |  36,096 | Not code and **not used by the loader** — see below |
 | `game2`     | `$0800-$21FF`  |   6,656 | Old World / court sequence plus the text table |
 | `game3`     | `$0800-$4FFF`  |  18,432 | World Maker plus disk formatter; 100% code     |
 | `game4`     | `$1000-$23FF`  |   5,120 | Pure tabular data, ~3-byte period. Unidentified |
@@ -583,27 +583,41 @@ the SpriteKit renderer: a procedural-detail surface is a very different job
 from a straight tilemap.
 
 
-## Correction: `game.prg` IS packed
+## Correction, twice over: the `game` file is a red herring
 
-An early note here claimed "the code is not packed or encrypted". That was
-wrong, and it stood in the record for a long time. It came from a crude
-JSR/RTS density heuristic that I over-trusted.
+This section has been wrong in both directions, so here is the settled version.
 
-The control is unambiguous:
+**First claim: "the code is not packed or encrypted."** From a crude JSR/RTS
+density heuristic. Withdrawn.
+
+**Second claim: "`game.prg` IS packed."** Also wrong, and it stood much longer.
+The evidence looked overwhelming:
 
 | Binary  |   Size | JSR | BNE | `AND #$0F` |
 | :------ | -----: | --: | --: | ---------: |
 | `game3` | 18,432 | 938 | 433 |          5 |
 | `game`  | 36,096 |  66 |  34 |      **0** |
 
-Zero `AND #$0F` in 36 KB is impossible for real 6502. `game2` and `game3` are
-plain; `game` is not.
+Zero `AND #$0F` in 36 KB really is impossible for 6502, so `game` really is not
+code. The error was the inference drawn from that: **not code** does not imply
+**packed code**. It can simply not be the program.
 
-**`tools/dump_game.py`** boots the game under vice-mcp, waits for it to unpack
-itself, and dumps `$0800-$94FF` to `local/game_unpacked.bin`. The result has
-JSR=1114, BNE=647 and matches the on-disk image in **0.0%** of bytes.
+**What is actually true:** the loader never opens `game`, never reads the
+directory, and never follows a sector chain. It issues raw `U1:` block reads
+from track 1 sector 0 and stores every byte verbatim. The program lives in the
+**248 sectors that are BAM-allocated but belong to no file, on tracks 1-10 and
+34-35** — noted in the file table above long before anyone realized that was
+where the game was. `game` at track 17 sector 7 is something else; the loader
+never touches it.
 
-Always analyze `game_unpacked.bin`, never `game.bin`.
+So there was never a packed payload, never a depacker, and the "7.04 bits/byte
+entropy" measured on `game.bin` was measuring a file the game does not use.
+See "Resolved: there is no depacker" below for the loader's actual data path
+and for how to extract a stage statically.
+
+`tools/dump_game.py` still works and `local/game_unpacked.bin` is still a valid
+RAM snapshot, but it is no longer the only way to get at the code, and an
+emulator is no longer required.
 
 ## Display modes (from the unpacked binary)
 
@@ -935,29 +949,129 @@ So the loader's bytecode is a tamper check, a memory test and the disk I/O
 driver. It also seeds the drive command string decoded in the very first
 session: the whole loader is one program.
 
-### Still unsolved: what transforms `game.prg`
+### Resolved: there is no depacker, and nothing was ever packed
 
-`DECRYPT2` (opcode `$0F`) **is** used, at `$C445`-`$C448` — four consecutive
-calls, so eight bytes per pass. But it does not decode the game file:
+**The whole "packed game" premise was wrong.** There is no depacker because
+there is no compression. The game is stored on disk as plain 6502, and the
+loader copies it into RAM byte for byte.
 
-**A per-page XOR was ruled out exhaustively.** All 256 masks were tried against
-four plausible load addresses (`$0800`, `$0000`, `$2100`, `$1000`), scoring for
-known plaintext and instruction density. Nothing. So whatever `DECRYPT2`
-unmasks is a small region — a key, a stub, or the drive code — and `game.prg`
-itself is transformed some other way, consistent with its 7.04 bits/byte.
+The mistake was comparing the wrong two things. `local/game.bin` was extracted
+by following the **DOS directory and sector-link chain** for the file named
+`game`. The loader never opens that file, never reads the directory, and never
+follows a sector chain. It issues raw `U1:` block reads and walks **track 1
+sector 0 onward, sectors 0-19 per track**. So `game.bin` and a RAM dump are
+different byte sequences by construction, and every conclusion drawn from
+comparing them — 0.00% positional match, 7.04 bits/byte "entropy", "compressed,
+not merely masked" — was an artifact of that misalignment, not evidence of
+anything.
 
-Next leads, in order:
+#### How the loader actually moves data
 
-1. Read `$C445`'s surrounding bytecode properly — it did not align from
-   `$C420`, so find its real entry and see what `$2C`/`$2D` point at.
-2. Check whether the depacker rides along in the loaded data itself rather than
-   in the loader, e.g. a stub in the first sectors that expands the rest.
-3. ~~The drive code uploaded by `$C29A`/`$C2A1`~~ — **checked, and it is not
-   drive code.** Both routines just send bytes from the command string at
-   `$C2B9` (`"I0:" "#" "U1:2,0,01,00" "B-P:2,0"`) over the serial bus via
-   `CIOUT` (`$FFA8`): `$C29A` sends `Y = $10..$17`, `$C2A1` sends `Y = $04..$10`.
-   They transmit DOS commands, nothing more. No drive code is uploaded anywhere
-   in the loader, so this lead is dead.
+The whole path is now readable end to end. `tools/vmtrace.py` follows every
+branch of the bytecode instead of one straight-line run at a time:
+
+```text
+$C033  tamper checks on $02F0 / $02D4        -> $C3CE on failure
+$C062  RAM test, pages $21..$A0 and $CA..$D0
+$C0AB  SETNAM "I0:" / SETLFS 15,8,15 / OPEN  ; command channel
+       SETNAM "#"   / SETLFS  2,8, 2 / OPEN  ; drive buffer
+$C0ED  LISTEN 8 / SECOND $6F / send "U1:2,0,tt,ss" / UNLSN
+$C176  LISTEN 8 / SECOND $6F / send "B-P:2,0"     / UNLSN
+$C189  TALK 8 / TKSA $62, then the transfer loop
+$C200  INC $2D; if $2D != $C004 loop back to $C0ED
+$C21B  SYS $C25A  -> checksum; JNZ $C100 prints "ERROR"
+$C230  JMPIND $C2B5 = JMP $1038                   ; hand off to the loaded stage
+```
+
+The transfer loop is the point. It applies **no transform whatsoever**:
+
+```text
+$C19B  JSR $FFA5        ; ACPTR — one byte off the serial bus
+$C19E  STA ($2C),Y      ; stored verbatim, 256 bytes per sector, page aligned
+$C1AA  INY / BNE $C19B
+```
+
+The `LDA $2D / EOR #$00 / STA $2D` pair bracketing that loop looks like a
+self-modifying page scrambler, and that is a good guess — but nothing in the
+loader ever writes `$C196` or `$C1C1` (checked for both native `STA abs` and
+the bytecode `STA` encoding). The operands stay `$00`, so the pair is
+vestigial.
+
+`$C25A` is likewise only verification — a rolling 8-bit sum over pages
+`$C003..$C004`, minus `$C005`, and `$C21E` branches to the "ERROR" printer if
+it is non-zero. It is not a depacker.
+
+#### Extracting a stage statically
+
+`$C003`/`$C004`/`$C005` are **per-load parameters** — start page, end page,
+checksum — set by the caller before re-entering the loader (the first stage
+does this at `$19D8`, `JSR $C003`). The values sitting in a RAM dump therefore
+describe whichever load ran last, not the first one. That is why the first
+stage does not satisfy the `$04` checksum found in a dumped loader.
+
+The first stage is **track 1 sector 0, sectors 0-19 per track, 44 sectors,
+page-aligned to `$0800-$33FF`**. Extracted that way it is immediately real
+6502 — a delay loop at `$1040`, a `$D012` raster wait at `$104B`, and an LFSR
+at `$106F` with the same `ROL x4 / AND #$02 / EOR / ROL / ROL` shape as the
+World Maker RNG. Pages `$08-$0F` are `4C 0C` filler; code starts around
+`$1000`, which is why the entry is `$1038`.
+
+The decisive confirmation is the text at `$1DE0-$1EF0`, stored as **screen
+codes offset by `$20`** (subtract `$20`, then `$01-$1A` are `A-Z`):
+
+```text
+OZARK SOFTSCAPE COPYRIGHT (C)
+PRESS  F1  TO CREATE ANOTHER WORLD
+PRESS  F7  TO PLAY THE GAME
+JIM RUSHING   ALAN WATSON        ROY GLOVER
+LOADING WORLD MAKER / GAME PROGRAM
+```
+
+That is the title screen, pulled off the disk image with no emulator involved.
+
+Each load leaves the track/sector digits where it stopped, so a following load
+*can* continue the stream — but it is not one long sequential read, and the
+first stage is not immediately followed by the second. Surveying the tracks in
+loader order shows what disk 1 actually holds:
+
+| Tracks  | Contents                                                        |
+| :------ | :-------------------------------------------------------------- |
+| 1-3     | **Stage 1** — title screen, credits, protection; entry `$1038`   |
+| 4-10    | Map storage, blank: `$01` padding throughout, a little `$4B`     |
+| 11-17   | Code — highest `JSR` density on the disk is tracks 12-13         |
+| 18-22   | Mixed / sparse                                                   |
+| 23-25   | Code                                                             |
+| 26-35   | `$01` padding                                                    |
+
+Tracks 4-10 being solid `$01` is a nice cross-check: `$01` is exactly the
+padding value the map decoder already expects (`MapDecoder.padding`), so that
+region is the reserved world slot a generated map gets written into. It also
+explains the 248 BAM-allocated sectors that belong to no file.
+
+The remaining stages, including the one holding the `$0AE2` RNG, should be
+recovered by extracting the code tracks with `tools/extract_stage.py --skip`
+and disassembling. Which `--skip` corresponds to which load is not yet pinned
+down; the honest way to settle it is to read the callers of `JSR $C003` in
+stage 1 and see what page range and checksum each one sets up.
+
+~~The drive code uploaded by `$C29A`/`$C2A1`~~ — **not drive code.** Both just
+send bytes from the command string at `$C2B9` (`"I0:" "#" "U1:2,0,01,00"
+"B-P:2,0"`) via `CIOUT` (`$FFA8`): `$C29A` sends `Y = $10..$17`, `$C2A1` sends
+`Y = $04..$10`. No drive code is uploaded anywhere in the loader.
+
+`DECRYPT2` (opcode `$0F`) is used at `$C445`-`$C448`, and a per-page XOR was
+ruled out exhaustively against four load addresses. Both of those remain true
+and are now simply unremarkable: `DECRYPT2` unmasks small regions inside the
+loader's own bytecode, and there was never a packed payload for a page XOR to
+decode.
+
+#### The lesson, again
+
+This is the fourth time in this project that a statistical attack on a data
+format produced confident nonsense — here, an entire fictitious compression
+scheme complete with an entropy measurement — and reading the code that moves
+the bytes settled it in one pass. The rule holds without exception so far:
+**instrument the producer, do not infer from the product.**
 
 4. `$C25A` is the most promising remaining lead. It sets `$2C`/`$2D` to
    `$0800` (low `#$00`, high from `$C003`), then manipulates the 6510 port:

@@ -12,39 +12,23 @@ engineering record; this holds the work.
       (`$0E20`, phases at `$2AE9`, `$2D23`, `$2E32`, `$3961`, `$3EAD`) and its
       RNG and arithmetic are already ported and verified against the original —
       the generation phases themselves are not.
-- [ ] **Write the depacker.** This is the gate on almost everything else, not a
-      nicety: the game's rules all live inside `game.prg`, and the original
-      terrain art cannot be extracted without it.
+- [x] ~~**Write the depacker.**~~ **There is no depacker — nothing is packed.**
+      The loader ignores the directory entirely: it issues raw `U1:` block reads
+      from track 1 sector 0, sectors 0-19 per track, and stores every byte
+      verbatim (`JSR $FFA5 / STA ($2C),Y`). The file named `game` that looked
+      encrypted is simply not the program and is never loaded. See NOTES.md.
 
-      What is established so far:
+      `tools/extract_stage.py` now lifts a stage straight off a disk image with
+      no emulator. Stage 1 (tracks 1-3, `$0800-$33FF`, entry `$1038`) yields
+      real 6502 and the title text, credits included.
+- [ ] **Extract the remaining stages.** Stage 1 is out; the game proper, the
+      World Maker and the terrain art are on the other code tracks (11-17 and
+      23-25). Pin down which `--skip` goes with which load by reading the
+      callers of `JSR $C003` in stage 1 — each sets a start page, end page and
+      checksum in `$C003`/`$C004`/`$C005` before re-entering the loader.
 
-      - `game.prg` on disk matches its in-RAM form in **0.00% of bytes** — not
-        one byte in 36,096, where even unrelated data would collide ~0.4% of
-        the time.
-      - **No chunk of the unpacked code appears anywhere on either disk image**,
-        so it is genuinely transformed, not merely stored in a different order.
-      - It is **not** a repeating XOR key, and the byte histograms differ, so it
-        is not a permutation either.
-      - `game2` and `game3` are **not** packed — they read as plain code and
-        text straight off the disk. Whatever this is, it was applied only to the
-        big file.
-      - The `$C000` fastloader is plain code and is the natural place for the
-        depacker to live. `$C047`-`$C25F` inside it is a large non-code region
-        of repeating 2-3 byte groups that looks like a bytecode or table and has
-        not been identified.
-
-      Approaches tried and their status:
-
-      - Write watchpoint inside the game's memory range: never fired. Watchpoints
-        have been unreliable throughout this project.
-      - Polling RAM during the load to catch a plain-then-transformed moment:
-        not yet completed — the run kept failing on title-menu sync.
-
-      **Now understood well enough to attack.** The `$C000` loader is a bytecode
-      VM — see NOTES.md for the dispatcher, the obfuscation constants and all
-      20 opcode handlers. The next step is to implement that VM in Python and
-      run the loader's own bytecode, which reveals the unpacking entirely
-      statically.
+      This is what unblocks the original tiles and the game rules, and it is now
+      a static disassembly job rather than an emulator job.
 - [ ] **Fill in the missing original tiles.** Rivers, villages and a clean
       mountain were absent from the captured frame and are reconstructed.
       Capturing more demo frames would replace them with the original's pixels.
