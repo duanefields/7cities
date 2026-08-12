@@ -103,7 +103,9 @@ Recovered from `game2`: rank ladder (`CAPTAIN`, `CAPTAIN GENERAL`, `VICE GOVERNO
 96 glyphs, 8x8, in **ASCII order** starting with space — not PETSCII order, which is why the
 game's text tables index it as `character = ASCII - $20`.
 
-**Offset 4714 (`$126A`)** of the raw stream from disk 1 tracks 1-10, ending at 5482.
+**Offset 4713 (`$1269`)** of the raw stream from disk 1 tracks 1-10, ending at 5481.
+Ground-truthed by matching against a charset dumped from the running game, not by scoring —
+the scoring heuristic had 4713 and 4714 tied and picked the wrong one.
 `tools/extract_font.py` pulls it to `local/font.png` and `local/font.json`, and verifies the
 offset rather than trusting it: glyph 0 must be blank and all 26 letters must have ink in rows
 1-6 with a blank row 7. Currently 26/26.
@@ -697,9 +699,34 @@ repeating filler pattern.
 | 5,482 - ~11,300 | dense dithered patterns — terrain tile candidates  |
 | ~11,300+      | filler                                              |
 
-## Open: terrain tile bitmaps
+## Solved: terrain tiles are multicolor CHARACTERS
 
-Still not identified. The region after the font is full of dithered 8-byte patterns that are
+The exploration view is **multicolor text mode**, not bitmap. Live VIC state while exploring:
+`video_mode` 1 (multicolor text), 24 rows, `$DD00` = `$C1` (VIC bank `$8000`), `$D018` = `$3B`
+giving video matrix `$8C00` and **charset `$A800`**.
+
+So terrain is drawn as 8x8 multicolor characters — 4 double-width pixels per row, 2 bits each.
+That is why the glyphs look like noise when rendered 1bpp.
+
+Charset layout as dumped from the running game:
+
+| Range     | Contents                                                     |
+| :-------- | :----------------------------------------------------------- |
+| `$00`-`$3F` | the ASCII-ordered font (matches the disk extraction)        |
+| `$40`-`$5F` | coastline / shore shapes, land against water                |
+| `$5A`-`$64` | brown rock and mountain forms                               |
+| `$65`-`$77` | dithered brown/green/blue — forest and swamp textures       |
+| `$80`-`$AF` | green tiles with blue river segments in varying connections |
+| `$B0`-`$FF` | unused filler                                               |
+
+The river glyph range mirrors the six river connection masks in the map data.
+
+**The terrain charset is not on disk anywhere** — not in the raw region, `game2`, `game3`,
+`game4`, or tracks 34-35. Like the game code, it is unpacked at runtime, so it has to be
+extracted from RAM. `local/terrain_charset.bin` is a 2 KB dump; the bitmap-mode path found
+earlier at `$1501` is presumably the separate zoomed-out map view.
+
+### Old note (superseded) The region after the font is full of dithered 8-byte patterns that are
 plausible hires terrain texture, but forest cannot be told from mountain by eye, and there are
 far more patterns (~6 KB) than the 16 terrain types need at 8 bytes each. Likely several
 variants per terrain type, mixed with other graphics.
@@ -707,8 +734,11 @@ variants per terrain type, mixed with other graphics.
 The reliable way to settle it is to capture the game's own rendering and match tiles against
 it. That needs the game to accept a map disk.
 
-**`d64/HISTMAP.D64`** is an attempt at that: a copy of `7CITIES2.D64` with its BAM and
-directory rewritten to look like a World Maker output (name `map`, id `ea`, 0 entries, BAM
-showing 2/683). Untested — the boot automation failed to sync its keypress on the attempt
-made, and emulator UI automation has repeatedly been the least productive activity in this
-project. Worth one careful manual try.
+**`d64/HISTMAP.D64` works.** A copy of `7CITIES2.D64` with its BAM and directory rewritten to
+look like World Maker output (name `map`, id `ea`, 0 entries, BAM showing 2/683) is **accepted
+by the game**. The map-disk validation really is just the directory. This is the key that
+unlocks everything in `game.prg`.
+
+With it attached, the OBSERVER (DEMO) mode plays itself — and the demo only runs on the
+historical map, which is exactly what this disk is. No joystick needed to reach the
+exploration view.

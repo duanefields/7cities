@@ -17,7 +17,7 @@ from PIL import Image
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from d64 import D64  # noqa: E402
 
-FONT_OFFSET = 4714
+FONT_OFFSET = 4713        # ground-truthed against a live charset dump
 GLYPHS = 96
 FIRST_CHAR = 0x20         # space
 
