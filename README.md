@@ -98,15 +98,18 @@ and says so in its title bar.
 
 ## Opening it in Xcode
 
-This is a Swift package, so there is no `.xcodeproj` to check in and let drift:
-
 ```bash
 open SevenCitiesCore/Package.swift
 ```
 
-Xcode builds, runs and debugs it natively. To run the viewer from Xcode, edit the `MapViewer`
-scheme and pass the absolute path to `assets` as an argument. From the command line,
-`swift build` and `swift test` work as usual.
+Xcode opens a Swift package as a project directly — schemes for `MapViewer`, `Extract` and the
+tests, with building, running and debugging as usual. There is deliberately **no `.xcodeproj`**
+in the repo: `swift package generate-xcodeproj` was deprecated and removed from SwiftPM, and a
+checked-in project file only drifts from `Package.swift`.
+
+Running the `MapViewer` scheme needs no setup — with no assets directory it generates a world.
+To point it at extracted assets instead, edit the scheme and pass the absolute path to `assets`
+as an argument. From the command line, `swift build` and `swift test` work as usual.
 
 ## Layout
 

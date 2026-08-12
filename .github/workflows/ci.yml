@@ -23,6 +23,13 @@ jobs:
       - name: Test
         run: swift test --package-path SevenCitiesCore
 
+      # Release builds catch what debug does not: whole-module optimization
+      # changes what the compiler will accept and diagnose. No artifact is
+      # published — shipping a runnable app would need bundling, signing and
+      # notarization, and an unsigned binary is worse than none.
+      - name: Release build
+        run: swift build --package-path SevenCitiesCore -c release
+
       - name: Extractor reports missing disks cleanly
         run: |
           # Without disk images this must fail with instructions rather than a
