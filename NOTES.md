@@ -1241,6 +1241,46 @@ background against `$D022` and `$D023` against color RAM — so this is the
 shimmer/animation pass over terrain, not the generator. The generator itself is
 still not located.
 
+### The exploration main loop (`$3F08`)
+
+The loop that runs while you are walking around, and the frame in which the
+terrain charset is built:
+
+```text
+$3F08  STA $AF                  ; buffer index (0 or 1)
+$3F11  LDA #$55 / JSR $0CEB     ; fill charset buffer with $55 ...
+$3F16  JSR $1076
+$3F19  LDA #$55 / JSR $0CEB     ; ... and the other one
+$3F1E  JSR $3FA8
+$3F21  JSR $38F7                ; <- loop top, the per-frame body
+$3F24  LDA $B9 / BNE $3F3F
+$3F2C  JSR $400E / JSR $0D70 / JSR $642F
+$3F47  JSR $3FE3
+$3F4A  JSR $4057                ; the EOR #$55 shimmer pass
+$3F4D  LDA $D01F / AND #$02     ; sprite-to-background collision
+$3F5C  JSR $6596 / JSR $657F
+$3F64  BNE $3F21                ; loop
+```
+
+`$0CEB` is "fill the current charset buffer with A": it compares `$02F4`
+against `$D018`, syncs via `$0C4B` if they differ, then fills either
+`$A380-$A7FF` or `$AB80-$AFFF` depending on `$AF`. Filling with `$55` lays down
+a uniform multicolor field before the glyphs are drawn over it.
+
+`$38F7` is a dispatcher rather than the composer:
+
+```text
+$38F7  LDA $9E1B / BEQ / JSR $3456
+$38FF  LDA $9ECF / BEQ / JSR $3A31
+$3907  LDA $D6   / BEQ / JSR $36F0
+$390E  JSR $37C2               ; unconditional — the likely renderer
+$3937  JMP $33AC
+```
+
+Still open: which of `$3FA8`, `$37C2`, `$400E` or `$3FE3` actually composes a
+terrain glyph. `$37C2` is the only unconditional call in the per-frame body and
+is the place to start.
+
 ### The lesson, twice in one session
 
 The genuine result here — the loader's data path, and stage 1 extracted
