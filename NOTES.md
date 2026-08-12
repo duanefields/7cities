@@ -742,3 +742,38 @@ unlocks everything in `game.prg`.
 With it attached, the OBSERVER (DEMO) mode plays itself — and the demo only runs on the
 historical map, which is exactly what this disk is. No joystick needed to reach the
 exploration view.
+
+## Correction: the exploration viewport is a software bitmap
+
+An earlier note read chars `$40`-`$AF` as a reusable terrain tileset. That was
+wrong. Dumping the screen matrix during exploration shows the 12x12 viewport at
+screen cols 14-25, rows 4-15 using **unique sequential character codes**,
+column-major:
+
+```text
+r4:  70 7c 88 94 a0 ac b8 c4 d0 dc e8 f4
+r5:  71 7d 89 95 a1 ad b9 c5 d1 dd e9 f5
+r6:  72 7e 8a 96 a2 ae ba c6 d2 de ea f6
+```
+
+Every cell has its own character. The game **redefines the character bitmaps
+each frame** to draw terrain — a software bitmap built out of chars, 12x12
+cells of 8x8 multicolor, so 48x96 logical pixels. Chars `$40`-`$6F` are static
+UI decoration and the viewport frame; `$70`-`$FF` are the dynamic surface.
+
+So there is no fixed 16-entry tile atlas to extract. What a previous dump
+captured was one frame's rendered content.
+
+Live colors during exploration: `$D021`=`$7` yellow (land), `$D022`=`$E` light
+blue (water), `$D023`=`$5` green (vegetation), color RAM `$8` orange (trunks,
+rock, ship). Multicolor bit pairs select bg0/bg1/bg2/fg.
+
+**Consequence for the port.** The renderer cannot be a straight tilemap of 16
+terrain images. The original composes a scene from the surrounding map cells,
+placing trees, mangroves, hills and coastline shapes procedurally within the
+viewport. Reproducing it faithfully means understanding that composition step,
+not just extracting art. A remaster could instead draw its own tiles from the
+decoded 256x400 grid — which is the simpler path and already fully unblocked.
+
+`tools/boot_demo.py` reaches this state automatically and captures the screen
+matrix, color RAM and charset.
