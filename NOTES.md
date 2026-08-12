@@ -807,7 +807,7 @@ world. Run it with:
 python3 tools/extract_map.py d64/7CITIES2.D64 local/historical.map
 python3 tools/extract_map.py local/generated_world.d64 local/generated.map
 python3 tools/boot_demo.py local && python3 tools/extract_tiles.py
-cd SevenCitiesCore && swift run MapViewer /Users/duane/Code/7cities/local
+cd SevenCitiesCore && swift run MapViewer ../local
 ```
 
 Two menus, as asked: **World** picks the classic Americas map or a generated

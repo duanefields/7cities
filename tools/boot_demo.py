@@ -22,7 +22,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from v import call  # noqa: E402
 
-ROOT = "/Users/duane/Code/7cities"
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DISK1 = f"{ROOT}/d64/7CITIES1.D64"
 MAPDISK = f"{ROOT}/d64/HISTMAP.D64"
 TERRAIN_LABEL = bytes([0x34, 0x25, 0x32, 0x32, 0x21, 0x29, 0x2E])   # "TERRAIN"

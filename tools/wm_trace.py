@@ -25,7 +25,8 @@ GAME3_LOAD = 0x0800
 ENTRY = 0x1E99
 F7_WAIT_BRANCH = 0x1F8A          # BNE $1F7C -> NOP NOP
 CHUNK = 256
-DISK = "/Users/duane/Code/7cities/d64/BLANKMAP2.D64"
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DISK = f"{ROOT}/d64/BLANKMAP2.D64"
 
 # Phase boundaries, in execution order. Each is the instruction that loads the
 # status string for the *next* phase, so stopping there means the previous
