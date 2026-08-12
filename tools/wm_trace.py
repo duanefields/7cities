@@ -88,10 +88,66 @@ def wait_paused(timeout=240):
     return False
 
 
+def wait_finished(timeout=600):
+    """Wait for the World Maker's completion screen.
+
+    It ends by setting border and background to green ($05) and printing
+    "THE NEW WORLD AWAITS!" (see $0DFF). Polling that is more reliable than
+    guessing at a duration.
+    """
+    end = time.time() + timeout
+    while time.time() < end:
+        # The VIC returns 1s in the unused upper nibble, so green ($05) reads
+        # back as $F5. Mask before comparing.
+        raw = call("vice_memory_read", address="$D021", size=1,
+                   encoding="hex")["data_hex"]
+        if int(raw, 16) & 0x0F == 0x05:
+            return True
+        time.sleep(2)
+    return False
+
+
+def run_full(code, outdir):
+    """Generate a complete world with no checkpoints, so every phase finishes.
+
+    Stopping at phase boundaries captures the disk before the terrain pass is
+    written back — the pipeline runs twice and only writes after each complete
+    pass — so a checkpointed run yields land and ocean but no terrain.
+    """
+    clear_checkpoints()
+    call("vice_execution_run")
+    call("vice_machine_config_set", resources={"WarpMode": 1})
+    call("vice_disk_detach", unit=8)
+    time.sleep(1)
+    call("vice_disk_attach", unit=8, path=DISK)
+    call("vice_machine_reset", mode="hard")
+    time.sleep(2)
+    wait_ready()
+
+    print(f"poking {len(code)} bytes at ${GAME3_LOAD:04X}", flush=True)
+    poke(GAME3_LOAD, code)
+    call("vice_memory_write", address=f"${F7_WAIT_BRANCH:04X}", data=[0xEA, 0xEA])
+    call("vice_keyboard_type", text=f"SYS {ENTRY}\n")
+    print("generating (no checkpoints; this runs the whole pipeline)", flush=True)
+
+    if not wait_finished():
+        print("TIMEOUT: never reached the completion screen", flush=True)
+        return None
+    time.sleep(3)                       # let the last write flush
+    dest = os.path.join(outdir, "wm_complete.d64")
+    shutil.copyfile(DISK, dest)
+    print(f"complete -> {dest}", flush=True)
+    return dest
+
+
 def main():
     game3 = sys.argv[1] if len(sys.argv) > 1 else "local/game3.bin"
     outdir = sys.argv[2] if len(sys.argv) > 2 else "."
     code = open(game3, "rb").read()
+
+    if "--full" in sys.argv:
+        run_full(code, outdir)
+        return
 
     clear_checkpoints()
     call("vice_execution_run")
