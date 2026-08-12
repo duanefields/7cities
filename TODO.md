@@ -35,7 +35,17 @@ engineering record; this holds the work.
       `$22F7`, both ported and verified against the original; the `LandMask`
       buffer and the command table as `LandMassPhase.configurations`.
       Still needed: the placement loop itself (including the paired-placement
-      retest at `$2231`), and the coastline walker.
+      retest at `$2231`), the **second wave** at `$280A`-`$2894` that adds
+      2-7 radius-3 islands (8-12 for configuration 2) and files their positions
+      into two tables split at row 219, and the coastline walker.
+- [ ] **Re-measure coverage to the true phase end.** The 64-of-207 figure was
+      taken between `$212A` and `$280A`, which is the command-table stage only
+      and excludes the second wave. `tools/wm_coverage.py` now runs to
+      `PHASE_DONE`; re-run it.
+- [ ] **Identify the two position tables at `$038C` and `$03B4`.** The second
+      wave files each radius-3 island into one or the other depending on whether
+      its row is below 219, and also writes `$03DC`. Something downstream reads
+      these — possibly the village or gold placement.
 - [ ] **Transliterate the coastline walker at `$15AD`.** The one thing between
       here and a complete land-mass phase. A state machine (`$1A` = state,
       `$46` = step counter wrapping at 201) emitting 12-byte segment records,

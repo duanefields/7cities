@@ -217,7 +217,37 @@ The three fields are **(size class, flags, count)**:
   the signed-vector reading. Only bit 7 is used, at `$21B0` and `$2231`.
 - **count** (`$55`) is the repeat count, decremented at `$2270`.
 
-Which makes the three world configurations:
+**The command table is only the first stage of the phase.** `$215F JMP $280A` fires when the
+sentinel is reached, and `$280A` is not the end of anything — it starts a second wave:
+
+```text
+$280A  LDA #$02 / LDX #$08 / LDY $57 / CPY #$02 / BNE +   ; count = random(2..8)
+$2816  LDA #$08 / LDX #$0D                                ; config 2: random(8..13)
+$2818  JSR $22B4 / STA $55 / STA $54
+$2824  $21 = $0A, then $22F7 at radius 5, then radius 3   ; small islands
+$2837  reject y in $C3..$DB (195..218)                    ; a latitude exclusion band
+$285E  record into $038C,($67) or $03B4,($68)             ; two lists, split at row 219
+$2894  end of phase
+```
+
+So the phase adds a further 2-7 radius-3 islands (8-12 for configuration 2) after the command
+table finishes, and files their positions into **two** separate tables depending on whether the
+row is below 219. Measured, at seed `$1234`:
+
+| Config | Blobs at `$280A` | Blobs at `$2894` |
+| :----- | ---------------: | ---------------: |
+| 0      | 4                | 11               |
+| 1      | 4                | 9                |
+| 2      | 8                | 16               |
+
+**This does not disturb the command-table reading** — the counts below are measured exactly at
+`$280A`, where the table finishes, and they are what the table predicts. But an earlier version of
+this file, and the tooling's `LANDMASS_DONE` constant, treated `$280A` as the end of the phase. It
+is not. The error was the same shape as reading `$1900`'s `JMP` as that routine's purpose: finding
+a jump and assuming where it goes, instead of reading the target. The constants are now
+`TABLE_STAGE_DONE` and `PHASE_DONE`, and the fixture captures both.
+
+Which makes the three world configurations, **at the end of the command-table stage**:
 
 | Seq | Reading                                             |
 | :-- | :-------------------------------------------------- |
@@ -442,6 +472,35 @@ four instructions above it.
 One such edge is enough to make essentially every routine "reachable" from every other, so any
 question of the form "what does this phase depend on" is unanswerable from the call graph.
 
+### There are two "give up and start over" paths
+
+`$2473` is reached from the bounds guard above **and from the raster interrupt itself**. The IRQ
+handler ends:
+
+```text
+$2463  LDA $AF / BNE $246D          ; skip the check once the second wave starts
+$2467  LDA $BE / CMP #$08 / BEQ $2473
+$246D  PLA / TAX / PLA / TAY / PLA / RTI     ; normal exit
+$2473  LDA #$00 / STA $D01A / JMP $20A3      ; kill the raster IRQ, regenerate
+```
+
+`$23D3` zeroes the frame counter `$BD`/`$BE` before each fill and the IRQ increments it at `$240D`,
+so `$BE` reaching 8 means roughly 2,048 frames — about 34 seconds of emulated time — have passed
+inside a single landmass fill. That is a **watchdog**: the coastline walker can evidently wander
+long enough to be worth abandoning, and the response is to throw the whole world away and start
+again.
+
+So generation has two failure paths, one spatial (`$1900`, the walker leaves the buffer) and one
+temporal (this one), and both restart everything. That is very likely a large part of why
+generation takes about 18 minutes, and it matters for the port: a port that assumes the phase runs
+exactly once is not reproducing the original's behavior, only its usual behavior.
+
+**The frame counter feeds nothing else.** Scanning the binary for zero-page references to `$BD` and
+`$BE` finds only `STA` at `$23D5`/`$23D7`, `INC` at `$240D`/`$2411`, and this `LDA` at `$2467`. A
+scan like that does throw false positives — it reported a `DEC $BD` at `$111B` that is really the
+operand of `CMP $C6` followed by the opcode of `LDA $11DD,X`, an instruction-boundary straddle — so
+check each hit against the disassembly before believing it.
+
 Measure coverage instead — `tools/wm_coverage.py` puts a non-halting checkpoint
 (`stop=False`, which still counts hits) on every `JSR` target, runs the phase between `$212A` and
 `$280A`, and reports which routines actually ran. Routine granularity is enough to scope a port
@@ -450,6 +509,10 @@ and keeps it to a couple of hundred probes instead of per-instruction tracing.
 **Result: 64 of 207 routines execute.** That is the real size of the land-mass port, against 207
 by call graph. The phase also completes in about 7 seconds under warp with all 207 probes armed,
 so this is a fast experiment to re-run per configuration.
+
+Caveat on that number: it was measured between `$212A` and `$280A`, so it covers the command-table
+stage only and **excludes the second wave** at `$280A`-`$2894`. `wm_coverage.py` now runs to
+`PHASE_DONE`; re-run it for the figure that covers the whole phase.
 
 The hot ones are the primitives already identified — `$142F` (144,659 calls) and `$1B4E`
 (103,249) are the mask address and bit test, then the multiply and divide, then `$141C`. The
@@ -556,8 +619,24 @@ the SID noise rig at `$2090`/`$2093`/`$2098`, the two seed reads, the IRQ stir, 
 same value, so it needs no patch.
 
 Verified: the same `(seed, config)` reproduces all 12,800 bytes of the mask exactly, and both a
-different seed and a different configuration change it. The phase is now a pure function of
-`(seed, config)`.
+different seed and a different configuration change it.
+
+**One unexplained divergence, so the harness now verifies rather than assumes.** An early capture
+of seed `$0001` configuration 0 produced a mask differing from every run since by a **single
+isolated cell** — 29,790 cells and 5 masses against 29,789 and 4. Every other case reproduced
+exactly, and that case has since reproduced identically seven consecutive times. Three candidate
+causes were tested and all three ruled out:
+
+- **Disk state.** The World Maker writes to the attached image, so it could accumulate. Running the
+  same case against three different disks gives identical masks; the disk is not an input.
+- **Leftover RAM.** Earlier harnesses poke drivers at `$C000`. Writing a marker there and hard
+  resetting shows VICE reinitializes RAM, so nothing carries over.
+- **The frame counter.** It only reaches the watchdog at `$2467`, which can restart the whole
+  generation but cannot alter one cell.
+
+Since the cause is unknown, `capture_fixtures` runs every case **twice and compares**, failing
+loudly on any mismatch. Determinism is the assumption the entire oracle rests on; it has been wrong
+once, and a silently wrong fixture would make the port's tests green against the wrong target.
 
 **The IRQ handler is not in `local/game3.disasm.lst`.** It is reached through the IRQ vector,
 never by `JSR` or `JMP`, so recursive descent never walks it — which is why `grep`-ing the listing

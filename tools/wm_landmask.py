@@ -11,12 +11,15 @@ Reading the code says there are two different addressings of the same base:
   it is the same layout `MapDecoder` reads off a finished map disk.
 
 Both cannot occupy `$5700` at once, so one must overwrite the other. This runs
-the World Maker headlessly, stops the instant the land-mass phase finishes
-(`$280A`, the sentinel target of the command loop at `$2158`), and renders
-`$5700` **both ways**. Whichever reading produces recognizable continents is the
-one that is live at that moment, and the answer is visual rather than statistical
-- which matters here, because statistics on this project have repeatedly
-supported conclusions that turned out to be wrong.
+the World Maker headlessly, stops when the land-mass phase finishes (`$2894`,
+`PHASE_DONE`), and renders `$5700` **both ways**. Whichever reading produces
+recognizable continents is the one that is live at that moment, and the answer is
+visual rather than statistical — which matters here, because statistics on this
+project have repeatedly supported conclusions that turned out to be wrong.
+
+Note `$280A` is *not* the end of the phase, though it looks like it: it is where
+the `$2286` command table hits its `$FE` sentinel, after which the phase places a
+further random(2..8) radius-3 islands. See NOTES.md.
 
 Requires vice-mcp (a VICE fork with MCP built in, not Homebrew VICE) and Pillow.
 """
@@ -28,14 +31,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from v import call  # noqa: E402
 from rng_reference import wait_ready  # noqa: E402
 from wm_trace import poke, dump, clear_checkpoints  # noqa: E402
-from wm_config import arm, wait_hit  # noqa: E402
+from wm_config import arm, wait_hit, PHASE_DONE  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DISK = f"{ROOT}/d64/BLANKMAP2.D64"
 GAME3_LOAD = 0x0800
 ENTRY = 0x1E99
 F7_WAIT_BRANCH = 0x1F8A          # BNE $1F7C -> NOP NOP
-LANDMASS_DONE = 0x280A           # JMP target once the command table hits $FE
 
 BASE = 0x5700
 WIDTH, HEIGHT = 256, 400
@@ -82,9 +84,9 @@ def main():
     poke(GAME3_LOAD, code)
     call("vice_memory_write", address=f"${F7_WAIT_BRANCH:04X}", data=[0xEA, 0xEA])
 
-    num = arm(LANDMASS_DONE)
+    num = arm(PHASE_DONE)
     call("vice_keyboard_type", text=f"SYS {ENTRY}\n")
-    print(f"running to ${LANDMASS_DONE:04X} (land-mass phase complete)", flush=True)
+    print(f"running to ${PHASE_DONE:04X} (land-mass phase complete)", flush=True)
     # Wait on the checkpoint's hit count. Polling `vice_ping` for "paused"
     # reports halts that never happened — see NOTES.md, harness gotchas.
     if not wait_hit(num, timeout=300):

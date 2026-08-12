@@ -27,7 +27,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from v import call  # noqa: E402
-from wm_config import boot, wait_hit, ENTRY, LANDMASS_DONE  # noqa: E402
+from wm_config import boot, wait_hit, ENTRY, PHASE_DONE  # noqa: E402
 from wm_deterministic import apply_patches  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -67,7 +67,7 @@ def main():
     for addr in targets:
         r = call("vice_checkpoint_add", start=f"${addr:04X}", exec=True, stop=False)
         probe[r["checkpoint_num"]] = addr
-    done = call("vice_checkpoint_add", start=f"${LANDMASS_DONE:04X}",
+    done = call("vice_checkpoint_add", start=f"${PHASE_DONE:04X}",
                 exec=True, stop=True)["checkpoint_num"]
 
     t0 = time.time()

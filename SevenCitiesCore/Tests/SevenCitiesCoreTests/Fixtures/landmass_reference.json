@@ -1,5 +1,7 @@
 {
- "description": "Land mask at $5700 after the World Maker's land-mass phase, captured from the original 6502 with the seed pinned and the raster IRQ's entropy stir removed. Digests only \u2014 no map data.",
+ "description": "Land mask at $5700 from the original 6502, seed pinned and the raster IRQ's entropy stir removed. Two stop points per case: tableStage is $280A, where the $2286 command table finishes; phaseEnd is $2894, after the further random(2..8) radius-3 islands the phase adds. Digests only \u2014 no map data.",
+ "tableStageAddress": 10250,
+ "phaseEndAddress": 10388,
  "base": 22272,
  "width": 256,
  "height": 400,
@@ -8,120 +10,296 @@
   {
    "seed": 4660,
    "config": 0,
-   "sha256": "1768bf75ec8c3f112b20f991b35f8ba63ffbe4715b8c1b5e3771e02a6216f6a7",
-   "landCells": 31307,
-   "blobAreas": [
-    15718,
-    14760,
-    447,
-    382
-   ]
+   "tableStage": {
+    "sha256": "1768bf75ec8c3f112b20f991b35f8ba63ffbe4715b8c1b5e3771e02a6216f6a7",
+    "landCells": 31307,
+    "blobAreas": [
+     15718,
+     14760,
+     447,
+     382
+    ]
+   },
+   "phaseEnd": {
+    "sha256": "4d9c541aa19576c8ba282ede026677da875593ad9eb8ce0cab9fc9e2d244030e",
+    "landCells": 31712,
+    "blobAreas": [
+     15718,
+     14760,
+     447,
+     382,
+     77,
+     75,
+     74,
+     67,
+     45,
+     44,
+     23
+    ]
+   }
   },
   {
    "seed": 4660,
    "config": 1,
-   "sha256": "e70796cb33bb41a247f4a2b6c6d1cd5ba26db596d6a4b5d06fd26d1334a365ab",
-   "landCells": 28583,
-   "blobAreas": [
-    27786,
-    479,
-    317,
-    1
-   ]
+   "tableStage": {
+    "sha256": "e70796cb33bb41a247f4a2b6c6d1cd5ba26db596d6a4b5d06fd26d1334a365ab",
+    "landCells": 28583,
+    "blobAreas": [
+     27786,
+     479,
+     317,
+     1
+    ]
+   },
+   "phaseEnd": {
+    "sha256": "c7b31a6ed4206557cabbc51596c8a4322bf18215075a4891c6ee640511c3413a",
+    "landCells": 28900,
+    "blobAreas": [
+     27786,
+     479,
+     317,
+     75,
+     74,
+     66,
+     53,
+     49,
+     1
+    ]
+   }
   },
   {
    "seed": 4660,
    "config": 2,
-   "sha256": "87867ff05f8c982b94c215865f0d2ce5fe83752cb744afcf5cf80a66956d9358",
-   "landCells": 16997,
-   "blobAreas": [
-    14283,
-    566,
-    523,
-    434,
-    429,
-    401,
-    360,
-    1
-   ]
+   "tableStage": {
+    "sha256": "87867ff05f8c982b94c215865f0d2ce5fe83752cb744afcf5cf80a66956d9358",
+    "landCells": 16997,
+    "blobAreas": [
+     14283,
+     566,
+     523,
+     434,
+     429,
+     401,
+     360,
+     1
+    ]
+   },
+   "phaseEnd": {
+    "sha256": "cd33769b6a041c8aaeb56517bb45f041801788adc85cfb4591a3e65f78950ac3",
+    "landCells": 17428,
+    "blobAreas": [
+     14283,
+     566,
+     523,
+     434,
+     429,
+     401,
+     360,
+     83,
+     75,
+     66,
+     53,
+     49,
+     43,
+     39,
+     23,
+     1
+    ]
+   }
   },
   {
    "seed": 48879,
    "config": 0,
-   "sha256": "b60e4b65703982c9260acae3a9e52a13e4689b0cbf059f723391bc0ecff58ec7",
-   "landCells": 32337,
-   "blobAreas": [
-    16208,
-    15361,
-    392,
-    376
-   ]
+   "tableStage": {
+    "sha256": "b60e4b65703982c9260acae3a9e52a13e4689b0cbf059f723391bc0ecff58ec7",
+    "landCells": 32337,
+    "blobAreas": [
+     16208,
+     15361,
+     392,
+     376
+    ]
+   },
+   "phaseEnd": {
+    "sha256": "cd80ff76af43fc816425506defa8e331d4fa8278c4d51ef89b9297a3956530dd",
+    "landCells": 32634,
+    "blobAreas": [
+     16208,
+     15361,
+     392,
+     376,
+     107,
+     75,
+     53,
+     39,
+     23
+    ]
+   }
   },
   {
    "seed": 48879,
    "config": 1,
-   "sha256": "9b610e3f32b37ad56be2d8815e0da40b9648187647146e76eddbd55fb6b6846b",
-   "landCells": 30894,
-   "blobAreas": [
-    29926,
-    535,
-    433
-   ]
+   "tableStage": {
+    "sha256": "9b610e3f32b37ad56be2d8815e0da40b9648187647146e76eddbd55fb6b6846b",
+    "landCells": 30894,
+    "blobAreas": [
+     29926,
+     535,
+     433
+    ]
+   },
+   "phaseEnd": {
+    "sha256": "752d930ca4cab3ecf70544c412e55e8621e0d126d0c5ef69ae4c45fcb8e74e3f",
+    "landCells": 31205,
+    "blobAreas": [
+     29926,
+     535,
+     433,
+     74,
+     67,
+     53,
+     49,
+     45,
+     23
+    ]
+   }
   },
   {
    "seed": 48879,
    "config": 2,
-   "sha256": "cb9796bbb226a564508f7e291f7b55406b006593bd7ffbb5503a1c3d6d1c8ce8",
-   "landCells": 18810,
-   "blobAreas": [
-    16208,
-    504,
-    468,
-    465,
-    429,
-    382,
-    354
-   ]
+   "tableStage": {
+    "sha256": "cb9796bbb226a564508f7e291f7b55406b006593bd7ffbb5503a1c3d6d1c8ce8",
+    "landCells": 18810,
+    "blobAreas": [
+     16208,
+     504,
+     468,
+     465,
+     429,
+     382,
+     354
+    ]
+   },
+   "phaseEnd": {
+    "sha256": "ed3d90dd6a99f738f17a3c22f54ea137aea9d8a642c7d3416b0cfd3d9ce8c246",
+    "landCells": 19369,
+    "blobAreas": [
+     16208,
+     504,
+     468,
+     465,
+     429,
+     382,
+     354,
+     107,
+     83,
+     75,
+     72,
+     66,
+     49,
+     43,
+     41,
+     23
+    ]
+   }
   },
   {
    "seed": 1,
    "config": 0,
-   "sha256": "255ecb93007267d8f00ab47816453b091765a311f53749b452de40ae22791bb5",
-   "landCells": 29790,
-   "blobAreas": [
-    14718,
-    14152,
-    505,
-    414,
-    1
-   ]
+   "tableStage": {
+    "sha256": "b3d31c60ec7f6bf99f9277805bca91d1c4a38ce80c17926315cd457376df2e1c",
+    "landCells": 29789,
+    "blobAreas": [
+     14718,
+     14152,
+     505,
+     414
+    ]
+   },
+   "phaseEnd": {
+    "sha256": "51a4c08940740e738a969c4c713e73740b9dc286f76e405be68f29a59c5103f8",
+    "landCells": 30260,
+    "blobAreas": [
+     14718,
+     14152,
+     505,
+     414,
+     107,
+     75,
+     72,
+     66,
+     53,
+     53,
+     45
+    ]
+   }
   },
   {
    "seed": 1,
    "config": 1,
-   "sha256": "6df925a64e0bbdc67ec0c02469356d6f88166057f04fd985bc36faaa6506ee88",
-   "landCells": 26329,
-   "blobAreas": [
-    25411,
-    515,
-    403
-   ]
+   "tableStage": {
+    "sha256": "6df925a64e0bbdc67ec0c02469356d6f88166057f04fd985bc36faaa6506ee88",
+    "landCells": 26329,
+    "blobAreas": [
+     25411,
+     515,
+     403
+    ]
+   },
+   "phaseEnd": {
+    "sha256": "b22c99895086bf47117aeb3d2b1c09c9f7397368dee9d76c6712909d4fe1af92",
+    "landCells": 26503,
+    "blobAreas": [
+     25411,
+     515,
+     403,
+     77,
+     74,
+     23
+    ]
+   }
   },
   {
    "seed": 1,
    "config": 2,
-   "sha256": "c2e3099c5022f9521db5b8856ce24437f617782adc0b492b493a60c2201d49d4",
-   "landCells": 18706,
-   "blobAreas": [
-    15988,
-    605,
-    466,
-    463,
-    446,
-    437,
-    300,
-    1
-   ]
+   "tableStage": {
+    "sha256": "c2e3099c5022f9521db5b8856ce24437f617782adc0b492b493a60c2201d49d4",
+    "landCells": 18706,
+    "blobAreas": [
+     15988,
+     605,
+     466,
+     463,
+     446,
+     437,
+     300,
+     1
+    ]
+   },
+   "phaseEnd": {
+    "sha256": "21be554c00f32c3f826e20685efc573ea688b1cb9032937e9d1bbab8f601009a",
+    "landCells": 19269,
+    "blobAreas": [
+     15988,
+     605,
+     466,
+     463,
+     446,
+     437,
+     300,
+     83,
+     77,
+     74,
+     72,
+     67,
+     53,
+     51,
+     44,
+     41,
+     1,
+     1
+    ]
+   }
   }
  ]
 }

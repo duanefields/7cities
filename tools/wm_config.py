@@ -36,7 +36,13 @@ GAME3_LOAD = 0x0800
 ENTRY = 0x1E99
 F7_WAIT_BRANCH = 0x1F8A
 SELECTOR = 0x2146                # JSR $0AE2 .. JSR $0A6E, the config draw
-LANDMASS_DONE = 0x280A           # the command table's $FE sentinel jumps here
+# The $FE sentinel jumps here, which ends the **command table stage** — not the
+# phase. $280A then draws a further random(2..8) small islands (random(8..13) for
+# configuration 2) and places them at radius 3, ending at $2894. Stopping at
+# $280A is right for checking the command table and wrong for anything that wants
+# the phase's actual output.
+TABLE_STAGE_DONE = 0x280A
+PHASE_DONE = 0x2894
 BASE = 0x5700
 WIDTH, HEIGHT = 256, 400
 OUTDIR = f"{ROOT}/local"
@@ -151,7 +157,7 @@ def trial(code, config):
         print(f"  config {config}: selector patch did not stick")
         return None
 
-    num = arm(LANDMASS_DONE)
+    num = arm(TABLE_STAGE_DONE)
     call("vice_keyboard_type", text=f"SYS {ENTRY}\n")
     if not wait_hit(num):
         pc = call("vice_registers_get")["PC"]

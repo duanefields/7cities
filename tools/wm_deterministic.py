@@ -37,7 +37,8 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from v import call  # noqa: E402
 from wm_trace import dump  # noqa: E402
-from wm_config import boot, arm, wait_hit, LANDMASS_DONE, ENTRY  # noqa: E402
+from wm_config import (boot, arm, wait_hit, clear_checkpoints,  # noqa: E402
+                       TABLE_STAGE_DONE, PHASE_DONE, ENTRY)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASE = 0x5700
@@ -82,18 +83,32 @@ def apply_patches(seed, config):
 
 
 def land_mask(code, seed, config):
-    """Run the land-mass phase for one (seed, config) and return `$5700`."""
+    """Run the phase for one (seed, config), capturing **both** stop points.
+
+    Returns `{"tableStage": ..., "phaseEnd": ...}`. Both matter: the table stage
+    is the incremental milestone a port can hit first, and the phase end is the
+    real output. One run yields both — stop at `$280A`, dump, then continue to
+    `$2894` and dump again.
+    """
     boot(code)
     apply_patches(seed, config)
-    num = arm(LANDMASS_DONE)
+
+    num = arm(TABLE_STAGE_DONE)
     call("vice_keyboard_type", text=f"SYS {ENTRY}\n")
     if not wait_hit(num, timeout=300):
-        raise SystemExit(f"seed ${seed:04X} config {config}: phase never finished")
-    mask = dump(BASE, BASE + MASK_BYTES - 1, bank="ram")
+        raise SystemExit(f"seed ${seed:04X} config {config}: table stage never finished")
+    table_stage = dump(BASE, BASE + MASK_BYTES - 1, bank="ram")
     seen = dump(0x57, 0x57, bank="ram")[0]
     if seen != config:
         raise SystemExit(f"$57 reads {seen}, expected config {config}")
-    return mask
+
+    num = arm(PHASE_DONE)
+    call("vice_execution_run")
+    if not wait_hit(num, timeout=300):
+        raise SystemExit(f"seed ${seed:04X} config {config}: phase never finished")
+    phase_end = dump(BASE, BASE + MASK_BYTES - 1, bank="ram")
+    clear_checkpoints()
+    return {"tableStage": table_stage, "phaseEnd": phase_end}
 
 
 def digest(b):
@@ -122,27 +137,50 @@ def capture_fixtures(code, seeds, configs):
     cases = []
     for seed in seeds:
         for config in configs:
-            mask = land_mask(code, seed, config)
-            open(os.path.join(maskdir, f"{seed:04X}_{config}.bin"), "wb").write(mask)
-            areas = blobs(mask_bits(mask))
-            cases.append({
-                "seed": seed,
-                "config": config,
-                "sha256": hashlib.sha256(mask).hexdigest(),
-                "landCells": sum(bin(b).count("1") for b in mask),
-                "blobAreas": areas,
-            })
-            print(f"  seed ${seed:04X} config {config}: {cases[-1]['sha256'][:16]} "
-                  f"{cases[-1]['landCells']:6d} cells  {len(areas)} masses", flush=True)
+            # Capture twice and compare. Determinism here is an assumption the
+            # whole oracle rests on, and it has been wrong once already: an
+            # earlier capture of seed $0001 config 0 produced a mask differing
+            # by a single isolated cell from every run since. Seven consecutive
+            # runs now agree, the disk is not an input, a hard reset does
+            # reinitialize RAM, and the frame counter feeds only the watchdog at
+            # $2467 -- so that one observation is still unexplained. Verifying
+            # each case rather than trusting it turns a silent bad fixture into a
+            # loud failure.
+            stages = land_mask(code, seed, config)
+            again = land_mask(code, seed, config)
+            for stage in stages:
+                if stages[stage] != again[stage]:
+                    raise SystemExit(
+                        f"seed ${seed:04X} config {config} {stage}: NOT "
+                        f"reproducible -- two runs differ, so this fixture "
+                        f"cannot be used as a port oracle")
+            case = {"seed": seed, "config": config}
+            for stage, mask in stages.items():
+                open(os.path.join(maskdir, f"{seed:04X}_{config}_{stage}.bin"),
+                     "wb").write(mask)
+                case[stage] = {
+                    "sha256": hashlib.sha256(mask).hexdigest(),
+                    "landCells": sum(bin(b).count("1") for b in mask),
+                    "blobAreas": blobs(mask_bits(mask)),
+                }
+            cases.append(case)
+            print(f"  seed ${seed:04X} config {config}: "
+                  f"table {case['tableStage']['landCells']:6d} cells / "
+                  f"{len(case['tableStage']['blobAreas'])} masses -> "
+                  f"phase {case['phaseEnd']['landCells']:6d} cells / "
+                  f"{len(case['phaseEnd']['blobAreas'])} masses", flush=True)
 
     out = os.path.join(ROOT, "SevenCitiesCore/Tests/SevenCitiesCoreTests/"
                              "Fixtures/landmass_reference.json")
     with open(out, "w") as f:
         json.dump({
-            "description": "Land mask at $5700 after the World Maker's land-mass "
-                           "phase, captured from the original 6502 with the seed "
+            "description": "Land mask at $5700 from the original 6502, seed "
                            "pinned and the raster IRQ's entropy stir removed. "
-                           "Digests only — no map data.",
+                           "Two stop points per case: tableStage is $280A, where "
+                           "the $2286 command table finishes; phaseEnd is $2894, "
+                           "after the further random(2..8) radius-3 islands the "
+                           "phase adds. Digests only — no map data.",
+            "tableStageAddress": TABLE_STAGE_DONE, "phaseEndAddress": PHASE_DONE,
             "base": BASE, "width": 256, "height": 400, "bytesPerRow": 32,
             "cases": cases,
         }, f, indent=1)
