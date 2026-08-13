@@ -2209,3 +2209,34 @@ This is also where `$1900` earns its bounds guard. The flood fill moves the row 
 by whole rows, so it is the routine most likely to walk off the buffer — which explains why it is
 called 68 times for an island and 530 times for a satellite, and not at all during a continent's
 outline trace.
+
+#### The outline walk, end to end
+
+`$15AD` is the loop. Each iteration:
+
+```text
+$15B9  INC $46, wrapping to 0 at $C9 (201)      ; ring slot
+$15C7  JSR $16BB, then write the undo record    ; $2C-$34, $14, $15, $1A
+$15E2  adopt the candidate ($16,$17) as current ($14,$15)
+$15EA  JSR $1728                                 ; plot it
+$160F  pick $14 or $15 by heading parity ($1A & 1)
+$1618  if that coordinate is not yet 0, keep walking this quadrant
+$1631  otherwise INC $1A — turn — and JSR $17A6 to adjust $B3
+$1642  when $1A reaches 4 the circle is closed; fall into the span fill at $1648
+```
+
+So the outline is walked **one quadrant at a time**. The walk starts at
+`(dx, dy) = (0, radius)` and advances until the axis coordinate for the current heading reaches
+zero, then turns; four turns close the shape. That is why the traced offsets show `dx` climbing
+monotonically while `dy` drifts — that is quadrant 0, and the other three are the same walk rotated
+by `$13E0`.
+
+Putting the pieces together, a landmass is built in three steps:
+
+1. **Trace** a perturbed circle, four quadrants of biased random walk, backtracking through the undo
+   ring whenever `$1A00` rejects a candidate.
+2. **Span fill** at `$1648`, with the self-modified `INC`/`DEC` at `$1657` closing each column.
+3. **Flood fill** the interior with `$194A`, using `$9100` again as a span stack with a 3-byte
+   stride.
+
+A port needs all three. Getting only the first produces coastlines with nothing inside them.
