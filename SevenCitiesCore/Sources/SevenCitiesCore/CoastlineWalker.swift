@@ -462,6 +462,8 @@ extension CoastlineWalker {
         var ring = [UndoRecord?](repeating: nil, count: ringCapacity)
         var tried = [UInt8](repeating: 0, count: 9)
         var edgeFlag = false
+        // `$2B`, set to `$FF` at $23EA and cleared only when the ring wraps.
+        var ringWrapped = false
 
         // $23D3: the candidate starts directly "above" the centre.
         s.candidate = Offset(dx: 0, dy: s.radius)
@@ -477,7 +479,10 @@ extension CoastlineWalker {
 
             // $15B9: advance the ring slot, wrapping at 201.
             s.step = s.step &+ 1
-            if s.step >= UInt8(ringCapacity) { s.step = 0 }
+            if s.step >= UInt8(ringCapacity) {
+                s.step = 0
+                ringWrapped = true                          // $15C5 STA $2B
+            }
             ring[Int(s.step)] = UndoRecord(tried: tried, offset: s.offset,
                                            heading: s.heading)
 
@@ -491,10 +496,14 @@ extension CoastlineWalker {
             // $160F: turn when the heading's axis coordinate reaches zero.
             let axisValue = s.heading & 1 == 1 ? s.offset.dx : s.offset.dy
             if axisValue == 0 {
+                // $1622: a draw whose result is thrown away. `CMP #$00` can only
+                // set the carry, so the `LDX #$FF` at `$162B` is unreachable and
+                // both biases are always cleared. The draw still has to happen —
+                // it is the generator that matters here, not the value.
                 if s.radius >= 0x46 {
-                    let flip: UInt8 = s.rng.next() < 0x40 ? 0xFF : 0x40
-                    s.biasX = flip
-                    s.biasY = flip
+                    _ = s.rng.next()
+                    s.biasX = 0
+                    s.biasY = 0
                 }
                 s.heading &+= 1
                 adjustDrift(&s)
@@ -539,72 +548,134 @@ extension CoastlineWalker {
             // iteration duplicates the cell, which is exactly how the island
             // diverged at plot 9: the original spent two iterations standing
             // still at (8,7) before moving to (9,7).
-            let horizontalBase = s.heading >> 1
-            let verticalBase: UInt8 = (s.heading == 0 || s.heading == 3) ? 0 : 1
-            var direction: UInt8 = 4
-            var stalls = 0
-            while direction == 4 && stalls < 10_000 {
-                proposeStep(&s)
-                direction = directionIndex(s, horizontalBase: horizontalBase,
-                                           verticalBase: verticalBase)
-                stalls += 1
-            }
+            proposal: while true {
+                let horizontalBase = s.heading >> 1
+                let verticalBase: UInt8 = (s.heading == 0 || s.heading == 3) ? 0 : 1
+                // $2507: the slot this search started from, for the ring-full
+                // guard at $16EC.
+                let startSlot = s.step &+ 1
 
-            tried = [UInt8](repeating: 0, count: 9)
-            tried[Int(direction) % 9] = 0xFF
-            var attempts = 2
-            var committed = false
-
-            while !committed {
-                if propose(&s, direction: direction,
-                           horizontalBase: horizontalBase,
-                           verticalBase: verticalBase, edgeGuard: edgeFlag),
-                   accepts(&s, in: mask) {
-                    committed = true
-                    break
+                var direction: UInt8 = 4
+                var stalls = 0
+                while direction == 4 && stalls < 10_000 {
+                    proposeStep(&s)
+                    direction = directionIndex(s, horizontalBase: horizontalBase,
+                                               verticalBase: verticalBase)
+                    stalls += 1
                 }
-                attempts += 1
-                if attempts >= 10 {
-                    // $16D1: out of directions — unwind, and keep unwinding
-                    // while the restored position fails revalidation.
-                    //
-                    // The order matters and is not the intuitive one. The cell
-                    // erased is the one the walk is standing on *now*, before
-                    // anything is restored ($16F0 precedes $16F3); the record is
-                    // then read from the current slot and only afterwards is the
-                    // counter decremented. Restoring first erases the wrong
-                    // cell, which is how the island diverged at plot 79.
-                    var unwound = false
-                    while !unwound {
-                        let standing = cell(offset: s.offset, heading: s.heading,
-                                            centerX: s.centerX, centerY: s.centerY)
-                        mask.clearLand(x: standing.x, y: standing.y)
-                        erase(standing.x, standing.y)
 
-                        guard let record = ring[Int(s.step)] else { return .exhausted }
-                        tried = record.tried
-                        s.offset = record.offset
-                        s.heading = record.heading
-                        s.step = s.step == 0 ? UInt8(ringCapacity - 1) : s.step &- 1
+                // $25EF: clear the tried set, then mark **two** slots — the
+                // direction just proposed, and slot 4. `$25F8 STY $30` stores the
+                // `$FF` the clearing loop left in Y into the middle of the array,
+                // so "no movement" is permanently marked and the picker at `$2619`
+                // can never draw it. Leaving slot 4 free lets the port pick a
+                // direction the original would have rejected and redrawn for,
+                // which desynchronizes the generator.
+                tried = [UInt8](repeating: 0, count: 9)
+                tried[4] = 0xFF
+                tried[Int(direction) % 9] = 0xFF
 
-                        // $1722: revalidate, and unwind again if it refuses.
-                        unwound = isCandidateClear(&s, in: mask)
+                // `$1E`, the attempt counter. Its invariant is the one thing that
+                // makes the unwind work: it always equals the number of marked
+                // slots, which is why an unwind can resume a half-finished search
+                // simply by recounting the record it restored.
+                var attempts = 2
+
+                while true {
+                    if propose(&s, direction: direction,
+                               horizontalBase: horizontalBase,
+                               verticalBase: verticalBase, edgeGuard: edgeFlag),
+                       accepts(&s, in: mask) {
+                        break proposal                      // $2608 JMP $15AD
                     }
-                    attempts = 2
-                    continue
+
+                    // $260B: one more attempt used. Note where `$16D1` returns
+                    // to — `$2616 JMP $260B`, *not* `$2603`. So an unwind is
+                    // followed by another `INC $1E` and another bounds check, and
+                    // a restored position that had already tried all nine
+                    // directions unwinds again immediately. That extra pass is
+                    // what a straightforward reading misses, and it is why the
+                    // island's deep unwind stopped one step short.
+                    attempts += 1
+                    while attempts >= 10 {                  // $260F CMP #$0A
+                        switch unwind(&s, ring: ring, tried: &tried,
+                                      ringWrapped: ringWrapped, in: &mask,
+                                      erase: erase, startSlot: startSlot) {
+                        case .restored:
+                            attempts = tried.reduce(0) { $0 + ($1 != 0 ? 1 : 0) } + 1
+                        case .restart:
+                            edgeFlag = false                // $16E0 STA $0E
+                            continue proposal               // $16E4 JMP $24FD
+                        case .abandon:
+                            return .exhausted               // $16E9 JMP $1A48
+                        }
+                    }
+
+                    // $2619: pick a direction not yet tried. The invariant above
+                    // guarantees at least one free slot whenever this is reached.
+                    var pick = s.rng.nextModulo(9)
+                    while tried[Int(pick) % 9] != 0 { pick = s.rng.nextModulo(9) }
+                    direction = pick
+                    tried[Int(pick) % 9] &+= 1
                 }
-                // $2619: pick a direction not yet tried.
-                var pick = s.rng.nextModulo(9)
-                var spins = 0
-                while tried[Int(pick) % 9] != 0 && spins < 64 {
-                    pick = s.rng.nextModulo(9)
-                    spins += 1
-                }
-                direction = pick
-                tried[Int(pick) % 9] &+= 1
             }
         }
         return .exhausted
+    }
+
+    /// What `$16D1` did.
+    enum Unwound {
+        /// A record was restored and revalidated; the search resumes from it.
+        case restored
+        /// The walk backed all the way out to the first slot with the heading
+        /// still zero, so the original discards the search and re-proposes from
+        /// the origin (`$16E4 JMP $24FD`).
+        case restart
+        /// Nothing left to undo (`$16E9 JMP $1A48`).
+        case abandon
+    }
+
+    /// Backtracks one or more steps (`$16D1`).
+    ///
+    /// Keeps unwinding while the restored position fails revalidation, and the
+    /// order within each pass is not the intuitive one. The cell erased is the one
+    /// the walk is standing on *now*, before anything is restored (`$16F0`
+    /// precedes `$16F3`); the record is then read from the current slot and only
+    /// afterwards is the counter decremented. Restoring first erases the wrong
+    /// cell, which is how the island diverged at plot 79.
+    static func unwind(_ s: inout WalkerState, ring: [UndoRecord?],
+                       tried: inout [UInt8], ringWrapped: Bool,
+                       in mask: inout LandMask,
+                       erase: (UInt8, Int) -> Void, startSlot: UInt8) -> Unwound {
+        while true {
+            // $16D3: back at the first slot without the ring ever having wrapped
+            // means every step taken has been undone. `$50` is zero throughout the
+            // outline trace — it is the flood fill's flag — so the choice is on the
+            // heading alone: still in the first quadrant, start over; otherwise
+            // give up on this landmass.
+            if !ringWrapped && s.step == 0 {
+                return s.heading == 0 ? .restart : .abandon
+            }
+            // $16EC: the ring is full — unwinding has come right around to the
+            // slot this search started from.
+            if s.step == startSlot { return .abandon }
+
+            // $16F0 JSR $1B3B: erase where the walk is standing.
+            let standing = cell(offset: s.offset, heading: s.heading,
+                                centerX: s.centerX, centerY: s.centerY)
+            mask.clearLand(x: standing.x, y: standing.y)
+            erase(standing.x, standing.y)
+
+            // $16F3: read the record, then step the counter back.
+            guard let record = ring[Int(s.step)] else { return .abandon }
+            tried = record.tried
+            s.offset = record.offset
+            s.heading = record.heading
+            s.step = s.step == 0 ? UInt8(ringCapacity - 1) : s.step &- 1
+
+            // $1722: revalidate, and unwind again if it refuses.
+            if isCandidateClear(&s, in: mask) { return .restored }
+        }
     }
 
     /// Closes the outline with a vertical run (`$1648`).

@@ -2322,35 +2322,98 @@ consumed one draw 1,106 times, two draws 299 times and three draws once.
 The outline trace is ported and graded against three fills captured from the original
 (`walker_reference.json`, via `tools/walker_reference.py`).
 
-| Rung       | Plots | Backtracks | State                                    |
-| :--------- | ----: | ---------: | :--------------------------------------- |
-| satellite  |    23 |          0 | **exact**                                |
-| island     |    93 |         13 | 79 of 93; the unwind itself is exact     |
-| continent  |  150* |         30 | **passing** (recorded prefix)            |
+| Rung       | Writes | Backtracks | State     |
+| :--------- | -----: | ---------: | :-------- |
+| satellite  |     23 |          0 | **exact** |
+| island     |    106 |         13 | **exact** |
+| continent  |    871 |        155 | **exact** |
 
-\* a prefix of 1,026 events; see the fixture's `truncated` flag.
+"Writes" counts plots and erases together, and "exact" means every one of them, in order, to the end
+of the fill. The fixture keeps the first 150 events of the continent in full — a port diverges at its
+*first* wrong cell, so a prefix is what localizes a fault — plus a SHA-256 over the whole write
+sequence, which is what proves the remaining 700. The full stream is not committed: a continent's
+cells are generated map data.
 
-**Where the island stops.** The deep unwind at plot 79 reproduces event for event — eleven erases,
-`(189,4)` back through `(195,13)`, in identical order — so the ring contents and the erase order are
-right. Only the stopping point differs: the original resumes at `(196,12)`, the port at `(195,12)`,
-one unwind short. The prime suspect is `$16EC CPX $4F / BEQ $16E7`, which compares the ring index
-against `$4F` (set at `$2507` to `$46 + 1` when the search began) and takes a different exit —
-`PLA / PLA / JMP $1A48` — on unwinding all the way back to the search's own starting slot. That
-guard is not implemented.
+Ported and verified: offset resolution `$13E0`, the steppers `$1555`/`$1583`, the shape parameters
+`$1731`, radius modulation `$178A`/`$17A6`, the distance metric `$19CC`, candidate validation
+`$1A00`, the step evaluator `$1476` with its 3x3 scan, the candidate generator `$24FD`, the direction
+mapping `$25B9`, the main loop `$15AD`, the direction search `$2603`, the unwind `$16D1`, the closure
+`$1690` and the span fill `$1648`.
 
-Ported and verified so far: offset resolution `$13E0`, the steppers `$1555`/`$1583`, the shape
-parameters `$1731`, radius modulation `$178A`/`$17A6`, the distance metric `$19CC`, candidate
-validation `$1A00`, the step evaluator `$1476` with its 3x3 scan, the candidate generator `$24FD`,
-the direction mapping `$25B9`, the main loop `$15AD`, the closure `$1690` and the span fill `$1648`.
+### The interior fill, the mirror, and the order they happen in
 
-Still unported: `$194A`, the interior flood fill. An outline without it is a coastline with nothing
-inside.
+The outline is only half of a landmass. `$194A` is a scanline flood fill with an explicit stack —
+the same `$9100` region and the same `$46` index the undo ring used, reclaimed now that the walk is
+over, three bytes an entry. It seeds at the landmass centre, walks right to the first land and back
+one, fills leftward while the cells are water, then scans the rows above and below the span it
+covered and pushes the rightmost cell of every water run. Two details are worth writing down: the
+leftward fill can exit either on land (leaving the index *on* the land cell) or by running down to
+column 0 (leaving it at 0, having filled that cell), and the scan span is half open at the left, so
+the column the fill stopped on is never scanned. Its one bounds check, at `$1900`, is on the row
+*pointer* rather than the row, and failing it is drastic: `JMP $2473` kills the raster interrupt and
+restarts the entire land-mass phase.
 
-Three things about this code that no amount of reading the disassembly revealed, all found by
-diffing against traces:
+None of its writes go through `$1728`. It sets bits directly at `$1987`, which is why the walker
+fixture — hooked on `$1728` and `$1B3B` — shows no trace of the interior at all.
+
+**Walks and fills are not paired one to one.** A continent's walk does not fill its own interior. At
+`$1666` it finds `$54` clear, patches a command into `$0200` and arranges the walk for the satellite
+that goes with it; that walk finds `$54` set and reaches `$168D JMP $194A`. The satellite sits inside
+the continent's outline, so that single flood fills both, seeded from the continent's centre. Six
+walks produce four fills. The `$1666` branch and `$2629` behind it are still unported — the fixture
+supplies the order instead.
+
+**And the map gets mirrored partway through.** `$4500 JSR $1C89` flips two independent coins. On the
+first it reverses all 256 bits of every row (`LSR A / ROL` through a scratch buffer at `$9100`,
+bytes copied back in the opposite order), mirroring `x` to `255 - x`. On the second it swaps row *r*
+with row `399 - r` for *r* from 0 to 199. It runs after the paired continents and before the islands.
+
+That one cost an hour. Every traced write matched the original, every landmass was in the right
+place relative to its own centre, and the finished mask was still wrong — by a clean 60-row
+translation. Nothing about the mirror goes through the mask's write path, so a replay assembled from
+traced writes alone cannot see it. What found it was hooking the interpreter's memory writes rather
+than its program counter, and noticing three unfamiliar addresses in the tally: `$1CC6` writing all
+12,800 bytes, and `$1D28`/`$1D2D` writing 6,400 each.
+
+`tools/interior_reference.py` records the whole stage as an ordered list of outlines, fills and
+mirrors, with a mask digest before each step and one at the end. `InteriorFillTests` replays it from
+an empty mask: eleven steps, 31,307 land cells, every write sequence and every digest exact.
+
+Five things about this code that no amount of reading the disassembly revealed, all found by diffing
+against traces:
 
 - A proposal that moves nothing **re-proposes without plotting** (`$25E6`). Treating it as an
   iteration duplicates the cell.
 - The closure at `$1690` fires on `dx < 2`, **not** on `dx` reaching zero.
 - The unwind **erases before it restores** (`$16F0` precedes `$16F3`), so the cell cleared is the
   one being stood on.
+- `$16D1` returns to `$260B`, **not** to `$2603`. See below.
+- The turn at `$1622` **always clears both biases**. See below.
+
+**How the direction search resumes after an unwind.** `$1E` counts attempts, and its invariant is
+that it always equals the number of marked slots in the tried set at `$2C`-`$34`. Two are marked
+before the search starts: the direction just proposed, and slot 4 — `$25F8 STY $30` files away the
+`$FF` the clearing loop left in `Y`, so "no movement" is permanently marked and the picker at `$2619`
+can never draw it. Leaving slot 4 free lets a port pick a direction the original would have redrawn
+for, which desynchronizes the generator without moving anything.
+
+The invariant is what lets an unwind resume a half-finished search: `$16F6` recounts the restored
+record's nonzero flags straight back into `$1E`. And `$2613 JSR $16D1` returns to **`$260B`**, which
+is `INC $1E` — not to `$2603`. So every unwind is followed by another increment and another bounds
+check, and a restored position that had already tried all nine directions unwinds again immediately.
+Missing that extra pass is what left the island stopping one unwind short of the original, resuming
+at `(195,12)` where the original resumed at `(196,12)`.
+
+`$16D1` has two non-local exits, both `PLA / PLA`, which discard the `JSR` return address and leave
+the search entirely. `$16EC CPX $4F` is the ring-full guard — `$4F` is `$46 + 1`, filed at `$2507`
+when the search began, so matching it means unwinding has come the whole way around 201 slots. The
+other, at `$16D3`, is the one that actually fires: `$2B` is `$FF` from `$23EA` and is cleared only
+when the ring wraps, so `$2B` set with `$46` at zero means every step taken has been undone. From
+there the original either restarts the proposal from the origin (`JMP $24FD`, still in the first
+quadrant) or gives up on the landmass (`JMP $1A48`).
+
+**The turn's dead draw.** `$1622` draws a random byte and then compares it with `CMP #$00`, which can
+only set the carry — so `LDX #$FF` at `$162B` is unreachable and both direction biases are cleared on
+every turn. The draw still has to happen; it is the generator that matters, not the value. Guessing a
+threshold there (the port had `#$40`) survives the satellite and the island, which never turn with a
+radius over `$46`, and shows up 522 writes into a continent.

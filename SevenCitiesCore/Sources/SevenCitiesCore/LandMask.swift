@@ -105,4 +105,49 @@ public struct LandMask: Sendable, Equatable {
     public var landCells: Int {
         bytes[0..<Self.mapByteCount].reduce(0) { $0 + $1.nonzeroBitCount }
     }
+
+    /// Mirrors every row left to right (`$1C9C`).
+    ///
+    /// A full 256-bit reversal per row, which the original does in two passes
+    /// through a scratch buffer at `$9100`: `LSR A / ROL` eight times reverses the
+    /// bits of a byte, and copying back with the index counting the other way
+    /// reverses the bytes. Cell `x` ends up at `255 - x`.
+    public mutating func mirrorHorizontally() {
+        for row in 0..<Self.height {
+            let start = row * Self.bytesPerRow
+            var reversed = [UInt8](repeating: 0, count: Self.bytesPerRow)
+            for byte in 0..<Self.bytesPerRow {
+                reversed[Self.bytesPerRow - 1 - byte] = bytes[start + byte].reversedBits
+            }
+            bytes.replaceSubrange(start..<(start + Self.bytesPerRow), with: reversed)
+        }
+    }
+
+    /// Flips the map top to bottom (`$1CE7`).
+    ///
+    /// Row `r` swaps with row `399 - r`, and the loop runs `r` from 0 to 199 so
+    /// each pair is swapped once. Only the map proper moves — the spare rows above
+    /// it are not touched.
+    public mutating func flipVertically() {
+        for row in 0..<(Self.height / 2) {
+            let top = row * Self.bytesPerRow
+            let bottom = (Self.height - 1 - row) * Self.bytesPerRow
+            for byte in 0..<Self.bytesPerRow {
+                bytes.swapAt(top + byte, bottom + byte)
+            }
+        }
+    }
+}
+
+private extension UInt8 {
+    /// The eight bits in the opposite order, as `LSR A / ROL` builds them.
+    var reversedBits: UInt8 {
+        var source = self
+        var result: UInt8 = 0
+        for _ in 0..<8 {
+            result = (result << 1) | (source & 1)
+            source >>= 1
+        }
+        return result
+    }
 }

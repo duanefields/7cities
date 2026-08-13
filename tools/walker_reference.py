@@ -39,6 +39,7 @@ the arguments are by definition correct, whoever called — is right for every
 caller. `walkDx`/`walkDy` are kept alongside because the divergence between the
 two is itself informative.
 """
+import hashlib
 import json
 import os
 import sys
@@ -119,6 +120,23 @@ def capture(seed, config, index):
     return state, events
 
 
+def writes_digest(events):
+    """A digest over every mask write the fill made, in order.
+
+    The truncated prefix is what localizes a fault; this is what proves the
+    *rest*. A continent is ~1,700 writes and committing them all would be
+    committing generated map data, so only the hash goes in — the same trade
+    `landmass_reference.json` already makes for the mask itself.
+
+    One line per write, `P x,y` or `E x,y`, joined by newlines. Backtracks are
+    left out: each one is followed by the erases it caused, so the write stream
+    already carries them.
+    """
+    lines = [f"{'P' if e['kind'] == 'plot' else 'E'} {e['cellX']},{e['cellY']}"
+             for e in events if e["kind"] in ("plot", "erase")]
+    return hashlib.sha256("\n".join(lines).encode()).hexdigest(), len(lines)
+
+
 def main():
     out = {"description": "One land-mass fill from the original 6502, captured "
                           "in the interpreter. Machine state at $23D3 entry and "
@@ -128,6 +146,7 @@ def main():
     for seed, config, index, label, cap in CASES:
         state, events = capture(seed, config, index)
         total = len(events)
+        digest, writes = writes_digest(events)
         if cap is not None and total > cap:
             events = events[:cap]
         if not state:
@@ -140,9 +159,11 @@ def main():
                              "fillIndex": index, **state,
                              "eventsTotal": total, "eventsRecorded": len(events),
                              "truncated": len(events) < total,
+                             "writesTotal": writes, "writesSha256": digest,
                              "events": events})
         print(f"  {label:<10} centre=({state['x']},{state['y']}) r={state['radius']}"
-              f"  {plots} plots, {erases} erases, {backs} backtracks", flush=True)
+              f"  {plots} plots, {erases} erases, {backs} backtracks"
+              f"  {writes} writes {digest[:12]}", flush=True)
 
     path = f"{FIX}/walker_reference.json"
     with open(path, "w") as f:

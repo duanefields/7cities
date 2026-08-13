@@ -18,8 +18,9 @@ engineering record; this holds the work.
       `tools/wm_config.py` builds exactly the predicted 2+2, 1+2 and 1+6
       landmasses. Placement is rejection sampling, and the land mask is 1 bit
       per cell at `$5700`, 32 B/row, confirmed visually by
-      `tools/wm_landmask.py`. What remains there is the coastline walker at
-      `$15AD`. See NOTES.md.
+      `tools/wm_landmask.py`. The coastline walker at `$15AD` now traces
+      outlines exactly; the interior flood fill at `$194A` is what remains.
+      See NOTES.md.
 - [x] ~~**Make the land-mass phase reproducible.**~~ **Done.** Patching the
       seeding site at `$20CB`, the raster IRQ's entropy stir at `$2406` and the
       configuration draw at `$2146` makes it a pure function of
@@ -37,7 +38,7 @@ engineering record; this holds the work.
       Still needed: the placement loop itself (including the paired-placement
       retest at `$2231`), the **second wave** at `$280A`-`$2894` that adds
       2-7 radius-3 islands (8-12 for configuration 2) and files their positions
-      into two tables split at row 219, and the coastline walker.
+      into two tables split at row 219, and the flood fill `$194A`.
 - [ ] **Re-measure coverage to the true phase end.** The 64-of-207 figure was
       taken between `$212A` and `$280A`, which is the command-table stage only
       and excludes the second wave. `tools/wm_coverage.py` now runs to
@@ -46,19 +47,28 @@ engineering record; this holds the work.
       wave files each radius-3 island into one or the other depending on whether
       its row is below 219, and also writes `$03DC`. Something downstream reads
       these — possibly the village or gold placement.
-- [ ] **Finish the coastline walker.** Mostly done: the satellite fill matches
-      the original exactly and the continent's recorded prefix passes. The island
-      matches 79 of 93 plots, with the deep unwind reproducing event for event
-      but stopping one step early — the suspect is the unimplemented
-      `$16EC CPX $4F` guard. Then `$194A`, the interior flood fill, which is not
-      started. See NOTES.md for the rung table.
-- [ ] ~~**Transliterate the coastline walker at `$15AD`.**~~ superseded by the above. The one thing between
-      here and a complete land-mass phase. A state machine (`$1A` = state,
-      `$46` = step counter wrapping at 201) emitting 12-byte segment records,
-      with a self-modified `INC`/`DEC` opcode at `$1657`. It has only one call
-      site, so it is not shared machinery. **Transcribe it literally rather
-      than trying to understand it first** — that is how the RNG, the divide
-      and the cipher went, and the fixture will prove it.
+- [x] ~~**Trace the coastline outline.**~~ **Done, exactly.** All three fills —
+      satellite, island and continent — reproduce every mask write the original
+      made, in order, to the end of the fill: 23, 106 and 871 writes, the last
+      with 155 backtracks. The fixture keeps a 150-event prefix for localizing
+      faults plus a SHA-256 over the whole write sequence, since a continent's
+      cells are generated map data and cannot be committed. See NOTES.md for the
+      five findings that took, all from diffing traces rather than reading.
+- [x] ~~**Port the interior flood fill at `$194A`.**~~ **Done, exactly.** With it
+      and the mirror pass at `$1C89`, the whole land-mass stage now replays from
+      an empty mask: eleven steps, 31,307 land cells, every write sequence and
+      every mask digest matching the original bit for bit
+      (`tools/interior_reference.py`, `InteriorFillTests`).
+- [ ] **Port `$1666` and `$2629`, which decide the order.** The replay above is
+      driven by a recorded step list because the original's own sequencing is not
+      understood: a continent's walk patches a command into `$0200` and arranges
+      the paired satellite's walk, and only that walk reaches the flood fill.
+      `$54` is the flag that selects between them. Until this is ported the stage
+      cannot run without the fixture.
+- [ ] **Find what calls `$4500`.** Nothing in `$0800`-`$94FF` names it, so it is
+      reached from a table. It is the mirror pass's caller and it runs partway
+      through the land-mass stage, which means the stage boundaries in NOTES are
+      not as clean as they look.
 - [ ] **Confirm the band structure.** The finished map is assembled on disk —
       51,200 bytes of nibbles will not fit in a C64 — and `$2C14` bounds its
       row counter at 208, which is very likely the band height. Still unknown:

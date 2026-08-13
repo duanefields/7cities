@@ -270,6 +270,8 @@
    "eventsTotal": 23,
    "eventsRecorded": 23,
    "truncated": false,
+   "writesTotal": 23,
+   "writesSha256": "2fccfbf3b47ba3bd47724d82188f3b65eca6f1230e2960d11606b2d9e003926c",
    "events": [
     {
      "kind": "plot",
@@ -818,6 +820,8 @@
    "eventsTotal": 119,
    "eventsRecorded": 119,
    "truncated": false,
+   "writesTotal": 106,
+   "writesSha256": "52a5aaedc58fcb45a560554f35dee2051dea920abb534ce167b45b34934e0772",
    "events": [
     {
      "kind": "plot",
@@ -2466,6 +2470,8 @@
    "eventsTotal": 1026,
    "eventsRecorded": 150,
    "truncated": true,
+   "writesTotal": 871,
+   "writesSha256": "daae516cbb5c33d6df0b59e406e07403031170489e180179a6e2213edb193613",
    "events": [
     {
      "kind": "plot",

@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import Testing
 
@@ -14,6 +15,8 @@ private struct Reference: Decodable {
         let zeroPage: [Int]
         let truncated: Bool
         let events: [Event]
+        let writesTotal: Int
+        let writesSha256: String
     }
     let cases: [Case]
 }
@@ -79,17 +82,39 @@ private func checkOutline(_ c: Reference.Case) -> String? {
     return nil
 }
 
+/// Every mask write a fill makes, in order, hashed the way the capture tool
+/// hashes them.
+///
+/// The recorded events stop at 150 for the continent, which is enough to localize
+/// a fault but says nothing about the remaining 700-odd writes. Those cannot be
+/// committed — a full continent's cells are generated map data — so the port is
+/// held to their digest instead.
+private func writesDigest(_ c: Reference.Case) -> (digest: String, count: Int) {
+    var s = state(c)
+    var mask = LandMask()
+    var lines: [String] = []
+    _ = CoastlineWalker.traceOutline(&s, in: &mask,
+                                     plot: { x, y in lines.append("P \(x),\(y)") },
+                                     erase: { x, y in lines.append("E \(x),\(y)") })
+    let joined = Data(lines.joined(separator: "\n").utf8)
+    let hash = SHA256.hash(data: joined).map { String(format: "%02x", $0) }.joined()
+    return (hash, lines.count)
+}
+
+@Test("Every fill's whole write sequence matches the original",
+      arguments: ["satellite", "island", "continent"])
+func writeSequenceMatchesOriginal(label: String) throws {
+    let reference = try loadReference()
+    let c = try #require(reference.cases.first { $0.label == label })
+    let (digest, count) = writesDigest(c)
+    #expect(count == c.writesTotal,
+            "\(label): expected \(c.writesTotal) mask writes, got \(count)")
+    #expect(digest == c.writesSha256, "\(label): write sequence differs")
+}
+
 /// Rung two: 93 plots with 13 backtracks, so this is the first case that
 /// exercises the undo ring at all — the satellite never unwinds.
-@Test("The island outline matches the original",
-      .disabled("""
-          Known: matches 79 of 93 plots. The deep unwind at plot 79 reproduces \
-          event for event — eleven erases, (189,4) back to (195,13) — but the \
-          port stops one unwind early, resuming at (195,12) where the original \
-          resumes at (196,12). Prime suspect is the $16EC CPX $4F guard, which \
-          detects unwinding back to where the current search began and is not \
-          implemented. See NOTES.md.
-          """))
+@Test("The island outline matches the original")
 func islandOutlineMatchesOriginal() throws {
     let reference = try loadReference()
     let c = try #require(reference.cases.first { $0.label == "island" })

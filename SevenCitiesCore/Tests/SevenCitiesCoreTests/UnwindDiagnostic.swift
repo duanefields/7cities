@@ -3,10 +3,18 @@ import Testing
 
 @testable import SevenCitiesCore
 
-/// Prints the port's plot/erase sequence so it can be lined up against the
-/// original's. Diagnostic only — enable when an outline diverges.
-@Test("diagnostic: island plot and erase sequence", .disabled("diagnostic; enable when an outline diverges"))
-func dumpIslandSequence() throws {
+/// Dumps the port's mask writes so they can be lined up against the original's.
+///
+/// Diagnostic only, and off unless asked for: set `WALKER_DUMP` to a fill's label
+/// and `WALKER_DUMP_PATH` to somewhere outside the repo. The continent's full
+/// sequence is 871 lines of generated map data, which is why this writes to a
+/// path you choose rather than to a fixture.
+///
+///     WALKER_DUMP=continent WALKER_DUMP_PATH=/tmp/port.txt swift test --filter diagnostic
+@Test("diagnostic: dump a fill's write sequence",
+      .enabled(if: ProcessInfo.processInfo.environment["WALKER_DUMP"] != nil))
+func dumpWriteSequence() throws {
+    let label = ProcessInfo.processInfo.environment["WALKER_DUMP"] ?? "island"
     let url = try #require(
         Bundle.module.url(forResource: "walker_reference", withExtension: "json",
                           subdirectory: "Fixtures"))
@@ -16,10 +24,13 @@ func dumpIslandSequence() throws {
         let cases: [C]
     }
     let r = try JSONDecoder().decode(R.self, from: Data(contentsOf: url))
-    let c = try #require(r.cases.first { $0.label == "island" })
+    let c = try #require(r.cases.first { $0.label == label })
     let zp = c.zeroPage
+    let usesSecond = c.radius < 10
     var s = WalkerState(
-        rng: WorldMakerRNG(high: UInt8(zp[0xCD]), low: UInt8(zp[0xCF])),
+        rng: usesSecond
+            ? WorldMakerRNG(high: UInt8(zp[0x1F]), low: UInt8(zp[0x20]))
+            : WorldMakerRNG(high: UInt8(zp[0xCD]), low: UInt8(zp[0xCF])),
         workingRadius: UInt8(c.radius), centerX: UInt8(c.x),
         centerY: UInt16(c.y), shape: 0,
         offset: .init(dx: 0, dy: 0), candidate: .init(dx: 0, dy: 0),
@@ -31,9 +42,14 @@ func dumpIslandSequence() throws {
     var mask = LandMask()
     var log: [String] = []
     _ = CoastlineWalker.traceOutline(&s, in: &mask,
-        plot: { x, y in log.append("plot   (\(x),\(y))") },
-        erase: { x, y in log.append("erase  (\(x),\(y))") })
-    for (i, line) in log.enumerated() where i >= 70 && i < 100 {
-        print("  \(i) \(line)")
+        plot: { x, y in log.append("P \(x),\(y)") },
+        erase: { x, y in log.append("E \(x),\(y)") })
+
+    let text = log.joined(separator: "\n") + "\n"
+    if let path = ProcessInfo.processInfo.environment["WALKER_DUMP_PATH"] {
+        try text.write(toFile: path, atomically: true, encoding: .utf8)
+        print("  wrote \(log.count) writes to \(path)")
+    } else {
+        print(text)
     }
 }
