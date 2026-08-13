@@ -2274,3 +2274,41 @@ are to step again. That is the mechanism that bends a straight walk into an arc.
 
 So the loop spans two regions: `$15AD`-`$16BB` commits and turns, `$24FD`-`$25A0` proposes. Neither
 is comprehensible alone, and nothing in the call graph marks them as one routine.
+
+#### There are two generators, and backtracking rewinds the random state
+
+`$0A9D` is a second LFSR. Byte for byte the same algorithm as `$0AE2` — four `ROL`s, the same two
+taps, eight shifts, the same all-zero escape — but on `$1F`/`$20` instead of `$CD`/`$CF`. `$0A87`
+is its modulo wrapper, mirroring `$0ACB`. `$27D4` and `$27DE` swap the vectors at `$0B11`/`$0B14`
+so the *same* walker code draws from whichever is currently installed:
+
+| Fill                | `$0B10`              | `$0B13`              |
+| :------------------ | :------------------- | :------------------- |
+| continent, island   | `JMP $0AE2` (`$CD`/`$CF`) | `JMP $0ACB`     |
+| satellite           | `JMP $0A9D` (`$1F`/`$20`) | `JMP $0A87`     |
+
+This was found by counting entries to `$0AE2` during each fill: the satellite made **zero**, while
+`$1555` unconditionally calls `$0B10`. The routine had not stopped drawing; it was drawing
+somewhere else.
+
+**The consequence matters more than the mechanism.** `$1F`/`$20` live inside the walker's saved
+state block. `$1B55` copies `$47`-`$4D` into `$1F`-`$25` and `$17C8` copies back, and that block is:
+
+```text
+$1F/$20  the second LFSR's state
+$21      the working radius
+$22      centre x
+$23/$24  centre y
+$25      a shape parameter
+```
+
+So when the walker backtracks it **restores the random state along with the position**. The retried
+step therefore re-draws the same numbers rather than fresh ones, which makes an unwind a true undo
+rather than a retry with new luck.
+
+A port that keeps one global generator, or that treats the RNG as outside the walker's state, will
+diverge the first time a landmass backtracks — which is 155 times in a single continent. Nothing in
+the routine listing suggests any of this; it was visible only by counting draws.
+
+The retry loop at `$1564` is also live, not dead code: measured over one continent, stepper calls
+consumed one draw 1,106 times, two draws 299 times and three draws once.
