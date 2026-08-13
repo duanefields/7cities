@@ -13,9 +13,13 @@
 ///    `$1666` patched to `RTS` so it cannot recurse, and only then floods —
 ///    from the continent's centre, filling both at once.
 /// 4. `$44EF`, at the end of the first command only, mirrors the whole mask on
-///    two coin flips.
+///    two coin flips and then picks the two sites — see ``SiteSelection``.
 ///
-/// Transcribed from `$2158`, `$1666`, `$2629`, `$2794` and `$44EF`.
+/// Transcribed from `$2158`, `$1666`, `$2629`, `$2794` and `$44EF`. What it
+/// produces is checked against mask digests captured from the original under VICE
+/// (`landmass_reference.json`) by way of `interior_reference.json`, which the
+/// interpreter captured independently and which agrees with them on all nine
+/// seed and configuration pairs.
 public enum LandMassStage {
 
     /// Something that touched the mask, in the order it happened.
@@ -91,30 +95,18 @@ public enum LandMassStage {
     public struct Run: Sendable {
         public let mask: LandMask
         public let steps: [Step]
-        /// The sites `$4500` chose partway through, if it got that far.
+        /// The sites `$4500` chose partway through.
         public let sites: SiteSelection.Result?
-        /// Why the stage stopped before the command table ran out, when it did.
-        /// `nil` means it finished.
+        /// Why the stage stopped before the command table ran out. `nil` means it
+        /// finished, which it now does for every configuration it accepts.
         public let stoppedBecause: String?
     }
 
-    /// Why the stage stops where it does.
-    static let stopReason = """
-        $44EF is ported only as far as $46B9. The mirror and the site selection \
-        are exact, but the routine keeps going — a loop at $4730 that drew 3,187 \
-        bounded values in one measured run, and a twelve-draw average at $47BC — \
-        and all of it shares this generator. That is 573 distinct addresses \
-        across $41E6-$47DE, a whole phase of its own, and until it is ported \
-        every landmass after the first command would be placed from a generator \
-        in the wrong place
-        """
-
     /// Runs the command-table stage for one seed and configuration.
     ///
-    /// **It stops after the first command**, at the seam described by
-    /// ``stopReason``. What it covers is the whole of that command: the
-    /// continents, the satellites placed inside them, the flood fills, the mirror
-    /// and the two sites `$4500` picks.
+    /// Runs it to the end, for configurations 0 and 2. Configuration 1 throws:
+    /// its command pairs the continent, and the partner is built by a mode of the
+    /// walk that is not ported.
     public static func run(config: Int, seed: UInt16) throws -> Run {
         var rng = WorldMakerRNG(seed: seed)
         var mask = LandMask()
@@ -191,8 +183,6 @@ public enum LandMassStage {
                 // it draws seven times from this generator with bounds taken from
                 // the mask, so the rest of the command table depends on it.
                 sites = try SiteSelection.choose(in: mask, rng: &rng)
-                return Run(mask: mask, steps: steps, sites: sites,
-                           stoppedBecause: stopReason)
             }
         }
         return Run(mask: mask, steps: steps, sites: sites, stoppedBecause: nil)

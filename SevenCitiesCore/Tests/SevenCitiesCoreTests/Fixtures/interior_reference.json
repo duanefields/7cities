@@ -1702,9 +1702,30 @@
      "kind": "mirror",
      "horizontal": true,
      "vertical": true
+    },
+    {
+     "kind": "outline",
+     "x": 187,
+     "y": 14,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 187,
+     "y": 14
+    },
+    {
+     "kind": "outline",
+     "x": 190,
+     "y": 348,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 190,
+     "y": 348
     }
    ],
-   "maskSha256": "ed8b6b8054cdad3177f661cba199ac5ddcd25a4647765207ac88492dc8d3a745",
    "sites": [
     {
      "column": 126,
@@ -1718,7 +1739,10 @@
      "southern": true,
      "kind": 9
     }
-   ]
+   ],
+   "parameter": 1,
+   "maskSha256": "1768bf75ec8c3f112b20f991b35f8ba63ffbe4715b8c1b5e3771e02a6216f6a7",
+   "landCells": 31307
   },
   {
    "seed": 4660,
@@ -1751,9 +1775,30 @@
      "kind": "mirror",
      "horizontal": false,
      "vertical": true
+    },
+    {
+     "kind": "outline",
+     "x": 24,
+     "y": 256,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 24,
+     "y": 256
+    },
+    {
+     "kind": "outline",
+     "x": 114,
+     "y": 80,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 114,
+     "y": 80
     }
    ],
-   "maskSha256": "12ecb0d318b38607423e4ed2e8df93826e1a8953fa26c0801e96b65114cc1ef5",
    "sites": [
     {
      "column": 77,
@@ -1767,7 +1812,10 @@
      "southern": false,
      "kind": 7
     }
-   ]
+   ],
+   "parameter": 1,
+   "maskSha256": "e70796cb33bb41a247f4a2b6c6d1cd5ba26db596d6a4b5d06fd26d1334a365ab",
+   "landCells": 28583
   },
   {
    "seed": 4660,
@@ -1794,9 +1842,74 @@
      "kind": "mirror",
      "horizontal": false,
      "vertical": false
+    },
+    {
+     "kind": "outline",
+     "x": 87,
+     "y": 122,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 87,
+     "y": 122
+    },
+    {
+     "kind": "outline",
+     "x": 231,
+     "y": 302,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 231,
+     "y": 302
+    },
+    {
+     "kind": "outline",
+     "x": 86,
+     "y": 58,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 86,
+     "y": 58
+    },
+    {
+     "kind": "outline",
+     "x": 97,
+     "y": 319,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 97,
+     "y": 319
+    },
+    {
+     "kind": "outline",
+     "x": 52,
+     "y": 333,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 52,
+     "y": 333
+    },
+    {
+     "kind": "outline",
+     "x": 144,
+     "y": 279,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 144,
+     "y": 279
     }
    ],
-   "maskSha256": "9111d3d698885cff676a62c3c99792345cff3db93385b20cae420814fcc36923",
    "sites": [
     {
      "column": 137,
@@ -1804,7 +1917,10 @@
      "southern": false,
      "kind": 9
     }
-   ]
+   ],
+   "parameter": 1,
+   "maskSha256": "87867ff05f8c982b94c215865f0d2ce5fe83752cb744afcf5cf80a66956d9358",
+   "landCells": 16997
   },
   {
    "seed": 48879,
@@ -1848,9 +1964,30 @@
      "kind": "mirror",
      "horizontal": true,
      "vertical": false
+    },
+    {
+     "kind": "outline",
+     "x": 238,
+     "y": 44,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 238,
+     "y": 44
+    },
+    {
+     "kind": "outline",
+     "x": 36,
+     "y": 122,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 36,
+     "y": 122
     }
    ],
-   "maskSha256": "c181e072a9c1afd107fe6fc9d062d26b7e49e03cec29157c82946fc46a347289",
    "sites": [
     {
      "column": 119,
@@ -1864,7 +2001,10 @@
      "southern": true,
      "kind": 9
     }
-   ]
+   ],
+   "parameter": 1,
+   "maskSha256": "b60e4b65703982c9260acae3a9e52a13e4689b0cbf059f723391bc0ecff58ec7",
+   "landCells": 32337
   },
   {
    "seed": 48879,
@@ -1897,9 +2037,30 @@
      "kind": "mirror",
      "horizontal": true,
      "vertical": true
+    },
+    {
+     "kind": "outline",
+     "x": 83,
+     "y": 53,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 83,
+     "y": 53
+    },
+    {
+     "kind": "outline",
+     "x": 23,
+     "y": 333,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 23,
+     "y": 333
     }
    ],
-   "maskSha256": "5fadf760b62ede81ee6535c2c0d09455ebf495f73b658478f185e50a192b888b",
    "sites": [
     {
      "column": 112,
@@ -1913,7 +2074,10 @@
      "southern": false,
      "kind": 7
     }
-   ]
+   ],
+   "parameter": 2,
+   "maskSha256": "9b610e3f32b37ad56be2d8815e0da40b9648187647146e76eddbd55fb6b6846b",
+   "landCells": 30894
   },
   {
    "seed": 48879,
@@ -1940,9 +2104,74 @@
      "kind": "mirror",
      "horizontal": false,
      "vertical": true
+    },
+    {
+     "kind": "outline",
+     "x": 25,
+     "y": 63,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 25,
+     "y": 63
+    },
+    {
+     "kind": "outline",
+     "x": 41,
+     "y": 146,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 41,
+     "y": 146
+    },
+    {
+     "kind": "outline",
+     "x": 36,
+     "y": 223,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 36,
+     "y": 223
+    },
+    {
+     "kind": "outline",
+     "x": 178,
+     "y": 142,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 178,
+     "y": 142
+    },
+    {
+     "kind": "outline",
+     "x": 234,
+     "y": 137,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 234,
+     "y": 137
+    },
+    {
+     "kind": "outline",
+     "x": 10,
+     "y": 199,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 10,
+     "y": 199
     }
    ],
-   "maskSha256": "43414653e695f9b18b6b1359cf072ed5155e3035d881d6d02196d2cb39e08511",
    "sites": [
     {
      "column": 133,
@@ -1956,7 +2185,10 @@
      "southern": true,
      "kind": 7
     }
-   ]
+   ],
+   "parameter": 1,
+   "maskSha256": "cb9796bbb226a564508f7e291f7b55406b006593bd7ffbb5503a1c3d6d1c8ce8",
+   "landCells": 18810
   },
   {
    "seed": 1,
@@ -2000,9 +2232,30 @@
      "kind": "mirror",
      "horizontal": true,
      "vertical": false
+    },
+    {
+     "kind": "outline",
+     "x": 206,
+     "y": 19,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 206,
+     "y": 19
+    },
+    {
+     "kind": "outline",
+     "x": 25,
+     "y": 42,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 25,
+     "y": 42
     }
    ],
-   "maskSha256": "778a6b3d18212189cb044ce59ad0ccaa758284a07821ac87a866e57eb818ec2d",
    "sites": [
     {
      "column": 115,
@@ -2010,7 +2263,10 @@
      "southern": true,
      "kind": 9
     }
-   ]
+   ],
+   "parameter": 1,
+   "maskSha256": "b3d31c60ec7f6bf99f9277805bca91d1c4a38ce80c17926315cd457376df2e1c",
+   "landCells": 29789
   },
   {
    "seed": 1,
@@ -2043,9 +2299,30 @@
      "kind": "mirror",
      "horizontal": false,
      "vertical": true
+    },
+    {
+     "kind": "outline",
+     "x": 61,
+     "y": 34,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 61,
+     "y": 34
+    },
+    {
+     "kind": "outline",
+     "x": 150,
+     "y": 138,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 150,
+     "y": 138
     }
    ],
-   "maskSha256": "4efcc6ce93274f1231b964614913649960942accbb97d01eab8145bd99c8b790",
    "sites": [
     {
      "column": 91,
@@ -2059,7 +2336,10 @@
      "southern": true,
      "kind": 7
     }
-   ]
+   ],
+   "parameter": 1,
+   "maskSha256": "6df925a64e0bbdc67ec0c02469356d6f88166057f04fd985bc36faaa6506ee88",
+   "landCells": 26329
   },
   {
    "seed": 1,
@@ -2086,9 +2366,74 @@
      "kind": "mirror",
      "horizontal": true,
      "vertical": false
+    },
+    {
+     "kind": "outline",
+     "x": 211,
+     "y": 334,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 211,
+     "y": 334
+    },
+    {
+     "kind": "outline",
+     "x": 30,
+     "y": 162,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 30,
+     "y": 162
+    },
+    {
+     "kind": "outline",
+     "x": 179,
+     "y": 287,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 179,
+     "y": 287
+    },
+    {
+     "kind": "outline",
+     "x": 240,
+     "y": 229,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 240,
+     "y": 229
+    },
+    {
+     "kind": "outline",
+     "x": 123,
+     "y": 285,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 123,
+     "y": 285
+    },
+    {
+     "kind": "outline",
+     "x": 17,
+     "y": 18,
+     "radius": 10
+    },
+    {
+     "kind": "interior",
+     "x": 17,
+     "y": 18
     }
    ],
-   "maskSha256": "455b0f59a6ad53dad1c25ff7f3dc65cf80b7a2416e33f3a5ab77f2563dc7a3c3",
    "sites": [
     {
      "column": 69,
@@ -2102,7 +2447,10 @@
      "southern": false,
      "kind": 9
     }
-   ]
+   ],
+   "parameter": 1,
+   "maskSha256": "c2e3099c5022f9521db5b8856ce24437f617782adc0b492b493a60c2201d49d4",
+   "landCells": 18706
   }
  ]
 }

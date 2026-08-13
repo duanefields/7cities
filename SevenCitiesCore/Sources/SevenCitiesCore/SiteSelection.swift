@@ -28,16 +28,14 @@ public enum SiteSelection {
 
     public struct Result: Sendable, Equatable {
         public let primary: Site
+        /// The second site. `nil` only when both searches failed, which the
+        /// original also allows — and which changes what `$47C6` does next.
         public let secondary: Site?
-        /// The original **always** ends up with a second site. When the two land
-        /// bands are separate and a coin flip agrees it looks for one in the other
-        /// band, which is `$4676`-`$46B9` and is ported. Every other time it takes
-        /// `$46BC` instead — a systematic walk outward from the first site's row
-        /// through the one band there is, reusing `$43E7` with `$4414` patched to
-        /// `RTS`, and leaning on `$44B5`, `$44C3` and `$44D9`. That path is not
-        /// ported, and this says so rather than letting a missing site read as a
-        /// site the original did not place.
-        public let secondaryUnported: Bool
+        /// `$EBCE`, the byte `$47B2` files away afterwards. Drawn from `$0B16`,
+        /// and from a *different* distribution depending on whether a second site
+        /// was found: centred on 1 with spread 1 when it was, on 2 with spread 6
+        /// when it was not. Nothing in the land-mass phase reads it.
+        public let parameter: UInt8
     }
 
     /// `$451C`/`$4409`: the mask has no land where the scans need it, and the
@@ -88,30 +86,175 @@ public enum SiteSelection {
         let kind: UInt8 = Int8(bitPattern: rng.next()) < 0 ? 7 : 9
         let primary = site(drawn, kind: kind)
 
-        // $4655: a second site only when the first band stood on its own, and
-        // then only on a second coin flip.
-        guard twoBands, Int8(bitPattern: rng.next()) < 0 else {
-            return Result(primary: primary, secondary: nil, secondaryUnported: true)
+        // $4655: the other band is searched only when the first stood on its own
+        // and a coin flip agrees. Note the flip is not made at all when `$5D` is
+        // clear — `BEQ` jumps before `JSR $0AE2` — which Swift's `guard` gets right
+        // only because it short-circuits left to right.
+        var secondary: Site?
+        if twoBands, Int8(bitPattern: rng.next()) < 0 {
+            secondary = try acrossBands(primary: primary, band: second, kind: kind,
+                                        mask: mask, rng: &rng)
+        } else {
+            secondary = try withinBand(primary: primary, band: band, kind: kind,
+                                       mask: mask, rng: &rng)
         }
 
-        // $4676: draw in the *other* band, then keep trying columns within the
-        // land run that row crosses until one is far enough away.
+        // $47B2: a parameter drawn from one of two distributions, and on the
+        // failing path the first site's kind is overwritten as well.
+        if secondary != nil {
+            let parameter = min(sample(base: 1, spread: 1, rng: &rng), 3)
+            return Result(primary: primary, secondary: secondary, parameter: parameter)
+        }
+        let parameter = min(sample(base: 2, spread: 6, rng: &rng), 7)
+        let settled = parameter >= 2
+            ? Site(column: primary.column, row: primary.row,
+                   southern: primary.southern, kind: 9)
+            : primary
+        return Result(primary: settled, secondary: nil, parameter: parameter)
+    }
+
+    /// The second site, looked for in the *other* land band (`$4676`-`$46B9`).
+    private static func acrossBands(primary: Site, band: Band, kind: UInt8,
+                                    mask: LandMask,
+                                    rng: inout WorldMakerRNG) throws -> Site? {
         for _ in 0..<256 {
-            let candidate = try draw(in: second, mask: mask, rng: &rng)
+            let candidate = try draw(in: band, mask: mask, rng: &rng)
             for _ in 0..<256 {
                 let column = rng.nextByte(from: candidate.run.left,
                                           below: candidate.run.right)
                 if farApart(column: column, row: candidate.row, from: primary) {
-                    return Result(primary: primary,
-                                  secondary: site((column, candidate.row,
-                                                   candidate.run),
-                                                  kind: kind ^ 0x0E),
-                                  secondaryUnported: false)
+                    return site((column, candidate.row, candidate.run),
+                                kind: kind ^ 0x0E)
                 }
             }
         }
-        // $469B JMP $47B0: it gave up. The first site stands.
-        return Result(primary: primary, secondary: nil, secondaryUnported: false)
+        return nil                                       // $469B JMP $47B0
+    }
+
+    /// The second site, looked for in the same band as the first (`$46BC`).
+    ///
+    /// Where the other search samples, this one *walks*. It starts at the far end
+    /// of whichever half of the band is longer, rounded up to an even row, and
+    /// steps two rows at a time back toward the first site until it finds a row
+    /// whose first land run is at least 30 cells wide. Then it draws columns in
+    /// that run until one is far enough away — and then keeps walking, still two
+    /// rows at a time, for as long as that column stays far enough. The two rows
+    /// that bracket, one from each end of that walk, become the range a final row
+    /// is drawn from. If the column turns out to be water in the drawn row, it
+    /// falls back to the row it started the walk from.
+    ///
+    /// The original does all of this by patching `$4373` in two places: `$4414`
+    /// becomes `RTS` so `$43E7` can be called for the row scan alone, and later
+    /// `$43E7` becomes `RTS` so `$4373` is left as the row draw alone.
+    private static func withinBand(primary: Site, band: Band, kind: UInt8,
+                                   mask: LandMask,
+                                   rng: inout WorldMakerRNG) throws -> Site? {
+        // $46C0: the halves are measured as **bytes**, from the low bytes alone.
+        let below = UInt8(truncatingIfNeeded: primary.row)
+            &- UInt8(truncatingIfNeeded: band.start)
+        let above = UInt8(truncatingIfNeeded: band.end)
+            &- UInt8(truncatingIfNeeded: primary.row)
+
+        var row: UInt16
+        if above >= below {
+            row = primary.row &+ UInt16(above)
+        } else {
+            row = primary.row &- UInt16(below)           // $46D8, two's complement
+        }
+        if row & 1 != 0 { row &+= 1 }                    // $46EF: round up to even
+
+        // $46FA: which way the walk runs. `$13` is set when the start is past the
+        // first site, so the steps subtract.
+        let stepsBack = primary.row < row
+
+        /// `$44C3` / `$44D9`: two rows toward the first site, and whether the band
+        /// still contains the result.
+        func step(_ row: inout UInt16) -> Bool {
+            if stepsBack {
+                row &-= 2
+                return row >= band.start
+            }
+            row &+= 2
+            return row < band.end
+        }
+
+        var counter: UInt8 = 0                           // $52, and it never resets
+        while true {
+            // $470E: `$43E7` with `$4414` patched to `RTS` — the row scan alone.
+            if let run = landRun(row: row, in: mask),
+               run.right &- run.left >= 0x1E {
+                // $4726: columns, until one is far enough or 256 have failed.
+                var column: UInt8?
+                while true {
+                    let candidate = rng.nextByte(from: run.left &+ 9,
+                                                 below: run.right &- 9)
+                    if farApart(column: candidate, row: row, from: primary) {
+                        column = candidate
+                        break
+                    }
+                    counter &+= 1                        // $47A6
+                    if counter == 0 { break }            // $47AD JMP $4713
+                }
+                if let column {
+                    return try settle(column: column, from: row, primary: primary,
+                                      kind: kind, stepsBack: stepsBack, band: band,
+                                      mask: mask, rng: &rng)
+                }
+            }
+            // $4713: step, and give up at the edge of the band.
+            guard step(&row) else { return nil }         // $471C JMP $47B0
+        }
+    }
+
+    /// Walks the found row as close to the first site as it can and settles on one
+    /// in between (`$4737`-`$47A3`).
+    private static func settle(column: UInt8, from anchor: UInt16, primary: Site,
+                               kind: UInt8, stepsBack: Bool, band: Band,
+                               mask: LandMask,
+                               rng: inout WorldMakerRNG) throws -> Site {
+        var row = anchor                                 // $16/$17 keeps the anchor
+        while true {                                     // $473F
+            if stepsBack {
+                row &-= 2
+                if row < band.start { break }
+            } else {
+                row &+= 2
+                if row >= band.end { break }
+            }
+            if !farApart(column: column, row: row, from: primary) { break }
+        }
+
+        // $4754: the walk's two ends bound the draw, in whichever order the
+        // direction put them.
+        let bounds = stepsBack ? Band(start: row, end: anchor)
+                               : Band(start: anchor, end: row)
+        // $4782: `$43E7` patched to `RTS` leaves `$4373` as its row draw alone.
+        let drawn = drawRow(in: bounds, rng: &rng)
+        // $478A: keep it only if the column is land in that row.
+        let settled = mask.isLand(x: column, y: Int(drawn)) ? drawn : anchor
+        return Site(column: column, row: settled, southern: settled >= 0xD0,
+                    kind: kind ^ 0x0E)
+    }
+
+    /// Twelve draws summed, centred and scaled (`$0B16`).
+    ///
+    /// The only non-flat generator found anywhere in the World Maker: sum twelve
+    /// bytes, subtract 1,536, halve it as a *signed* value, scale by the spread and
+    /// keep the high byte. A negative result comes out as zero (`$0B7E BPL`), so
+    /// the distribution is a clipped normal around `base`.
+    static func sample(base: UInt8, spread: UInt8,
+                       rng: inout WorldMakerRNG) -> UInt8 {
+        guard spread != 0 else { return base }           // $0B18
+        var sum: UInt16 = 0
+        for _ in 0..<12 { sum = sum &+ UInt16(rng.next()) }
+        var centred = sum &- 0x0600                      // $0B5D
+        centred = UInt16(bitPattern: Int16(bitPattern: centred) >> 1)  // $0B6A
+        // $0B83 is a 17-round shift-add multiply; only its low word is used, which
+        // makes it a plain wrapping product.
+        let product = centred &* UInt16(spread)
+        let rounding: UInt8 = UInt8(truncatingIfNeeded: product) >= 0x80 ? 1 : 0
+        let result = base &+ UInt8(truncatingIfNeeded: product >> 8) &+ rounding
+        return result & 0x80 != 0 ? 0 : result           // $0B7E
     }
 
     /// Packages a drawn position with its kind (`$462F` and `$469E`).
@@ -145,6 +288,21 @@ public enum SiteSelection {
         return (high << 8 | low) >= 0x2EE0
     }
 
+    /// `$4373`'s row draw, without the land scan that normally follows it.
+    ///
+    /// Two draws in the *opposite* order to `$247B`: the first supplies the high
+    /// byte through its sign, the second the low byte, redrawn until it comes up
+    /// even. Out of band, both are thrown away.
+    static func drawRow(in band: Band, rng: inout WorldMakerRNG) -> UInt16 {
+        while true {
+            let high: UInt8 = rng.next() >= 0x80 ? 1 : 0         // $439D
+            var low: UInt8
+            repeat { low = rng.next() } while low & 1 != 0       // $43D0
+            let row = UInt16(high) << 8 | UInt16(low)
+            if row >= band.start && row < band.end { return row }
+        }
+    }
+
     /// Draws a position inside a band (`$4373`).
     ///
     /// The row comes from two draws in the *opposite* order to `$247B`: the first
@@ -156,12 +314,7 @@ public enum SiteSelection {
                              rng: inout WorldMakerRNG)
         throws -> (column: UInt8, row: UInt16, run: (left: UInt8, right: UInt8)) {
         while true {
-            // $439D: the sign of the first draw is the high byte.
-            let high: UInt8 = rng.next() >= 0x80 ? 1 : 0
-            var low: UInt8
-            repeat { low = rng.next() } while low & 1 != 0     // $43D0 LSR / BCS
-            let row = UInt16(high) << 8 | UInt16(low)
-            guard row >= band.start && row < band.end else { continue }
+            let row = drawRow(in: band, rng: &rng)
 
             // $43EE: the first land in the row, then the first water past it.
             guard let run = landRun(row: row, in: mask) else { continue }

@@ -2424,18 +2424,34 @@ which is why one call can burn dozens of draws. The column then comes from `$22B
 difference reduced to a **byte** before squaring and the sign taken from the full 16-bit subtraction.
 A pair 260 rows apart therefore measures as 4.
 
-Ported: everything above, plus the second-site search at `$4676`-`$46B9` — draw in the other band,
-then keep trying columns inside the land run that row crosses until one is far enough away. Verified
-against the original for every seed and configuration.
+There are **two** searches for the second site, and the original picks between them. `$4676`-`$46B9`
+runs when the bands are disjoint and a coin flip agrees: draw in the other band, then keep trying
+columns inside the land run that row crosses until one is far enough away. Every other time it takes
+`$46BC`, which does not sample — it *walks*. It starts at the far end of whichever half of the band
+is longer, rounded up to an even row, and steps two rows at a time back toward the first site until
+it finds a row whose first land run is at least 30 wide. Then it draws columns there until one is far
+enough, and then keeps walking, two rows at a time, for as long as that column stays far enough. The
+two ends of that walk bracket a range, a final row is drawn from it, and if the column turns out to
+be water in that row it falls back to where the walk began.
 
-Not ported: `$46BC`, which is where the original goes whenever that search does not apply — a
-systematic walk outward from the first site's row through the one band there is, reusing `$43E7` with
-`$4414` patched to `RTS` and leaning on `$44B5`, `$44C3` and `$44D9`. In one measured run it drew
-3,187 bounded values. Nor is `$47B2`, whose `$47BC JSR $0B16` sums **twelve** draws — an averaging
-generator, not a flat one, and the only place one has turned up so far.
+`$46BC` does all of this by patching `$4373` in two places, at different times: `$4414` becomes `RTS`
+so `$43E7` can be called for the row scan alone, and later `$43E7` becomes `RTS` so what is left of
+`$4373` is the row draw alone. `$2139` and `$2143` put both back at the start of every phase.
 
-So the port covers the first command in full — the continents, the satellites, the fills, the mirror
-and the sites — and stops at `$46BC`.
+Then `$47B2` files one more byte, at `$EBCE`, drawn from `$0B16` — **twelve** draws summed, centred
+on 1,536, halved as a signed value, scaled and clipped at zero. A rough normal, and the only
+non-flat generator found anywhere in the World Maker. Which distribution it uses depends on whether a
+second site was found: centred on 1 with spread 1 if so, on 2 with spread 6 if not — and in the
+second case, a result of 2 or more overwrites the *first* site's kind with 9.
+
+All of it is ported, and the whole command-table stage now runs from a seed to the original's mask
+for configurations 0 and 2. The check is worth describing because it closes a loop: `LandMassStage`
+is graded against `interior_reference.json`, captured in the interpreter, and that fixture's final
+mask digests agree with `landmass_reference.json`'s — captured months earlier from the real thing
+under VICE — on all nine seed and configuration pairs. Two independent captures, one port.
+
+What is left of the land-mass phase: configuration 1's paired continent, and the second wave at
+`$280A`-`$2894`.
 
 Configuration 1 is refused outright. Its continent is paired, and the partner is not placed by the
 placement loop at all — the walk itself reaches `$160C JMP $186C`, saves its state, sets `$50`, and

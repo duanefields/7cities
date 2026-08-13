@@ -63,12 +63,11 @@ FLOOD = 0x194A
 # landmass after it in the wrong place.
 MIRROR = 0x1C89
 MIRROR_DONE = 0x1D3B
-# `$4651` and `$46B9`: the two sites `$4500` files into `$77`-`$7B` and
-# `$7C`-`$80`, once the first command's landmasses exist. `$46BC` is the exit
-# that leaves the second unset.
-SITE_ONE = 0x4651
-SITE_TWO = 0x46B9
-SITE_TWO_SKIPPED = 0x46BC
+# `$469E` files the second site; `$47C5` and `$47DE` are where `$44EF` returns,
+# by which point `$7B` may have been rewritten and `$EBCE` written. Reading at the
+# exits rather than as it goes is what makes the capture agree with the port.
+SITE_TWO_FOUND = 0x469E
+SITES_DONE = (0x47C5, 0x47DE)
 PLOT = 0x1728
 ERASE = 0x1B3B
 RESOLVE = 0x13E0
@@ -98,6 +97,8 @@ def capture(seed, config):
     cpu = machine(seed, config)
     steps = []
     sites = []
+    found = [False]
+    parameter = [None]
     pending = [None]
 
     def mask_digest():
@@ -120,15 +121,18 @@ def capture(seed, config):
             steps.append({"kind": "mirror", "maskBefore": mask_digest(),
                           "writes": []})
             return
-        if pc in (SITE_ONE, SITE_TWO, SITE_TWO_SKIPPED):
-            if pc == SITE_ONE:
-                sites.append({"column": cpu.rd(0x77),
-                              "row": cpu.rd(0x79) << 8 | cpu.rd(0x78),
-                              "southern": cpu.rd(0x7A) != 0, "kind": cpu.rd(0x7B)})
-            elif pc == SITE_TWO:
+        if pc == SITE_TWO_FOUND:
+            found[0] = True
+            return
+        if pc in SITES_DONE and not sites:
+            sites.append({"column": cpu.rd(0x77),
+                          "row": cpu.rd(0x79) << 8 | cpu.rd(0x78),
+                          "southern": cpu.rd(0x7A) != 0, "kind": cpu.rd(0x7B)})
+            if found[0]:
                 sites.append({"column": cpu.rd(0x7C),
                               "row": cpu.rd(0x7E) << 8 | cpu.rd(0x7D),
                               "southern": cpu.rd(0x7F) != 0, "kind": cpu.rd(0x80)})
+            parameter[0] = cpu.rd(0xEBCE)
             return
         if pc == MIRROR_DONE and steps and steps[-1]["kind"] == "mirror":
             # `$B7` and `$B8` are the two flips' flags, each `DEC`ed from zero to
@@ -156,11 +160,11 @@ def capture(seed, config):
     final = {"maskSha256": mask_digest(),
              "landCells": sum(b.bit_count()
                               for b in cpu.mem[BASE:BASE + MASK_BYTES])}
-    return steps, final, sites
+    return steps, final, sites, parameter[0]
 
 
 def main():
-    steps, final, _ = capture(SEED, CONFIG)
+    steps, final, _, _ = capture(SEED, CONFIG)
     out = {"description": "Every walk and every flood fill the command-table "
                           "stage performs, in order, captured in the "
                           "interpreter. Starting state and write digests per "
@@ -189,12 +193,9 @@ def main():
     # The compact section: the whole stage for every seed and configuration.
     out["unaided"] = []
     for seed, config in UNAIDED:
-        steps, _, sites = capture(seed, config)
-        # The port runs to the mirror and the site selection that follows it, and
-        # stops there — so that is what this section records.
-        cut = next(i for i, s in enumerate(steps) if s["kind"] == "mirror")
+        steps, done, sites, parameter = capture(seed, config)
         compact = []
-        for s in steps[:cut + 1]:
+        for s in steps:
             entry = {"kind": s["kind"]}
             if s["kind"] == "mirror":
                 entry["horizontal"], entry["vertical"] = s["horizontal"], s["vertical"]
@@ -204,10 +205,10 @@ def main():
                     entry["radius"] = s["radius"]
             compact.append(entry)
         out["unaided"].append({"seed": seed, "config": config, "steps": compact,
-                               "maskSha256": steps[cut + 1]["maskBefore"],
-                               "sites": sites})
+                               "sites": sites, "parameter": parameter, **done})
         print(f"  seed ${seed:04X} config {config}: {len(compact)} steps, "
-              f"{len(sites)} site(s) {sites}", flush=True)
+              f"{len(sites)} site(s), parameter {parameter}, "
+              f"{done['landCells']:,} land cells", flush=True)
 
     path = f"{FIX}/interior_reference.json"
     with open(path, "w") as fh:

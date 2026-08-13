@@ -30,7 +30,9 @@ private struct Stage: Decodable {
         let config: Int
         let steps: [Step]
         let maskSha256: String
+        let landCells: Int
         let sites: [Site]
+        let parameter: Int
     }
     let unaided: [Case]
 }
@@ -84,7 +86,7 @@ func stageRunsUnaided(index: Int) throws {
     }
 
     let run = try LandMassStage.run(config: c.config, seed: UInt16(c.seed))
-    #expect(run.stoppedBecause != nil, "the stage now runs further than this test")
+    #expect(run.stoppedBecause == nil, "\(label): \(run.stoppedBecause ?? "")")
 
     let actual = run.steps.map(describe)
     let expected = c.steps.map(describe)
@@ -94,17 +96,16 @@ func stageRunsUnaided(index: Int) throws {
     }
     #expect(actual.count == expected.count,
             "\(label): expected \(expected.count) steps, got \(actual.count)")
+    #expect(run.mask.landCells == c.landCells, "\(label): land cell count")
     #expect(sha256(run.mask.mapBytes) == c.maskSha256,
-            "\(label): the mask at the stopping point differs from the original's")
+            "\(label): the finished mask differs from the original's")
 
     // $4500's sites. They touch no map data, but they draw from the same
     // generator, so getting them wrong is what puts the next command's landmasses
     // somewhere else.
-    // The original always ends with two sites; the port finds the second only
-    // when it came from the ported search. Where it did not, the fixture still
-    // records what the original chose, so the gap stays visible.
     let sites = try #require(run.sites)
-    let expectedSites = sites.secondaryUnported ? Array(c.sites.prefix(1)) : c.sites
+    let expectedSites = c.sites
+    #expect(Int(sites.parameter) == c.parameter, "\(label): $EBCE parameter")
     let chosen = [sites.primary, sites.secondary].compactMap { $0 }
     #expect(chosen.count == expectedSites.count,
             "\(label): expected \(expectedSites.count) site(s), got \(chosen.count)")

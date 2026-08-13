@@ -64,17 +64,11 @@ engineering record; this holds the work.
       paired satellite search at `$2655` and the mirror from a seed alone, and
       matches the original on all nine seed/configuration pairs. It stops after
       the first command; see below.
-- [ ] **Finish `$44EF`.** It is where the stage stops, and it is now mapped.
-      Done: the land-band scans at `$4503`, the band choice at `$45F3`, the
-      position draw at `$4373`, the distance test at `$4479`, and the
-      second-site search at `$4676` — all in `SiteSelection`, verified against
-      the original for every seed and configuration.
-      Left: **`$46BC`**, the search the original uses whenever the ported one does
-      not apply, which walks outward from the first site's row through a single
-      band, reusing `$43E7` with `$4414` patched to `RTS` and calling `$44B5`,
-      `$44C3` and `$44D9`; and **`$47B2`**, whose `$47BC JSR $0B16` sums twelve
-      draws rather than taking one. Both share the land-mass generator, so the
-      command table cannot continue past the first command until they exist.
+- [x] ~~**Finish `$44EF`.**~~ **Done.** Both second-site searches, the twelve-draw
+      average at `$0B16` and the `$EBCE` parameter. With it the command-table
+      stage runs from a seed to the original's mask for configurations 0 and 2 —
+      checked against `interior_reference.json`, whose own digests agree with the
+      VICE-captured ones in `landmass_reference.json` on all nine cases.
 - [ ] **Find out what reads `$77`-`$81`.** `$44EF` files two sites there —
       column, row, a row-past-`$D0` flag and a kind of 9 or 7, one of each. Two
       advanced civilizations is the obvious guess and is only a guess.
