@@ -49,6 +49,55 @@ private func state(_ c: Reference.Case) -> WalkerState {
     return s
 }
 
+/// Compares a fill's plots against the original and reports the first
+/// divergence, which is what localizes a fault: matching *n* plots and failing at
+/// *n+1* says the walk was right up to there.
+private func checkOutline(_ c: Reference.Case) -> String? {
+    let expected = c.events.compactMap { e -> (Int, Int)? in
+        guard e.kind == "plot", let x = e.cellX, let y = e.cellY else { return nil }
+        return (x, y)
+    }
+    var s = state(c)
+    var mask = LandMask()
+    var drawn: [(Int, Int)] = []
+    _ = CoastlineWalker.traceOutline(&s, in: &mask) { x, y in
+        drawn.append((Int(x), y))
+    }
+    for i in 0..<min(drawn.count, expected.count) where drawn[i] != expected[i] {
+        return """
+            \(c.label) diverges at plot \(i): expected \
+            (\(expected[i].0),\(expected[i].1)), got (\(drawn[i].0),\(drawn[i].1)). \
+            Matched \(i) of \(expected.count).
+            """
+    }
+    if !c.truncated && drawn.count != expected.count {
+        return "\(c.label) plot count: expected \(expected.count), got \(drawn.count)"
+    }
+    if c.truncated && drawn.count < expected.count {
+        return "\(c.label) stopped early: \(drawn.count) plots against a \(expected.count)-plot prefix"
+    }
+    return nil
+}
+
+/// Rung two: 93 plots with 13 backtracks, so this is the first case that
+/// exercises the undo ring at all — the satellite never unwinds.
+@Test("The island outline matches the original")
+func islandOutlineMatchesOriginal() throws {
+    let reference = try loadReference()
+    let c = try #require(reference.cases.first { $0.label == "island" })
+    let failure = checkOutline(c)
+    #expect(failure == nil, "\(failure ?? "")")
+}
+
+/// Rung three, against a recorded prefix: 150 events including 30 backtracks.
+@Test("The continent outline matches the original")
+func continentOutlineMatchesOriginal() throws {
+    let reference = try loadReference()
+    let c = try #require(reference.cases.first { $0.label == "continent" })
+    let failure = checkOutline(c)
+    #expect(failure == nil, "\(failure ?? "")")
+}
+
 /// The first rung of the ladder: 23 plots, no backtracking, so a failure here is
 /// in the walk itself rather than the undo ring.
 @Test("The satellite outline matches the original")

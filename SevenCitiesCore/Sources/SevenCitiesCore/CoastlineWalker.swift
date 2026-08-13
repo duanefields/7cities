@@ -456,7 +456,8 @@ extension CoastlineWalker {
     /// the reference traces record.
     public static func traceOutline(
         _ s: inout WalkerState, in mask: inout LandMask,
-        plot: (UInt8, Int) -> Void = { _, _ in }
+        plot: (UInt8, Int) -> Void = { _, _ in },
+        erase: (UInt8, Int) -> Void = { _, _ in }
     ) -> Outcome {
         var ring = [UndoRecord?](repeating: nil, count: ringCapacity)
         var tried = [UInt8](repeating: 0, count: 9)
@@ -530,12 +531,24 @@ extension CoastlineWalker {
             }
 
             // $24FD: propose, then search the nine directions for one that works.
-            proposeStep(&s)
+            //
+            // **A proposal that moves nothing re-proposes; it does not commit.**
+            // `$25E6` compares the direction index against 4 — the centre of the
+            // 3x3, meaning neither axis advanced — and `JMP $24FD` runs the
+            // generator again *without* plotting. Treating that as a normal
+            // iteration duplicates the cell, which is exactly how the island
+            // diverged at plot 9: the original spent two iterations standing
+            // still at (8,7) before moving to (9,7).
             let horizontalBase = s.heading >> 1
             let verticalBase: UInt8 = (s.heading == 0 || s.heading == 3) ? 0 : 1
-            var direction = directionIndex(s, horizontalBase: horizontalBase,
+            var direction: UInt8 = 4
+            var stalls = 0
+            while direction == 4 && stalls < 10_000 {
+                proposeStep(&s)
+                direction = directionIndex(s, horizontalBase: horizontalBase,
                                            verticalBase: verticalBase)
-            if direction == 4 { continue }          // $25E6: nowhere to go
+                stalls += 1
+            }
 
             tried = [UInt8](repeating: 0, count: 9)
             tried[Int(direction) % 9] = 0xFF
@@ -552,15 +565,31 @@ extension CoastlineWalker {
                 }
                 attempts += 1
                 if attempts >= 10 {
-                    // $2613: out of directions — unwind.
-                    guard let record = ring[Int(s.step)] else { return .exhausted }
-                    tried = record.tried
-                    s.offset = record.offset
-                    s.heading = record.heading
-                    s.step = s.step == 0 ? UInt8(ringCapacity - 1) : s.step &- 1
-                    let erased = cell(offset: s.offset, heading: s.heading,
-                                      centerX: s.centerX, centerY: s.centerY)
-                    mask.clearLand(x: erased.x, y: erased.y)
+                    // $16D1: out of directions — unwind, and keep unwinding
+                    // while the restored position fails revalidation.
+                    //
+                    // The order matters and is not the intuitive one. The cell
+                    // erased is the one the walk is standing on *now*, before
+                    // anything is restored ($16F0 precedes $16F3); the record is
+                    // then read from the current slot and only afterwards is the
+                    // counter decremented. Restoring first erases the wrong
+                    // cell, which is how the island diverged at plot 79.
+                    var unwound = false
+                    while !unwound {
+                        let standing = cell(offset: s.offset, heading: s.heading,
+                                            centerX: s.centerX, centerY: s.centerY)
+                        mask.clearLand(x: standing.x, y: standing.y)
+                        erase(standing.x, standing.y)
+
+                        guard let record = ring[Int(s.step)] else { return .exhausted }
+                        tried = record.tried
+                        s.offset = record.offset
+                        s.heading = record.heading
+                        s.step = s.step == 0 ? UInt8(ringCapacity - 1) : s.step &- 1
+
+                        // $1722: revalidate, and unwind again if it refuses.
+                        unwound = isCandidateClear(&s, in: mask)
+                    }
                     attempts = 2
                     continue
                 }
@@ -608,18 +637,34 @@ extension CoastlineWalker {
         }
     }
 
-    /// Whether the evaluator accepts the current candidate (`$1516`).
+    /// Whether the evaluator accepts the current candidate (`$1516`-`$1554`).
     ///
-    /// Two neighbors or more is a refusal — the walk keeps to thin coastline
-    /// rather than filling area, which the span and flood passes do later.
+    /// Four separate refusals, and omitting the last two is not cosmetic: a
+    /// wrongly accepted candidate changes how many directions the search tries,
+    /// which changes how many numbers it draws, which shifts the whole
+    /// subsequent walk. An early version of this checked only the first two and
+    /// the island diverged at plot 9.
+    ///
+    /// 1. `$1516` — two or more neighbors refuses. The walk keeps to thin
+    ///    coastline; area is filled later by the span and flood passes.
+    /// 2. `$151A` — either offset reaching `$FF`, i.e. having wrapped past zero.
+    /// 3. `$152D` — the resolved column being 0 or `$FF`, keeping the outline
+    ///    off the map's vertical edges.
+    /// 4. `$1547` — the resolved row being 0, or at least `$018F` when it has
+    ///    crossed 256. That second bound is 399, the last row of the map.
     static func accepts(_ s: inout WalkerState, in mask: LandMask) -> Bool {
         let (column, row) = cell(offset: s.candidate, heading: s.heading,
                                  centerX: s.centerX, centerY: s.centerY)
         let origin = scanOrigin(column: column, row: row)
-        let neighbors = neighborCount(fromColumn: origin.column, row: origin.row,
-                                      in: mask)
-        if neighbors >= 2 { return false }
+        if neighborCount(fromColumn: origin.column, row: origin.row, in: mask) >= 2 {
+            return false
+        }
         if s.candidate.dx == 0xFF || s.candidate.dy == 0xFF { return false }
-        return true
+        if column == 0 || column == 0xFF { return false }
+
+        // $1547: the row is 16-bit, and the two halves are checked differently.
+        let value = UInt16(bitPattern: Int16(truncatingIfNeeded: row))
+        if value & 0xFF00 != 0 { return value & 0xFF < 0x8F }
+        return value & 0xFF != 0
     }
 }
