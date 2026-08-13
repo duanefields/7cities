@@ -2291,24 +2291,28 @@ This was found by counting entries to `$0AE2` during each fill: the satellite ma
 `$1555` unconditionally calls `$0B10`. The routine had not stopped drawing; it was drawing
 somewhere else.
 
-**The consequence matters more than the mechanism.** `$1F`/`$20` live inside the walker's saved
-state block. `$1B55` copies `$47`-`$4D` into `$1F`-`$25` and `$17C8` copies back, and that block is:
+**Correction: backtracking does *not* rewind the random state.** An earlier version of this
+section claimed it did, reasoning that `$1F`/`$20` sit inside the block `$1B55` copies and that an
+unwind therefore restores the generator along with the position. Measured, that is false. Across
+every backtrack in a continent fill, the position changes and **neither** generator moves:
 
 ```text
-$1F/$20  the second LFSR's state
-$21      the working radius
-$22      centre x
-$23/$24  centre y
-$25      a shape parameter
+before   $1F/$20 = 0,0   $CD/$CF = 73,32   position 2,70
+after    $1F/$20 = 0,0   $CD/$CF = 73,32   position 1,71
 ```
 
-So when the walker backtracks it **restores the random state along with the position**. The retried
-step therefore re-draws the same numbers rather than fresh ones, which makes an unwind a true undo
-rather than a retry with new luck.
+The undo record written at `$15CA` is `$2C`-`$34`, then `$14`, `$15` and `$1A` — nine bytes of
+working state plus the position and heading. The generator is not in it, and `$16D1` restores
+exactly those twelve bytes. So an unwind rewinds *where* the walk is, not *what it will draw next*:
+the retried step gets fresh numbers.
 
-A port that keeps one global generator, or that treats the RNG as outside the walker's state, will
-diverge the first time a landmass backtracks — which is 155 times in a single continent. Nothing in
-the routine listing suggests any of this; it was visible only by counting draws.
+`$1B55`, which copies `$47`-`$4D` into `$1F`-`$25`, is a different mechanism entirely. Its callers
+are `$1879` and `$1AED`, neither of which is the backtrack path, and I conflated the two because
+both are save-and-restore of a zero-page run.
+
+The two-generator finding above stands — `$0A9D` is real, `$27D4` really does swap the vectors, and
+the satellite really does draw from `$1F`/`$20`. Only the consequence I drew from it was wrong. A
+port needs both generators; it does not need to snapshot them per step.
 
 The retry loop at `$1564` is also live, not dead code: measured over one continent, stepper calls
 consumed one draw 1,106 times, two draws 299 times and three draws once.

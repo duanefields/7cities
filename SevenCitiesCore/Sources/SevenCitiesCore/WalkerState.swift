@@ -5,21 +5,19 @@
 /// cosmetic — see ``saved``, which the original relies on.
 public struct WalkerState: Sendable {
 
-    // MARK: - The saved block, `$1F`-`$25`
-    //
-    // `$1B55` copies `$47`-`$4D` into `$1F`-`$25` and `$17C8` copies back. These
-    // seven bytes are what an unwind restores, and they include the generator.
-
-    /// `$1F`/`$20` — the walker's own LFSR.
+    /// The generator this fill draws from.
     ///
-    /// **Not the same generator as the placement loop's.** `$0A9D` runs the
-    /// identical algorithm to `$0AE2` on a different pair of bytes, and `$27D4`
-    /// swaps `$0B11` between them so the same code draws from whichever is
-    /// installed. Because this state lives in the saved block, **backtracking
-    /// rewinds the randomness**: a retried step re-draws the same numbers rather
-    /// than fresh ones, making an unwind a true undo. A port with one global
-    /// generator diverges the first time a landmass backtracks, which is 155
-    /// times in a single continent.
+    /// **Which generator that is depends on the landmass.** `$0A9D` runs the
+    /// identical algorithm to `$0AE2` on `$1F`/`$20` rather than `$CD`/`$CF`,
+    /// and `$27D4` swaps the vector at `$0B11` between them, so the same walker
+    /// code draws from whichever is installed — `$CD`/`$CF` for continents and
+    /// islands, `$1F`/`$20` for satellites.
+    ///
+    /// It is **not** part of the undo record. An earlier version of this file
+    /// said backtracking rewound the generator; measured, neither generator
+    /// moves across an unwind. `$16D1` restores `$2C`-`$34`, `$14`, `$15` and
+    /// `$1A` — position, heading and working state — so a retried step draws
+    /// fresh numbers.
     public var rng: WorldMakerRNG
     /// `$21` — the working radius, recomputed every step by `$178A`.
     ///
@@ -84,10 +82,12 @@ public struct WalkerState: Sendable {
     /// `$B0` — the command's nominal radius, constant for the fill.
     public var radius: UInt8
 
-    /// The seven bytes an unwind restores (`$1F`-`$25`).
+    /// The block `$1B55` copies from `$47`-`$4D` into `$1F`-`$25`.
     ///
-    /// Kept as one value so a port cannot restore the position and forget the
-    /// generator, which is the failure this grouping exists to prevent.
+    /// **Not the undo record**, which is written at `$15CA` and restored by
+    /// `$16D1`, and which holds `$2C`-`$34` plus the position and heading. This
+    /// is a separate save-and-restore used by `$1879` and `$1AED`; conflating
+    /// the two produced a wrong claim about backtracking rewinding randomness.
     public struct Saved: Sendable {
         public var rng: WorldMakerRNG
         public var workingRadius: UInt8
