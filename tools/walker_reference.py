@@ -22,7 +22,22 @@ dependency only after the port disagrees. 256 bytes is cheap.
 
 Writes are recorded as offsets from the landmass centre, matching how the
 original works: `$22`/`$23:$24` hold the centre and never move during a fill,
-while `$14`/`$15` are what the walk advances.
+while the offset is what varies.
+
+**The offset comes from A and Y, and is captured at `$13E0` itself.** Neither
+call site is a reliable place to read it. `$1728` is entered with the arguments
+already loaded by *its* caller — the walk passes `$16`/`$17`, but the span fill at
+`$1648` does `LDA #$00 / JSR $1728` and plots a whole column at `dx = 0` while
+`$14` still holds the walk's last value. `$1B3B` is the opposite: it loads
+`$14`/`$15` into A and Y as its own first two instructions, so at its entry the
+registers are still the caller's leftovers.
+
+Reading `$14`/`$15` mislabelled the span fill; reading A and Y at `$1728`/`$1B3B`
+mislabelled the erases. Both showed up as small clusters of disagreement rather
+than wholesale failure, which is what identified them. Hooking `$13E0` — where
+the arguments are by definition correct, whoever called — is right for every
+caller. `walkDx`/`walkDy` are kept alongside because the divergence between the
+two is itself informative.
 """
 import json
 import os
@@ -40,6 +55,15 @@ ERASE = 0x1B3B
 BACKTRACK = 0x16D1
 BASE = 0x5700
 
+# Just past `JSR $13E0` inside `$1728`, where the original has finished resolving
+# the offset: X indexes the bit mask at `$13D3`, Y is the byte within the row, and
+# `$29`/`$2A` point at the row. Capturing the cell *the original computed* is what
+# makes `$13E0` verifiable — offsets alone would let a port that rotates
+# quadrants wrongly agree with the fixture.
+PLOT_RESOLVED = 0x172B
+ERASE_RESOLVED = 0x1B42
+RESOLVE = 0x13E0
+
 # (seed, config, fill index, label, event cap) — see the ladder above.
 #
 # The continent is truncated. A port diverges at its *first* wrong cell, so the
@@ -56,6 +80,7 @@ def capture(seed, config, index):
     events = []
     seen = [0]
     done = [False]
+    pending = [None]
 
     def hook(pc, op):
         if done[0]:
@@ -72,11 +97,22 @@ def capture(seed, config, index):
             return
         if seen[0] != index + 1:
             return
-        if pc in (PLOT, ERASE, BACKTRACK):
-            kind = {PLOT: "plot", ERASE: "erase", BACKTRACK: "backtrack"}[pc]
-            events.append({"kind": kind, "dx": cpu.rd(0x14), "dy": cpu.rd(0x15),
+        if pc == BACKTRACK:
+            events.append({"kind": "backtrack", "walkDx": cpu.rd(0x14),
+                           "walkDy": cpu.rd(0x15), "heading": cpu.rd(0x1A),
+                           "step": cpu.rd(0x46), "workingRadius": cpu.rd(0x21)})
+        elif pc in (PLOT, ERASE):
+            pending[0] = "plot" if pc == PLOT else "erase"
+        elif pc == RESOLVE and pending[0]:
+            events.append({"kind": pending[0], "dx": cpu.a, "dy": cpu.y,
+                           "walkDx": cpu.rd(0x14), "walkDy": cpu.rd(0x15),
                            "heading": cpu.rd(0x1A), "step": cpu.rd(0x46),
                            "workingRadius": cpu.rd(0x21)})
+            pending[0] = None
+        elif pc in (PLOT_RESOLVED, ERASE_RESOLVED) and events:
+            row = ((cpu.rd(0x2A) << 8 | cpu.rd(0x29)) - BASE) >> 5
+            events[-1]["cellX"] = cpu.y * 8 + cpu.x
+            events[-1]["cellY"] = row
 
     cpu.trace = hook
     cpu.run_until({TABLE_STAGE_DONE})

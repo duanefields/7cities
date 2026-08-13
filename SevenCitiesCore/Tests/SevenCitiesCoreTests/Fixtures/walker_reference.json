@@ -275,185 +275,277 @@
      "kind": "plot",
      "dx": 0,
      "dy": 3,
+     "walkDx": 0,
+     "walkDy": 3,
      "heading": 0,
      "step": 0,
-     "workingRadius": 3
+     "workingRadius": 3,
+     "cellX": 201,
+     "cellY": 90
     },
     {
      "kind": "plot",
      "dx": 1,
      "dy": 4,
+     "walkDx": 1,
+     "walkDy": 4,
      "heading": 0,
      "step": 1,
-     "workingRadius": 3
+     "workingRadius": 3,
+     "cellX": 200,
+     "cellY": 89
     },
     {
      "kind": "plot",
      "dx": 2,
      "dy": 3,
+     "walkDx": 2,
+     "walkDy": 3,
      "heading": 0,
      "step": 2,
-     "workingRadius": 3
+     "workingRadius": 3,
+     "cellX": 199,
+     "cellY": 90
     },
     {
      "kind": "plot",
      "dx": 3,
      "dy": 2,
+     "walkDx": 3,
+     "walkDy": 2,
      "heading": 0,
      "step": 3,
-     "workingRadius": 3
+     "workingRadius": 3,
+     "cellX": 198,
+     "cellY": 91
     },
     {
      "kind": "plot",
      "dx": 2,
      "dy": 1,
+     "walkDx": 2,
+     "walkDy": 1,
      "heading": 0,
      "step": 4,
-     "workingRadius": 3
+     "workingRadius": 3,
+     "cellX": 199,
+     "cellY": 92
     },
     {
      "kind": "plot",
      "dx": 3,
      "dy": 0,
+     "walkDx": 3,
+     "walkDy": 0,
      "heading": 0,
      "step": 5,
-     "workingRadius": 3
+     "workingRadius": 3,
+     "cellX": 198,
+     "cellY": 93
     },
     {
      "kind": "plot",
      "dx": 4,
      "dy": 1,
+     "walkDx": 4,
+     "walkDy": 1,
      "heading": 1,
      "step": 6,
-     "workingRadius": 3
+     "workingRadius": 3,
+     "cellX": 197,
+     "cellY": 94
     },
     {
      "kind": "plot",
      "dx": 3,
      "dy": 2,
+     "walkDx": 3,
+     "walkDy": 2,
      "heading": 1,
      "step": 7,
-     "workingRadius": 3
+     "workingRadius": 3,
+     "cellX": 198,
+     "cellY": 95
     },
     {
      "kind": "plot",
      "dx": 2,
      "dy": 2,
+     "walkDx": 2,
+     "walkDy": 2,
      "heading": 1,
      "step": 8,
-     "workingRadius": 3
+     "workingRadius": 3,
+     "cellX": 199,
+     "cellY": 95
     },
     {
      "kind": "plot",
      "dx": 1,
      "dy": 1,
+     "walkDx": 1,
+     "walkDy": 1,
      "heading": 1,
      "step": 9,
-     "workingRadius": 3
+     "workingRadius": 3,
+     "cellX": 200,
+     "cellY": 94
     },
     {
      "kind": "plot",
      "dx": 0,
      "dy": 2,
+     "walkDx": 0,
+     "walkDy": 2,
      "heading": 1,
      "step": 10,
-     "workingRadius": 3
+     "workingRadius": 3,
+     "cellX": 201,
+     "cellY": 95
     },
     {
      "kind": "plot",
      "dx": 1,
      "dy": 3,
+     "walkDx": 1,
+     "walkDy": 3,
      "heading": 2,
      "step": 11,
-     "workingRadius": 3
+     "workingRadius": 3,
+     "cellX": 202,
+     "cellY": 96
     },
     {
      "kind": "plot",
      "dx": 2,
      "dy": 4,
+     "walkDx": 2,
+     "walkDy": 4,
      "heading": 2,
      "step": 12,
-     "workingRadius": 3
+     "workingRadius": 3,
+     "cellX": 203,
+     "cellY": 97
     },
     {
      "kind": "plot",
      "dx": 3,
      "dy": 3,
+     "walkDx": 3,
+     "walkDy": 3,
      "heading": 2,
      "step": 13,
-     "workingRadius": 3
+     "workingRadius": 3,
+     "cellX": 204,
+     "cellY": 96
     },
     {
      "kind": "plot",
      "dx": 4,
      "dy": 2,
+     "walkDx": 4,
+     "walkDy": 2,
      "heading": 2,
      "step": 14,
-     "workingRadius": 3
+     "workingRadius": 3,
+     "cellX": 205,
+     "cellY": 95
     },
     {
      "kind": "plot",
      "dx": 4,
      "dy": 1,
+     "walkDx": 4,
+     "walkDy": 1,
      "heading": 2,
      "step": 15,
-     "workingRadius": 3
+     "workingRadius": 3,
+     "cellX": 205,
+     "cellY": 94
     },
     {
      "kind": "plot",
      "dx": 3,
      "dy": 0,
+     "walkDx": 3,
+     "walkDy": 0,
      "heading": 2,
      "step": 16,
-     "workingRadius": 3
+     "workingRadius": 3,
+     "cellX": 204,
+     "cellY": 93
     },
     {
      "kind": "plot",
      "dx": 4,
      "dy": 1,
+     "walkDx": 4,
+     "walkDy": 1,
      "heading": 3,
      "step": 17,
-     "workingRadius": 3
+     "workingRadius": 3,
+     "cellX": 205,
+     "cellY": 92
     },
     {
      "kind": "plot",
      "dx": 3,
      "dy": 2,
+     "walkDx": 3,
+     "walkDy": 2,
      "heading": 3,
      "step": 18,
-     "workingRadius": 3
+     "workingRadius": 3,
+     "cellX": 204,
+     "cellY": 91
     },
     {
      "kind": "plot",
      "dx": 2,
      "dy": 2,
+     "walkDx": 2,
+     "walkDy": 2,
      "heading": 3,
      "step": 19,
-     "workingRadius": 3
+     "workingRadius": 3,
+     "cellX": 203,
+     "cellY": 91
     },
     {
      "kind": "plot",
      "dx": 1,
      "dy": 1,
+     "walkDx": 1,
+     "walkDy": 1,
      "heading": 3,
      "step": 20,
-     "workingRadius": 3
+     "workingRadius": 3,
+     "cellX": 202,
+     "cellY": 92
     },
     {
      "kind": "plot",
-     "dx": 1,
+     "dx": 0,
      "dy": 1,
+     "walkDx": 1,
+     "walkDy": 1,
      "heading": 3,
      "step": 20,
-     "workingRadius": 3
+     "workingRadius": 3,
+     "cellX": 201,
+     "cellY": 92
     },
     {
      "kind": "plot",
-     "dx": 1,
+     "dx": 0,
      "dy": 2,
+     "walkDx": 1,
+     "walkDy": 2,
      "heading": 3,
      "step": 20,
-     "workingRadius": 3
+     "workingRadius": 3,
+     "cellX": 201,
+     "cellY": 91
     }
    ]
   },
@@ -731,953 +823,1377 @@
      "kind": "plot",
      "dx": 0,
      "dy": 10,
+     "walkDx": 0,
+     "walkDy": 10,
      "heading": 0,
      "step": 0,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 187,
+     "cellY": 4
     },
     {
      "kind": "plot",
      "dx": 1,
      "dy": 9,
+     "walkDx": 1,
+     "walkDy": 9,
      "heading": 0,
      "step": 1,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 186,
+     "cellY": 5
     },
     {
      "kind": "plot",
      "dx": 2,
      "dy": 8,
+     "walkDx": 2,
+     "walkDy": 8,
      "heading": 0,
      "step": 2,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 185,
+     "cellY": 6
     },
     {
      "kind": "plot",
      "dx": 3,
      "dy": 9,
+     "walkDx": 3,
+     "walkDy": 9,
      "heading": 0,
      "step": 3,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 184,
+     "cellY": 5
     },
     {
      "kind": "plot",
      "dx": 4,
      "dy": 8,
+     "walkDx": 4,
+     "walkDy": 8,
      "heading": 0,
      "step": 4,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 183,
+     "cellY": 6
     },
     {
      "kind": "plot",
      "dx": 5,
      "dy": 8,
+     "walkDx": 5,
+     "walkDy": 8,
      "heading": 0,
      "step": 5,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 182,
+     "cellY": 6
     },
     {
      "kind": "plot",
      "dx": 6,
      "dy": 8,
+     "walkDx": 6,
+     "walkDy": 8,
      "heading": 0,
      "step": 6,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 181,
+     "cellY": 6
     },
     {
      "kind": "plot",
      "dx": 7,
      "dy": 7,
+     "walkDx": 7,
+     "walkDy": 7,
      "heading": 0,
      "step": 7,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 180,
+     "cellY": 7
     },
     {
      "kind": "plot",
      "dx": 8,
      "dy": 7,
+     "walkDx": 8,
+     "walkDy": 7,
      "heading": 0,
      "step": 8,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 179,
+     "cellY": 7
     },
     {
      "kind": "plot",
      "dx": 9,
      "dy": 7,
+     "walkDx": 9,
+     "walkDy": 7,
      "heading": 0,
      "step": 9,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 178,
+     "cellY": 7
     },
     {
      "kind": "plot",
      "dx": 10,
      "dy": 6,
+     "walkDx": 10,
+     "walkDy": 6,
      "heading": 0,
      "step": 10,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 177,
+     "cellY": 8
     },
     {
      "kind": "plot",
      "dx": 10,
      "dy": 5,
+     "walkDx": 10,
+     "walkDy": 5,
      "heading": 0,
      "step": 11,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 177,
+     "cellY": 9
     },
     {
      "kind": "plot",
      "dx": 10,
      "dy": 4,
+     "walkDx": 10,
+     "walkDy": 4,
      "heading": 0,
      "step": 12,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 177,
+     "cellY": 10
     },
     {
      "kind": "plot",
      "dx": 9,
      "dy": 3,
+     "walkDx": 9,
+     "walkDy": 3,
      "heading": 0,
      "step": 13,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 178,
+     "cellY": 11
     },
     {
      "kind": "plot",
      "dx": 9,
      "dy": 2,
+     "walkDx": 9,
+     "walkDy": 2,
      "heading": 0,
      "step": 14,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 178,
+     "cellY": 12
     },
     {
      "kind": "plot",
      "dx": 9,
      "dy": 1,
+     "walkDx": 9,
+     "walkDy": 1,
      "heading": 0,
      "step": 15,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 178,
+     "cellY": 13
     },
     {
      "kind": "plot",
      "dx": 10,
      "dy": 0,
+     "walkDx": 10,
+     "walkDy": 0,
      "heading": 0,
      "step": 16,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 177,
+     "cellY": 14
     },
     {
      "kind": "plot",
      "dx": 9,
      "dy": 1,
+     "walkDx": 9,
+     "walkDy": 1,
      "heading": 1,
      "step": 17,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 178,
+     "cellY": 15
     },
     {
      "kind": "plot",
      "dx": 9,
      "dy": 2,
+     "walkDx": 9,
+     "walkDy": 2,
      "heading": 1,
      "step": 18,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 178,
+     "cellY": 16
     },
     {
      "kind": "plot",
      "dx": 9,
      "dy": 3,
+     "walkDx": 9,
+     "walkDy": 3,
      "heading": 1,
      "step": 19,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 178,
+     "cellY": 17
     },
     {
      "kind": "plot",
      "dx": 9,
      "dy": 4,
+     "walkDx": 9,
+     "walkDy": 4,
      "heading": 1,
      "step": 20,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 178,
+     "cellY": 18
     },
     {
      "kind": "plot",
      "dx": 9,
      "dy": 5,
+     "walkDx": 9,
+     "walkDy": 5,
      "heading": 1,
      "step": 21,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 178,
+     "cellY": 19
     },
     {
      "kind": "plot",
      "dx": 8,
      "dy": 6,
+     "walkDx": 8,
+     "walkDy": 6,
      "heading": 1,
      "step": 22,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 179,
+     "cellY": 20
     },
     {
      "kind": "plot",
      "dx": 8,
      "dy": 7,
+     "walkDx": 8,
+     "walkDy": 7,
      "heading": 1,
      "step": 23,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 179,
+     "cellY": 21
     },
     {
      "kind": "plot",
      "dx": 7,
      "dy": 8,
+     "walkDx": 7,
+     "walkDy": 8,
      "heading": 1,
      "step": 24,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 180,
+     "cellY": 22
     },
     {
      "kind": "plot",
      "dx": 6,
      "dy": 7,
+     "walkDx": 6,
+     "walkDy": 7,
      "heading": 1,
      "step": 25,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 181,
+     "cellY": 21
     },
     {
      "kind": "plot",
      "dx": 5,
      "dy": 6,
+     "walkDx": 5,
+     "walkDy": 6,
      "heading": 1,
      "step": 26,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 182,
+     "cellY": 20
     },
     {
      "kind": "plot",
      "dx": 4,
      "dy": 7,
+     "walkDx": 4,
+     "walkDy": 7,
      "heading": 1,
      "step": 27,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 183,
+     "cellY": 21
     },
     {
      "kind": "plot",
      "dx": 3,
      "dy": 8,
+     "walkDx": 3,
+     "walkDy": 8,
      "heading": 1,
      "step": 28,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 184,
+     "cellY": 22
     },
     {
      "kind": "plot",
      "dx": 3,
      "dy": 9,
+     "walkDx": 3,
+     "walkDy": 9,
      "heading": 1,
      "step": 29,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 184,
+     "cellY": 23
     },
     {
      "kind": "plot",
      "dx": 2,
      "dy": 10,
+     "walkDx": 2,
+     "walkDy": 10,
      "heading": 1,
      "step": 30,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 185,
+     "cellY": 24
     },
     {
      "kind": "plot",
      "dx": 1,
      "dy": 11,
+     "walkDx": 1,
+     "walkDy": 11,
      "heading": 1,
      "step": 31,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 186,
+     "cellY": 25
     },
     {
      "kind": "plot",
      "dx": 0,
      "dy": 11,
+     "walkDx": 0,
+     "walkDy": 11,
      "heading": 1,
      "step": 32,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 187,
+     "cellY": 25
     },
     {
      "kind": "plot",
      "dx": 1,
      "dy": 10,
+     "walkDx": 1,
+     "walkDy": 10,
      "heading": 2,
      "step": 33,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 188,
+     "cellY": 24
     },
     {
      "kind": "plot",
      "dx": 2,
      "dy": 10,
+     "walkDx": 2,
+     "walkDy": 10,
      "heading": 2,
      "step": 34,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 189,
+     "cellY": 24
     },
     {
      "kind": "plot",
      "dx": 3,
      "dy": 10,
+     "walkDx": 3,
+     "walkDy": 10,
      "heading": 2,
      "step": 35,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 190,
+     "cellY": 24
     },
     {
      "kind": "plot",
      "dx": 4,
      "dy": 11,
+     "walkDx": 4,
+     "walkDy": 11,
      "heading": 2,
      "step": 36,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 191,
+     "cellY": 25
     },
     {
      "kind": "plot",
      "dx": 5,
      "dy": 10,
+     "walkDx": 5,
+     "walkDy": 10,
      "heading": 2,
      "step": 37,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 192,
+     "cellY": 24
     },
     {
      "kind": "plot",
      "dx": 6,
      "dy": 9,
+     "walkDx": 6,
+     "walkDy": 9,
      "heading": 2,
      "step": 38,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 193,
+     "cellY": 23
     },
     {
      "kind": "plot",
      "dx": 7,
      "dy": 9,
+     "walkDx": 7,
+     "walkDy": 9,
      "heading": 2,
      "step": 39,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 194,
+     "cellY": 23
     },
     {
      "kind": "plot",
      "dx": 8,
      "dy": 10,
+     "walkDx": 8,
+     "walkDy": 10,
      "heading": 2,
      "step": 40,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 195,
+     "cellY": 24
     },
     {
      "kind": "plot",
      "dx": 7,
      "dy": 11,
+     "walkDx": 7,
+     "walkDy": 11,
      "heading": 2,
      "step": 41,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 194,
+     "cellY": 25
     },
     {
      "kind": "plot",
      "dx": 7,
      "dy": 12,
+     "walkDx": 7,
+     "walkDy": 12,
      "heading": 2,
      "step": 42,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 194,
+     "cellY": 26
     },
     {
      "kind": "plot",
      "dx": 6,
      "dy": 13,
+     "walkDx": 6,
+     "walkDy": 13,
      "heading": 2,
      "step": 43,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 193,
+     "cellY": 27
     },
     {
      "kind": "plot",
      "dx": 6,
      "dy": 14,
+     "walkDx": 6,
+     "walkDy": 14,
      "heading": 2,
      "step": 44,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 193,
+     "cellY": 28
     },
     {
      "kind": "plot",
      "dx": 6,
      "dy": 15,
+     "walkDx": 6,
+     "walkDy": 15,
      "heading": 2,
      "step": 45,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 193,
+     "cellY": 29
     },
     {
      "kind": "plot",
      "dx": 6,
      "dy": 16,
+     "walkDx": 6,
+     "walkDy": 16,
      "heading": 2,
      "step": 46,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 193,
+     "cellY": 30
     },
     {
      "kind": "plot",
      "dx": 7,
      "dy": 17,
+     "walkDx": 7,
+     "walkDy": 17,
      "heading": 2,
      "step": 47,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 194,
+     "cellY": 31
     },
     {
      "kind": "plot",
      "dx": 8,
      "dy": 16,
+     "walkDx": 8,
+     "walkDy": 16,
      "heading": 2,
      "step": 48,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 195,
+     "cellY": 30
     },
     {
      "kind": "plot",
      "dx": 8,
      "dy": 15,
+     "walkDx": 8,
+     "walkDy": 15,
      "heading": 2,
      "step": 49,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 195,
+     "cellY": 29
     },
     {
      "kind": "plot",
      "dx": 8,
      "dy": 14,
+     "walkDx": 8,
+     "walkDy": 14,
      "heading": 2,
      "step": 50,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 195,
+     "cellY": 28
     },
     {
      "kind": "plot",
      "dx": 9,
      "dy": 13,
+     "walkDx": 9,
+     "walkDy": 13,
      "heading": 2,
      "step": 51,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 196,
+     "cellY": 27
     },
     {
      "kind": "plot",
      "dx": 10,
      "dy": 12,
+     "walkDx": 10,
+     "walkDy": 12,
      "heading": 2,
      "step": 52,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 197,
+     "cellY": 26
     },
     {
      "kind": "plot",
      "dx": 11,
      "dy": 11,
+     "walkDx": 11,
+     "walkDy": 11,
      "heading": 2,
      "step": 53,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 198,
+     "cellY": 25
     },
     {
      "kind": "plot",
      "dx": 11,
      "dy": 10,
+     "walkDx": 11,
+     "walkDy": 10,
      "heading": 2,
      "step": 54,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 198,
+     "cellY": 24
     },
     {
      "kind": "plot",
      "dx": 11,
      "dy": 9,
+     "walkDx": 11,
+     "walkDy": 9,
      "heading": 2,
      "step": 55,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 198,
+     "cellY": 23
     },
     {
      "kind": "plot",
      "dx": 10,
      "dy": 8,
+     "walkDx": 10,
+     "walkDy": 8,
      "heading": 2,
      "step": 56,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 197,
+     "cellY": 22
     },
     {
      "kind": "plot",
      "dx": 10,
      "dy": 7,
+     "walkDx": 10,
+     "walkDy": 7,
      "heading": 2,
      "step": 57,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 197,
+     "cellY": 21
     },
     {
      "kind": "plot",
      "dx": 9,
      "dy": 6,
+     "walkDx": 9,
+     "walkDy": 6,
      "heading": 2,
      "step": 58,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 196,
+     "cellY": 20
     },
     {
      "kind": "plot",
      "dx": 10,
      "dy": 5,
+     "walkDx": 10,
+     "walkDy": 5,
      "heading": 2,
      "step": 59,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 197,
+     "cellY": 19
     },
     {
      "kind": "plot",
      "dx": 10,
      "dy": 4,
+     "walkDx": 10,
+     "walkDy": 4,
      "heading": 2,
      "step": 60,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 197,
+     "cellY": 18
     },
     {
      "kind": "plot",
      "dx": 10,
      "dy": 3,
+     "walkDx": 10,
+     "walkDy": 3,
      "heading": 2,
      "step": 61,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 197,
+     "cellY": 17
     },
     {
      "kind": "plot",
      "dx": 9,
      "dy": 2,
+     "walkDx": 9,
+     "walkDy": 2,
      "heading": 2,
      "step": 62,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 196,
+     "cellY": 16
     },
     {
      "kind": "plot",
      "dx": 10,
      "dy": 1,
+     "walkDx": 10,
+     "walkDy": 1,
      "heading": 2,
      "step": 63,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 197,
+     "cellY": 15
     },
     {
      "kind": "plot",
      "dx": 10,
      "dy": 0,
+     "walkDx": 10,
+     "walkDy": 0,
      "heading": 2,
      "step": 64,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 197,
+     "cellY": 14
     },
     {
      "kind": "plot",
      "dx": 9,
      "dy": 1,
+     "walkDx": 9,
+     "walkDy": 1,
      "heading": 3,
      "step": 65,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 196,
+     "cellY": 13
     },
     {
      "kind": "plot",
      "dx": 8,
      "dy": 1,
+     "walkDx": 8,
+     "walkDy": 1,
+     "heading": 3,
+     "step": 66,
+     "workingRadius": 10,
+     "cellX": 195,
+     "cellY": 13
+    },
+    {
+     "kind": "plot",
+     "dx": 7,
+     "dy": 0,
+     "walkDx": 7,
+     "walkDy": 0,
+     "heading": 3,
+     "step": 67,
+     "workingRadius": 10,
+     "cellX": 194,
+     "cellY": 14
+    },
+    {
+     "kind": "plot",
+     "dx": 6,
+     "dy": 1,
+     "walkDx": 6,
+     "walkDy": 1,
+     "heading": 3,
+     "step": 68,
+     "workingRadius": 10,
+     "cellX": 193,
+     "cellY": 13
+    },
+    {
+     "kind": "plot",
+     "dx": 6,
+     "dy": 2,
+     "walkDx": 6,
+     "walkDy": 2,
+     "heading": 3,
+     "step": 69,
+     "workingRadius": 10,
+     "cellX": 193,
+     "cellY": 12
+    },
+    {
+     "kind": "plot",
+     "dx": 6,
+     "dy": 3,
+     "walkDx": 6,
+     "walkDy": 3,
+     "heading": 3,
+     "step": 70,
+     "workingRadius": 10,
+     "cellX": 193,
+     "cellY": 11
+    },
+    {
+     "kind": "plot",
+     "dx": 6,
+     "dy": 4,
+     "walkDx": 6,
+     "walkDy": 4,
+     "heading": 3,
+     "step": 71,
+     "workingRadius": 10,
+     "cellX": 193,
+     "cellY": 10
+    },
+    {
+     "kind": "plot",
+     "dx": 6,
+     "dy": 5,
+     "walkDx": 6,
+     "walkDy": 5,
+     "heading": 3,
+     "step": 72,
+     "workingRadius": 10,
+     "cellX": 193,
+     "cellY": 9
+    },
+    {
+     "kind": "plot",
+     "dx": 6,
+     "dy": 6,
+     "walkDx": 6,
+     "walkDy": 6,
+     "heading": 3,
+     "step": 73,
+     "workingRadius": 10,
+     "cellX": 193,
+     "cellY": 8
+    },
+    {
+     "kind": "plot",
+     "dx": 5,
+     "dy": 7,
+     "walkDx": 5,
+     "walkDy": 7,
+     "heading": 3,
+     "step": 74,
+     "workingRadius": 10,
+     "cellX": 192,
+     "cellY": 7
+    },
+    {
+     "kind": "plot",
+     "dx": 4,
+     "dy": 8,
+     "walkDx": 4,
+     "walkDy": 8,
+     "heading": 3,
+     "step": 75,
+     "workingRadius": 10,
+     "cellX": 191,
+     "cellY": 6
+    },
+    {
+     "kind": "plot",
+     "dx": 4,
+     "dy": 9,
+     "walkDx": 4,
+     "walkDy": 9,
+     "heading": 3,
+     "step": 76,
+     "workingRadius": 10,
+     "cellX": 191,
+     "cellY": 5
+    },
+    {
+     "kind": "plot",
+     "dx": 3,
+     "dy": 10,
+     "walkDx": 3,
+     "walkDy": 10,
+     "heading": 3,
+     "step": 77,
+     "workingRadius": 10,
+     "cellX": 190,
+     "cellY": 4
+    },
+    {
+     "kind": "plot",
+     "dx": 2,
+     "dy": 10,
+     "walkDx": 2,
+     "walkDy": 10,
+     "heading": 3,
+     "step": 78,
+     "workingRadius": 10,
+     "cellX": 189,
+     "cellY": 4
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 2,
+     "walkDy": 10,
+     "heading": 3,
+     "step": 78,
+     "workingRadius": 10
+    },
+    {
+     "kind": "erase",
+     "dx": 2,
+     "dy": 10,
+     "walkDx": 2,
+     "walkDy": 10,
+     "heading": 3,
+     "step": 78,
+     "workingRadius": 10,
+     "cellX": 189,
+     "cellY": 4
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 3,
+     "walkDy": 10,
+     "heading": 3,
+     "step": 77,
+     "workingRadius": 10
+    },
+    {
+     "kind": "erase",
+     "dx": 3,
+     "dy": 10,
+     "walkDx": 3,
+     "walkDy": 10,
+     "heading": 3,
+     "step": 77,
+     "workingRadius": 10,
+     "cellX": 190,
+     "cellY": 4
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 4,
+     "walkDy": 9,
+     "heading": 3,
+     "step": 76,
+     "workingRadius": 10
+    },
+    {
+     "kind": "erase",
+     "dx": 4,
+     "dy": 9,
+     "walkDx": 4,
+     "walkDy": 9,
+     "heading": 3,
+     "step": 76,
+     "workingRadius": 10,
+     "cellX": 191,
+     "cellY": 5
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 4,
+     "walkDy": 8,
+     "heading": 3,
+     "step": 75,
+     "workingRadius": 10
+    },
+    {
+     "kind": "erase",
+     "dx": 4,
+     "dy": 8,
+     "walkDx": 4,
+     "walkDy": 8,
+     "heading": 3,
+     "step": 75,
+     "workingRadius": 10,
+     "cellX": 191,
+     "cellY": 6
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 5,
+     "walkDy": 7,
+     "heading": 3,
+     "step": 74,
+     "workingRadius": 10
+    },
+    {
+     "kind": "erase",
+     "dx": 5,
+     "dy": 7,
+     "walkDx": 5,
+     "walkDy": 7,
+     "heading": 3,
+     "step": 74,
+     "workingRadius": 10,
+     "cellX": 192,
+     "cellY": 7
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 6,
+     "walkDy": 6,
+     "heading": 3,
+     "step": 73,
+     "workingRadius": 10
+    },
+    {
+     "kind": "erase",
+     "dx": 6,
+     "dy": 6,
+     "walkDx": 6,
+     "walkDy": 6,
+     "heading": 3,
+     "step": 73,
+     "workingRadius": 10,
+     "cellX": 193,
+     "cellY": 8
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 6,
+     "walkDy": 5,
+     "heading": 3,
+     "step": 72,
+     "workingRadius": 10
+    },
+    {
+     "kind": "erase",
+     "dx": 6,
+     "dy": 5,
+     "walkDx": 6,
+     "walkDy": 5,
+     "heading": 3,
+     "step": 72,
+     "workingRadius": 10,
+     "cellX": 193,
+     "cellY": 9
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 6,
+     "walkDy": 4,
+     "heading": 3,
+     "step": 71,
+     "workingRadius": 10
+    },
+    {
+     "kind": "erase",
+     "dx": 6,
+     "dy": 4,
+     "walkDx": 6,
+     "walkDy": 4,
+     "heading": 3,
+     "step": 71,
+     "workingRadius": 10,
+     "cellX": 193,
+     "cellY": 10
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 6,
+     "walkDy": 3,
+     "heading": 3,
+     "step": 70,
+     "workingRadius": 10
+    },
+    {
+     "kind": "erase",
+     "dx": 6,
+     "dy": 3,
+     "walkDx": 6,
+     "walkDy": 3,
+     "heading": 3,
+     "step": 70,
+     "workingRadius": 10,
+     "cellX": 193,
+     "cellY": 11
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 6,
+     "walkDy": 2,
+     "heading": 3,
+     "step": 69,
+     "workingRadius": 10
+    },
+    {
+     "kind": "erase",
+     "dx": 6,
+     "dy": 2,
+     "walkDx": 6,
+     "walkDy": 2,
+     "heading": 3,
+     "step": 69,
+     "workingRadius": 10,
+     "cellX": 193,
+     "cellY": 12
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 6,
+     "walkDy": 1,
+     "heading": 3,
+     "step": 68,
+     "workingRadius": 10
+    },
+    {
+     "kind": "erase",
+     "dx": 6,
+     "dy": 1,
+     "walkDx": 6,
+     "walkDy": 1,
+     "heading": 3,
+     "step": 68,
+     "workingRadius": 10,
+     "cellX": 193,
+     "cellY": 13
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 7,
+     "walkDy": 0,
+     "heading": 3,
+     "step": 67,
+     "workingRadius": 10
+    },
+    {
+     "kind": "erase",
+     "dx": 7,
+     "dy": 0,
+     "walkDx": 7,
+     "walkDy": 0,
+     "heading": 3,
+     "step": 67,
+     "workingRadius": 10,
+     "cellX": 194,
+     "cellY": 14
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 8,
+     "walkDy": 1,
      "heading": 3,
      "step": 66,
      "workingRadius": 10
     },
     {
-     "kind": "plot",
-     "dx": 7,
-     "dy": 0,
-     "heading": 3,
-     "step": 67,
-     "workingRadius": 10
-    },
-    {
-     "kind": "plot",
-     "dx": 6,
-     "dy": 1,
-     "heading": 3,
-     "step": 68,
-     "workingRadius": 10
-    },
-    {
-     "kind": "plot",
-     "dx": 6,
-     "dy": 2,
-     "heading": 3,
-     "step": 69,
-     "workingRadius": 10
-    },
-    {
-     "kind": "plot",
-     "dx": 6,
-     "dy": 3,
-     "heading": 3,
-     "step": 70,
-     "workingRadius": 10
-    },
-    {
-     "kind": "plot",
-     "dx": 6,
-     "dy": 4,
-     "heading": 3,
-     "step": 71,
-     "workingRadius": 10
-    },
-    {
-     "kind": "plot",
-     "dx": 6,
-     "dy": 5,
-     "heading": 3,
-     "step": 72,
-     "workingRadius": 10
-    },
-    {
-     "kind": "plot",
-     "dx": 6,
-     "dy": 6,
-     "heading": 3,
-     "step": 73,
-     "workingRadius": 10
-    },
-    {
-     "kind": "plot",
-     "dx": 5,
-     "dy": 7,
-     "heading": 3,
-     "step": 74,
-     "workingRadius": 10
-    },
-    {
-     "kind": "plot",
-     "dx": 4,
-     "dy": 8,
-     "heading": 3,
-     "step": 75,
-     "workingRadius": 10
-    },
-    {
-     "kind": "plot",
-     "dx": 4,
-     "dy": 9,
-     "heading": 3,
-     "step": 76,
-     "workingRadius": 10
-    },
-    {
-     "kind": "plot",
-     "dx": 3,
-     "dy": 10,
-     "heading": 3,
-     "step": 77,
-     "workingRadius": 10
-    },
-    {
-     "kind": "plot",
-     "dx": 2,
-     "dy": 10,
-     "heading": 3,
-     "step": 78,
-     "workingRadius": 10
-    },
-    {
-     "kind": "backtrack",
-     "dx": 2,
-     "dy": 10,
-     "heading": 3,
-     "step": 78,
-     "workingRadius": 10
-    },
-    {
      "kind": "erase",
-     "dx": 2,
-     "dy": 10,
-     "heading": 3,
-     "step": 78,
-     "workingRadius": 10
-    },
-    {
-     "kind": "backtrack",
-     "dx": 3,
-     "dy": 10,
-     "heading": 3,
-     "step": 77,
-     "workingRadius": 10
-    },
-    {
-     "kind": "erase",
-     "dx": 3,
-     "dy": 10,
-     "heading": 3,
-     "step": 77,
-     "workingRadius": 10
-    },
-    {
-     "kind": "backtrack",
-     "dx": 4,
-     "dy": 9,
-     "heading": 3,
-     "step": 76,
-     "workingRadius": 10
-    },
-    {
-     "kind": "erase",
-     "dx": 4,
-     "dy": 9,
-     "heading": 3,
-     "step": 76,
-     "workingRadius": 10
-    },
-    {
-     "kind": "backtrack",
-     "dx": 4,
-     "dy": 8,
-     "heading": 3,
-     "step": 75,
-     "workingRadius": 10
-    },
-    {
-     "kind": "erase",
-     "dx": 4,
-     "dy": 8,
-     "heading": 3,
-     "step": 75,
-     "workingRadius": 10
-    },
-    {
-     "kind": "backtrack",
-     "dx": 5,
-     "dy": 7,
-     "heading": 3,
-     "step": 74,
-     "workingRadius": 10
-    },
-    {
-     "kind": "erase",
-     "dx": 5,
-     "dy": 7,
-     "heading": 3,
-     "step": 74,
-     "workingRadius": 10
-    },
-    {
-     "kind": "backtrack",
-     "dx": 6,
-     "dy": 6,
-     "heading": 3,
-     "step": 73,
-     "workingRadius": 10
-    },
-    {
-     "kind": "erase",
-     "dx": 6,
-     "dy": 6,
-     "heading": 3,
-     "step": 73,
-     "workingRadius": 10
-    },
-    {
-     "kind": "backtrack",
-     "dx": 6,
-     "dy": 5,
-     "heading": 3,
-     "step": 72,
-     "workingRadius": 10
-    },
-    {
-     "kind": "erase",
-     "dx": 6,
-     "dy": 5,
-     "heading": 3,
-     "step": 72,
-     "workingRadius": 10
-    },
-    {
-     "kind": "backtrack",
-     "dx": 6,
-     "dy": 4,
-     "heading": 3,
-     "step": 71,
-     "workingRadius": 10
-    },
-    {
-     "kind": "erase",
-     "dx": 6,
-     "dy": 4,
-     "heading": 3,
-     "step": 71,
-     "workingRadius": 10
-    },
-    {
-     "kind": "backtrack",
-     "dx": 6,
-     "dy": 3,
-     "heading": 3,
-     "step": 70,
-     "workingRadius": 10
-    },
-    {
-     "kind": "erase",
-     "dx": 6,
-     "dy": 3,
-     "heading": 3,
-     "step": 70,
-     "workingRadius": 10
-    },
-    {
-     "kind": "backtrack",
-     "dx": 6,
-     "dy": 2,
-     "heading": 3,
-     "step": 69,
-     "workingRadius": 10
-    },
-    {
-     "kind": "erase",
-     "dx": 6,
-     "dy": 2,
-     "heading": 3,
-     "step": 69,
-     "workingRadius": 10
-    },
-    {
-     "kind": "backtrack",
-     "dx": 6,
-     "dy": 1,
-     "heading": 3,
-     "step": 68,
-     "workingRadius": 10
-    },
-    {
-     "kind": "erase",
-     "dx": 6,
-     "dy": 1,
-     "heading": 3,
-     "step": 68,
-     "workingRadius": 10
-    },
-    {
-     "kind": "backtrack",
-     "dx": 7,
-     "dy": 0,
-     "heading": 3,
-     "step": 67,
-     "workingRadius": 10
-    },
-    {
-     "kind": "erase",
-     "dx": 7,
-     "dy": 0,
-     "heading": 3,
-     "step": 67,
-     "workingRadius": 10
-    },
-    {
-     "kind": "backtrack",
      "dx": 8,
      "dy": 1,
+     "walkDx": 8,
+     "walkDy": 1,
      "heading": 3,
      "step": 66,
-     "workingRadius": 10
-    },
-    {
-     "kind": "erase",
-     "dx": 8,
-     "dy": 1,
-     "heading": 3,
-     "step": 66,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 195,
+     "cellY": 13
     },
     {
      "kind": "plot",
      "dx": 9,
      "dy": 2,
+     "walkDx": 9,
+     "walkDy": 2,
      "heading": 3,
      "step": 66,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 196,
+     "cellY": 12
     },
     {
      "kind": "plot",
      "dx": 8,
      "dy": 3,
+     "walkDx": 8,
+     "walkDy": 3,
      "heading": 3,
      "step": 67,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 195,
+     "cellY": 11
     },
     {
      "kind": "plot",
      "dx": 7,
      "dy": 4,
+     "walkDx": 7,
+     "walkDy": 4,
      "heading": 3,
      "step": 68,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 194,
+     "cellY": 10
     },
     {
      "kind": "plot",
      "dx": 7,
      "dy": 5,
+     "walkDx": 7,
+     "walkDy": 5,
      "heading": 3,
      "step": 69,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 194,
+     "cellY": 9
     },
     {
      "kind": "plot",
      "dx": 7,
      "dy": 6,
+     "walkDx": 7,
+     "walkDy": 6,
      "heading": 3,
      "step": 70,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 194,
+     "cellY": 8
     },
     {
      "kind": "plot",
      "dx": 6,
      "dy": 7,
+     "walkDx": 6,
+     "walkDy": 7,
      "heading": 3,
      "step": 71,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 193,
+     "cellY": 7
     },
     {
      "kind": "plot",
      "dx": 6,
      "dy": 8,
+     "walkDx": 6,
+     "walkDy": 8,
      "heading": 3,
      "step": 72,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 193,
+     "cellY": 6
     },
     {
      "kind": "plot",
      "dx": 5,
      "dy": 9,
+     "walkDx": 5,
+     "walkDy": 9,
      "heading": 3,
      "step": 73,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 192,
+     "cellY": 5
     },
     {
      "kind": "plot",
      "dx": 4,
      "dy": 10,
+     "walkDx": 4,
+     "walkDy": 10,
      "heading": 3,
      "step": 74,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 191,
+     "cellY": 4
     },
     {
      "kind": "plot",
      "dx": 3,
      "dy": 11,
+     "walkDx": 3,
+     "walkDy": 11,
      "heading": 3,
      "step": 75,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 190,
+     "cellY": 3
     },
     {
      "kind": "plot",
      "dx": 2,
      "dy": 11,
+     "walkDx": 2,
+     "walkDy": 11,
      "heading": 3,
      "step": 76,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 189,
+     "cellY": 3
     },
     {
      "kind": "plot",
      "dx": 1,
      "dy": 12,
+     "walkDx": 1,
+     "walkDy": 12,
      "heading": 3,
      "step": 77,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 188,
+     "cellY": 2
     },
     {
      "kind": "plot",
-     "dx": 1,
+     "dx": 0,
      "dy": 12,
+     "walkDx": 1,
+     "walkDy": 12,
      "heading": 3,
      "step": 77,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 187,
+     "cellY": 2
     },
     {
      "kind": "plot",
-     "dx": 1,
+     "dx": 0,
      "dy": 11,
+     "walkDx": 1,
+     "walkDy": 11,
      "heading": 3,
      "step": 77,
-     "workingRadius": 10
+     "workingRadius": 10,
+     "cellX": 187,
+     "cellY": 3
     }
    ]
   },
@@ -1955,1198 +2471,1678 @@
      "kind": "plot",
      "dx": 0,
      "dy": 70,
+     "walkDx": 0,
+     "walkDy": 70,
      "heading": 0,
      "step": 0,
-     "workingRadius": 70
+     "workingRadius": 70,
+     "cellX": 166,
+     "cellY": 24
     },
     {
      "kind": "plot",
      "dx": 1,
      "dy": 71,
+     "walkDx": 1,
+     "walkDy": 71,
      "heading": 0,
      "step": 1,
-     "workingRadius": 70
+     "workingRadius": 70,
+     "cellX": 165,
+     "cellY": 23
     },
     {
      "kind": "plot",
      "dx": 2,
      "dy": 70,
+     "walkDx": 2,
+     "walkDy": 70,
      "heading": 0,
      "step": 2,
-     "workingRadius": 70
+     "workingRadius": 70,
+     "cellX": 164,
+     "cellY": 24
     },
     {
      "kind": "plot",
      "dx": 3,
      "dy": 69,
+     "walkDx": 3,
+     "walkDy": 69,
      "heading": 0,
      "step": 3,
-     "workingRadius": 70
+     "workingRadius": 70,
+     "cellX": 163,
+     "cellY": 25
     },
     {
      "kind": "plot",
      "dx": 4,
      "dy": 68,
+     "walkDx": 4,
+     "walkDy": 68,
      "heading": 0,
      "step": 4,
-     "workingRadius": 71
+     "workingRadius": 71,
+     "cellX": 162,
+     "cellY": 26
     },
     {
      "kind": "plot",
      "dx": 5,
      "dy": 69,
+     "walkDx": 5,
+     "walkDy": 69,
      "heading": 0,
      "step": 5,
-     "workingRadius": 71
+     "workingRadius": 71,
+     "cellX": 161,
+     "cellY": 25
     },
     {
      "kind": "plot",
      "dx": 6,
      "dy": 68,
+     "walkDx": 6,
+     "walkDy": 68,
      "heading": 0,
      "step": 6,
-     "workingRadius": 71
+     "workingRadius": 71,
+     "cellX": 160,
+     "cellY": 26
     },
     {
      "kind": "plot",
      "dx": 7,
      "dy": 69,
+     "walkDx": 7,
+     "walkDy": 69,
      "heading": 0,
      "step": 7,
-     "workingRadius": 71
+     "workingRadius": 71,
+     "cellX": 159,
+     "cellY": 25
     },
     {
      "kind": "plot",
      "dx": 8,
      "dy": 68,
+     "walkDx": 8,
+     "walkDy": 68,
      "heading": 0,
      "step": 8,
-     "workingRadius": 71
+     "workingRadius": 71,
+     "cellX": 158,
+     "cellY": 26
     },
     {
      "kind": "plot",
      "dx": 9,
      "dy": 68,
+     "walkDx": 9,
+     "walkDy": 68,
      "heading": 0,
      "step": 9,
-     "workingRadius": 71
+     "workingRadius": 71,
+     "cellX": 157,
+     "cellY": 26
     },
     {
      "kind": "plot",
      "dx": 10,
      "dy": 67,
+     "walkDx": 10,
+     "walkDy": 67,
      "heading": 0,
      "step": 10,
-     "workingRadius": 71
+     "workingRadius": 71,
+     "cellX": 156,
+     "cellY": 27
     },
     {
      "kind": "plot",
      "dx": 11,
      "dy": 66,
+     "walkDx": 11,
+     "walkDy": 66,
      "heading": 0,
      "step": 11,
-     "workingRadius": 72
+     "workingRadius": 72,
+     "cellX": 155,
+     "cellY": 28
     },
     {
      "kind": "plot",
      "dx": 12,
      "dy": 66,
+     "walkDx": 12,
+     "walkDy": 66,
      "heading": 0,
      "step": 12,
-     "workingRadius": 72
+     "workingRadius": 72,
+     "cellX": 154,
+     "cellY": 28
     },
     {
      "kind": "plot",
      "dx": 13,
      "dy": 67,
+     "walkDx": 13,
+     "walkDy": 67,
      "heading": 0,
      "step": 13,
-     "workingRadius": 72
+     "workingRadius": 72,
+     "cellX": 153,
+     "cellY": 27
     },
     {
      "kind": "plot",
      "dx": 14,
      "dy": 66,
+     "walkDx": 14,
+     "walkDy": 66,
      "heading": 0,
      "step": 14,
-     "workingRadius": 72
+     "workingRadius": 72,
+     "cellX": 152,
+     "cellY": 28
     },
     {
      "kind": "plot",
      "dx": 15,
      "dy": 65,
+     "walkDx": 15,
+     "walkDy": 65,
      "heading": 0,
      "step": 15,
-     "workingRadius": 72
+     "workingRadius": 72,
+     "cellX": 151,
+     "cellY": 29
     },
     {
      "kind": "plot",
      "dx": 16,
      "dy": 64,
+     "walkDx": 16,
+     "walkDy": 64,
      "heading": 0,
      "step": 16,
-     "workingRadius": 73
+     "workingRadius": 73,
+     "cellX": 150,
+     "cellY": 30
     },
     {
      "kind": "plot",
      "dx": 17,
      "dy": 63,
+     "walkDx": 17,
+     "walkDy": 63,
      "heading": 0,
      "step": 17,
-     "workingRadius": 73
+     "workingRadius": 73,
+     "cellX": 149,
+     "cellY": 31
     },
     {
      "kind": "plot",
      "dx": 18,
      "dy": 64,
+     "walkDx": 18,
+     "walkDy": 64,
      "heading": 0,
      "step": 18,
-     "workingRadius": 74
+     "workingRadius": 74,
+     "cellX": 148,
+     "cellY": 30
     },
     {
      "kind": "plot",
      "dx": 19,
      "dy": 63,
+     "walkDx": 19,
+     "walkDy": 63,
      "heading": 0,
      "step": 19,
-     "workingRadius": 73
+     "workingRadius": 73,
+     "cellX": 147,
+     "cellY": 31
     },
     {
      "kind": "plot",
      "dx": 20,
      "dy": 64,
+     "walkDx": 20,
+     "walkDy": 64,
      "heading": 0,
      "step": 20,
-     "workingRadius": 74
+     "workingRadius": 74,
+     "cellX": 146,
+     "cellY": 30
     },
     {
      "kind": "plot",
      "dx": 21,
      "dy": 65,
+     "walkDx": 21,
+     "walkDy": 65,
      "heading": 0,
      "step": 21,
-     "workingRadius": 73
+     "workingRadius": 73,
+     "cellX": 145,
+     "cellY": 29
     },
     {
      "kind": "plot",
      "dx": 22,
      "dy": 66,
+     "walkDx": 22,
+     "walkDy": 66,
      "heading": 0,
      "step": 22,
-     "workingRadius": 73
+     "workingRadius": 73,
+     "cellX": 144,
+     "cellY": 28
     },
     {
      "kind": "plot",
      "dx": 23,
      "dy": 67,
+     "walkDx": 23,
+     "walkDy": 67,
      "heading": 0,
      "step": 23,
-     "workingRadius": 72
+     "workingRadius": 72,
+     "cellX": 143,
+     "cellY": 27
     },
     {
      "kind": "plot",
      "dx": 24,
      "dy": 66,
+     "walkDx": 24,
+     "walkDy": 66,
      "heading": 0,
      "step": 24,
-     "workingRadius": 72
+     "workingRadius": 72,
+     "cellX": 142,
+     "cellY": 28
     },
     {
      "kind": "plot",
      "dx": 24,
      "dy": 65,
+     "walkDx": 24,
+     "walkDy": 65,
      "heading": 0,
      "step": 25,
-     "workingRadius": 72
+     "workingRadius": 72,
+     "cellX": 142,
+     "cellY": 29
     },
     {
      "kind": "plot",
      "dx": 25,
      "dy": 64,
+     "walkDx": 25,
+     "walkDy": 64,
      "heading": 0,
      "step": 26,
-     "workingRadius": 73
+     "workingRadius": 73,
+     "cellX": 141,
+     "cellY": 30
     },
     {
      "kind": "plot",
      "dx": 26,
      "dy": 65,
+     "walkDx": 26,
+     "walkDy": 65,
      "heading": 0,
      "step": 27,
-     "workingRadius": 73
+     "workingRadius": 73,
+     "cellX": 140,
+     "cellY": 29
     },
     {
      "kind": "plot",
      "dx": 27,
      "dy": 65,
+     "walkDx": 27,
+     "walkDy": 65,
      "heading": 0,
      "step": 28,
-     "workingRadius": 73
+     "workingRadius": 73,
+     "cellX": 139,
+     "cellY": 29
     },
     {
      "kind": "plot",
      "dx": 28,
      "dy": 64,
+     "walkDx": 28,
+     "walkDy": 64,
      "heading": 0,
      "step": 29,
-     "workingRadius": 73
+     "workingRadius": 73,
+     "cellX": 138,
+     "cellY": 30
     },
     {
      "kind": "plot",
      "dx": 29,
      "dy": 64,
+     "walkDx": 29,
+     "walkDy": 64,
      "heading": 0,
      "step": 30,
-     "workingRadius": 73
+     "workingRadius": 73,
+     "cellX": 137,
+     "cellY": 30
     },
     {
      "kind": "plot",
      "dx": 30,
      "dy": 63,
+     "walkDx": 30,
+     "walkDy": 63,
      "heading": 0,
      "step": 31,
-     "workingRadius": 73
+     "workingRadius": 73,
+     "cellX": 136,
+     "cellY": 31
     },
     {
      "kind": "plot",
      "dx": 31,
      "dy": 62,
+     "walkDx": 31,
+     "walkDy": 62,
      "heading": 0,
      "step": 32,
-     "workingRadius": 74
+     "workingRadius": 74,
+     "cellX": 135,
+     "cellY": 32
     },
     {
      "kind": "plot",
      "dx": 32,
      "dy": 61,
+     "walkDx": 32,
+     "walkDy": 61,
      "heading": 0,
      "step": 33,
-     "workingRadius": 74
+     "workingRadius": 74,
+     "cellX": 134,
+     "cellY": 33
     },
     {
      "kind": "plot",
      "dx": 33,
      "dy": 62,
+     "walkDx": 33,
+     "walkDy": 62,
      "heading": 0,
      "step": 34,
-     "workingRadius": 75
+     "workingRadius": 75,
+     "cellX": 133,
+     "cellY": 32
     },
     {
      "kind": "plot",
      "dx": 34,
      "dy": 63,
+     "walkDx": 34,
+     "walkDy": 63,
      "heading": 0,
      "step": 35,
-     "workingRadius": 74
+     "workingRadius": 74,
+     "cellX": 132,
+     "cellY": 31
     },
     {
      "kind": "plot",
      "dx": 35,
      "dy": 62,
+     "walkDx": 35,
+     "walkDy": 62,
      "heading": 0,
      "step": 36,
-     "workingRadius": 74
+     "workingRadius": 74,
+     "cellX": 131,
+     "cellY": 32
     },
     {
      "kind": "plot",
      "dx": 36,
      "dy": 61,
+     "walkDx": 36,
+     "walkDy": 61,
      "heading": 0,
      "step": 37,
-     "workingRadius": 74
+     "workingRadius": 74,
+     "cellX": 130,
+     "cellY": 33
     },
     {
      "kind": "plot",
      "dx": 36,
      "dy": 60,
+     "walkDx": 36,
+     "walkDy": 60,
      "heading": 0,
      "step": 38,
-     "workingRadius": 75
+     "workingRadius": 75,
+     "cellX": 130,
+     "cellY": 34
     },
     {
      "kind": "plot",
      "dx": 37,
      "dy": 59,
+     "walkDx": 37,
+     "walkDy": 59,
      "heading": 0,
      "step": 39,
-     "workingRadius": 75
+     "workingRadius": 75,
+     "cellX": 129,
+     "cellY": 35
     },
     {
      "kind": "plot",
      "dx": 36,
      "dy": 58,
+     "walkDx": 36,
+     "walkDy": 58,
      "heading": 0,
      "step": 40,
-     "workingRadius": 76
+     "workingRadius": 76,
+     "cellX": 130,
+     "cellY": 36
     },
     {
      "kind": "plot",
      "dx": 35,
      "dy": 58,
+     "walkDx": 35,
+     "walkDy": 58,
      "heading": 0,
      "step": 41,
-     "workingRadius": 76
+     "workingRadius": 76,
+     "cellX": 131,
+     "cellY": 36
     },
     {
      "kind": "plot",
      "dx": 34,
      "dy": 59,
+     "walkDx": 34,
+     "walkDy": 59,
      "heading": 0,
      "step": 42,
-     "workingRadius": 76
+     "workingRadius": 76,
+     "cellX": 132,
+     "cellY": 35
     },
     {
      "kind": "plot",
      "dx": 33,
      "dy": 58,
+     "walkDx": 33,
+     "walkDy": 58,
      "heading": 0,
      "step": 43,
-     "workingRadius": 76
+     "workingRadius": 76,
+     "cellX": 133,
+     "cellY": 36
     },
     {
      "kind": "plot",
      "dx": 32,
      "dy": 58,
+     "walkDx": 32,
+     "walkDy": 58,
      "heading": 0,
      "step": 44,
-     "workingRadius": 76
+     "workingRadius": 76,
+     "cellX": 134,
+     "cellY": 36
     },
     {
      "kind": "plot",
      "dx": 31,
      "dy": 58,
+     "walkDx": 31,
+     "walkDy": 58,
      "heading": 0,
      "step": 45,
-     "workingRadius": 76
+     "workingRadius": 76,
+     "cellX": 135,
+     "cellY": 36
     },
     {
      "kind": "plot",
      "dx": 30,
      "dy": 58,
+     "walkDx": 30,
+     "walkDy": 58,
      "heading": 0,
      "step": 46,
-     "workingRadius": 76
+     "workingRadius": 76,
+     "cellX": 136,
+     "cellY": 36
     },
     {
      "kind": "plot",
      "dx": 29,
      "dy": 58,
+     "walkDx": 29,
+     "walkDy": 58,
      "heading": 0,
      "step": 47,
-     "workingRadius": 76
+     "workingRadius": 76,
+     "cellX": 137,
+     "cellY": 36
     },
     {
      "kind": "plot",
      "dx": 28,
      "dy": 59,
+     "walkDx": 28,
+     "walkDy": 59,
      "heading": 0,
      "step": 48,
-     "workingRadius": 76
+     "workingRadius": 76,
+     "cellX": 138,
+     "cellY": 35
     },
     {
      "kind": "plot",
      "dx": 29,
      "dy": 60,
+     "walkDx": 29,
+     "walkDy": 60,
      "heading": 0,
      "step": 49,
-     "workingRadius": 76
+     "workingRadius": 76,
+     "cellX": 137,
+     "cellY": 34
     },
     {
      "kind": "plot",
      "dx": 28,
      "dy": 61,
+     "walkDx": 28,
+     "walkDy": 61,
      "heading": 0,
      "step": 50,
-     "workingRadius": 75
+     "workingRadius": 75,
+     "cellX": 138,
+     "cellY": 33
     },
     {
      "kind": "plot",
      "dx": 27,
      "dy": 61,
+     "walkDx": 27,
+     "walkDy": 61,
      "heading": 0,
      "step": 51,
-     "workingRadius": 75
+     "workingRadius": 75,
+     "cellX": 139,
+     "cellY": 33
     },
     {
      "kind": "plot",
      "dx": 26,
      "dy": 61,
+     "walkDx": 26,
+     "walkDy": 61,
      "heading": 0,
      "step": 52,
-     "workingRadius": 75
+     "workingRadius": 75,
+     "cellX": 140,
+     "cellY": 33
     },
     {
      "kind": "plot",
      "dx": 25,
      "dy": 61,
+     "walkDx": 25,
+     "walkDy": 61,
      "heading": 0,
      "step": 53,
-     "workingRadius": 75
+     "workingRadius": 75,
+     "cellX": 141,
+     "cellY": 33
     },
     {
      "kind": "plot",
      "dx": 24,
      "dy": 62,
+     "walkDx": 24,
+     "walkDy": 62,
      "heading": 0,
      "step": 54,
-     "workingRadius": 75
+     "workingRadius": 75,
+     "cellX": 142,
+     "cellY": 32
     },
     {
      "kind": "plot",
      "dx": 23,
      "dy": 61,
+     "walkDx": 23,
+     "walkDy": 61,
      "heading": 0,
      "step": 55,
-     "workingRadius": 74
+     "workingRadius": 74,
+     "cellX": 143,
+     "cellY": 33
     },
     {
      "kind": "plot",
      "dx": 23,
      "dy": 60,
+     "walkDx": 23,
+     "walkDy": 60,
      "heading": 0,
      "step": 56,
-     "workingRadius": 75
+     "workingRadius": 75,
+     "cellX": 143,
+     "cellY": 34
     },
     {
      "kind": "plot",
      "dx": 22,
      "dy": 59,
+     "walkDx": 22,
+     "walkDy": 59,
      "heading": 0,
      "step": 57,
-     "workingRadius": 75
+     "workingRadius": 75,
+     "cellX": 144,
+     "cellY": 35
     },
     {
      "kind": "plot",
      "dx": 21,
      "dy": 60,
+     "walkDx": 21,
+     "walkDy": 60,
      "heading": 0,
      "step": 58,
-     "workingRadius": 76
+     "workingRadius": 76,
+     "cellX": 145,
+     "cellY": 34
     },
     {
      "kind": "plot",
      "dx": 20,
      "dy": 61,
+     "walkDx": 20,
+     "walkDy": 61,
      "heading": 0,
      "step": 59,
-     "workingRadius": 75
+     "workingRadius": 75,
+     "cellX": 146,
+     "cellY": 33
     },
     {
      "kind": "plot",
      "dx": 19,
      "dy": 60,
+     "walkDx": 19,
+     "walkDy": 60,
      "heading": 0,
      "step": 60,
-     "workingRadius": 75
+     "workingRadius": 75,
+     "cellX": 147,
+     "cellY": 34
     },
     {
      "kind": "plot",
      "dx": 19,
      "dy": 59,
+     "walkDx": 19,
+     "walkDy": 59,
      "heading": 0,
      "step": 61,
-     "workingRadius": 75
+     "workingRadius": 75,
+     "cellX": 147,
+     "cellY": 35
     },
     {
      "kind": "plot",
      "dx": 18,
      "dy": 58,
+     "walkDx": 18,
+     "walkDy": 58,
+     "heading": 0,
+     "step": 62,
+     "workingRadius": 76,
+     "cellX": 148,
+     "cellY": 36
+    },
+    {
+     "kind": "plot",
+     "dx": 17,
+     "dy": 57,
+     "walkDx": 17,
+     "walkDy": 57,
+     "heading": 0,
+     "step": 63,
+     "workingRadius": 76,
+     "cellX": 149,
+     "cellY": 37
+    },
+    {
+     "kind": "plot",
+     "dx": 17,
+     "dy": 56,
+     "walkDx": 17,
+     "walkDy": 56,
+     "heading": 0,
+     "step": 64,
+     "workingRadius": 77,
+     "cellX": 149,
+     "cellY": 38
+    },
+    {
+     "kind": "plot",
+     "dx": 16,
+     "dy": 55,
+     "walkDx": 16,
+     "walkDy": 55,
+     "heading": 0,
+     "step": 65,
+     "workingRadius": 77,
+     "cellX": 150,
+     "cellY": 39
+    },
+    {
+     "kind": "plot",
+     "dx": 15,
+     "dy": 55,
+     "walkDx": 15,
+     "walkDy": 55,
+     "heading": 0,
+     "step": 66,
+     "workingRadius": 78,
+     "cellX": 151,
+     "cellY": 39
+    },
+    {
+     "kind": "plot",
+     "dx": 14,
+     "dy": 56,
+     "walkDx": 14,
+     "walkDy": 56,
+     "heading": 0,
+     "step": 67,
+     "workingRadius": 78,
+     "cellX": 152,
+     "cellY": 38
+    },
+    {
+     "kind": "plot",
+     "dx": 15,
+     "dy": 57,
+     "walkDx": 15,
+     "walkDy": 57,
+     "heading": 0,
+     "step": 68,
+     "workingRadius": 77,
+     "cellX": 151,
+     "cellY": 37
+    },
+    {
+     "kind": "plot",
+     "dx": 15,
+     "dy": 58,
+     "walkDx": 15,
+     "walkDy": 58,
+     "heading": 0,
+     "step": 69,
+     "workingRadius": 77,
+     "cellX": 151,
+     "cellY": 36
+    },
+    {
+     "kind": "plot",
+     "dx": 16,
+     "dy": 59,
+     "walkDx": 16,
+     "walkDy": 59,
+     "heading": 0,
+     "step": 70,
+     "workingRadius": 76,
+     "cellX": 150,
+     "cellY": 35
+    },
+    {
+     "kind": "plot",
+     "dx": 17,
+     "dy": 60,
+     "walkDx": 17,
+     "walkDy": 60,
+     "heading": 0,
+     "step": 71,
+     "workingRadius": 76,
+     "cellX": 149,
+     "cellY": 34
+    },
+    {
+     "kind": "plot",
+     "dx": 16,
+     "dy": 61,
+     "walkDx": 16,
+     "walkDy": 61,
+     "heading": 0,
+     "step": 72,
+     "workingRadius": 75,
+     "cellX": 150,
+     "cellY": 33
+    },
+    {
+     "kind": "plot",
+     "dx": 15,
+     "dy": 62,
+     "walkDx": 15,
+     "walkDy": 62,
+     "heading": 0,
+     "step": 73,
+     "workingRadius": 75,
+     "cellX": 151,
+     "cellY": 32
+    },
+    {
+     "kind": "plot",
+     "dx": 14,
+     "dy": 62,
+     "walkDx": 14,
+     "walkDy": 62,
+     "heading": 0,
+     "step": 74,
+     "workingRadius": 74,
+     "cellX": 152,
+     "cellY": 32
+    },
+    {
+     "kind": "plot",
+     "dx": 13,
+     "dy": 61,
+     "walkDx": 13,
+     "walkDy": 61,
+     "heading": 0,
+     "step": 75,
+     "workingRadius": 74,
+     "cellX": 153,
+     "cellY": 33
+    },
+    {
+     "kind": "plot",
+     "dx": 12,
+     "dy": 61,
+     "walkDx": 12,
+     "walkDy": 61,
+     "heading": 0,
+     "step": 76,
+     "workingRadius": 75,
+     "cellX": 154,
+     "cellY": 33
+    },
+    {
+     "kind": "plot",
+     "dx": 11,
+     "dy": 61,
+     "walkDx": 11,
+     "walkDy": 61,
+     "heading": 0,
+     "step": 77,
+     "workingRadius": 75,
+     "cellX": 155,
+     "cellY": 33
+    },
+    {
+     "kind": "plot",
+     "dx": 10,
+     "dy": 60,
+     "walkDx": 10,
+     "walkDy": 60,
+     "heading": 0,
+     "step": 78,
+     "workingRadius": 75,
+     "cellX": 156,
+     "cellY": 34
+    },
+    {
+     "kind": "plot",
+     "dx": 9,
+     "dy": 59,
+     "walkDx": 9,
+     "walkDy": 59,
+     "heading": 0,
+     "step": 79,
+     "workingRadius": 75,
+     "cellX": 157,
+     "cellY": 35
+    },
+    {
+     "kind": "plot",
+     "dx": 8,
+     "dy": 58,
+     "walkDx": 8,
+     "walkDy": 58,
+     "heading": 0,
+     "step": 80,
+     "workingRadius": 76,
+     "cellX": 158,
+     "cellY": 36
+    },
+    {
+     "kind": "plot",
+     "dx": 7,
+     "dy": 58,
+     "walkDx": 7,
+     "walkDy": 58,
+     "heading": 0,
+     "step": 81,
+     "workingRadius": 76,
+     "cellX": 159,
+     "cellY": 36
+    },
+    {
+     "kind": "plot",
+     "dx": 6,
+     "dy": 59,
+     "walkDx": 6,
+     "walkDy": 59,
+     "heading": 0,
+     "step": 82,
+     "workingRadius": 76,
+     "cellX": 160,
+     "cellY": 35
+    },
+    {
+     "kind": "plot",
+     "dx": 7,
+     "dy": 60,
+     "walkDx": 7,
+     "walkDy": 60,
+     "heading": 0,
+     "step": 83,
+     "workingRadius": 76,
+     "cellX": 159,
+     "cellY": 34
+    },
+    {
+     "kind": "plot",
+     "dx": 7,
+     "dy": 61,
+     "walkDx": 7,
+     "walkDy": 61,
+     "heading": 0,
+     "step": 84,
+     "workingRadius": 75,
+     "cellX": 159,
+     "cellY": 33
+    },
+    {
+     "kind": "plot",
+     "dx": 8,
+     "dy": 62,
+     "walkDx": 8,
+     "walkDy": 62,
+     "heading": 0,
+     "step": 85,
+     "workingRadius": 75,
+     "cellX": 158,
+     "cellY": 32
+    },
+    {
+     "kind": "plot",
+     "dx": 9,
+     "dy": 63,
+     "walkDx": 9,
+     "walkDy": 63,
+     "heading": 0,
+     "step": 86,
+     "workingRadius": 74,
+     "cellX": 157,
+     "cellY": 31
+    },
+    {
+     "kind": "plot",
+     "dx": 10,
+     "dy": 64,
+     "walkDx": 10,
+     "walkDy": 64,
+     "heading": 0,
+     "step": 87,
+     "workingRadius": 74,
+     "cellX": 156,
+     "cellY": 30
+    },
+    {
+     "kind": "plot",
+     "dx": 11,
+     "dy": 64,
+     "walkDx": 11,
+     "walkDy": 64,
+     "heading": 0,
+     "step": 88,
+     "workingRadius": 73,
+     "cellX": 155,
+     "cellY": 30
+    },
+    {
+     "kind": "plot",
+     "dx": 12,
+     "dy": 64,
+     "walkDx": 12,
+     "walkDy": 64,
+     "heading": 0,
+     "step": 89,
+     "workingRadius": 73,
+     "cellX": 154,
+     "cellY": 30
+    },
+    {
+     "kind": "plot",
+     "dx": 13,
+     "dy": 64,
+     "walkDx": 13,
+     "walkDy": 64,
+     "heading": 0,
+     "step": 90,
+     "workingRadius": 73,
+     "cellX": 153,
+     "cellY": 30
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 13,
+     "walkDy": 64,
+     "heading": 0,
+     "step": 90,
+     "workingRadius": 73
+    },
+    {
+     "kind": "erase",
+     "dx": 13,
+     "dy": 64,
+     "walkDx": 13,
+     "walkDy": 64,
+     "heading": 0,
+     "step": 90,
+     "workingRadius": 73,
+     "cellX": 153,
+     "cellY": 30
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 12,
+     "walkDy": 64,
+     "heading": 0,
+     "step": 89,
+     "workingRadius": 73
+    },
+    {
+     "kind": "erase",
+     "dx": 12,
+     "dy": 64,
+     "walkDx": 12,
+     "walkDy": 64,
+     "heading": 0,
+     "step": 89,
+     "workingRadius": 73,
+     "cellX": 154,
+     "cellY": 30
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 11,
+     "walkDy": 64,
+     "heading": 0,
+     "step": 88,
+     "workingRadius": 73
+    },
+    {
+     "kind": "erase",
+     "dx": 11,
+     "dy": 64,
+     "walkDx": 11,
+     "walkDy": 64,
+     "heading": 0,
+     "step": 88,
+     "workingRadius": 73,
+     "cellX": 155,
+     "cellY": 30
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 10,
+     "walkDy": 64,
+     "heading": 0,
+     "step": 87,
+     "workingRadius": 73
+    },
+    {
+     "kind": "erase",
+     "dx": 10,
+     "dy": 64,
+     "walkDx": 10,
+     "walkDy": 64,
+     "heading": 0,
+     "step": 87,
+     "workingRadius": 73,
+     "cellX": 156,
+     "cellY": 30
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 9,
+     "walkDy": 63,
+     "heading": 0,
+     "step": 86,
+     "workingRadius": 74
+    },
+    {
+     "kind": "erase",
+     "dx": 9,
+     "dy": 63,
+     "walkDx": 9,
+     "walkDy": 63,
+     "heading": 0,
+     "step": 86,
+     "workingRadius": 74,
+     "cellX": 157,
+     "cellY": 31
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 8,
+     "walkDy": 62,
+     "heading": 0,
+     "step": 85,
+     "workingRadius": 74
+    },
+    {
+     "kind": "erase",
+     "dx": 8,
+     "dy": 62,
+     "walkDx": 8,
+     "walkDy": 62,
+     "heading": 0,
+     "step": 85,
+     "workingRadius": 74,
+     "cellX": 158,
+     "cellY": 32
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 7,
+     "walkDy": 61,
+     "heading": 0,
+     "step": 84,
+     "workingRadius": 75
+    },
+    {
+     "kind": "erase",
+     "dx": 7,
+     "dy": 61,
+     "walkDx": 7,
+     "walkDy": 61,
+     "heading": 0,
+     "step": 84,
+     "workingRadius": 75,
+     "cellX": 159,
+     "cellY": 33
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 7,
+     "walkDy": 60,
+     "heading": 0,
+     "step": 83,
+     "workingRadius": 75
+    },
+    {
+     "kind": "erase",
+     "dx": 7,
+     "dy": 60,
+     "walkDx": 7,
+     "walkDy": 60,
+     "heading": 0,
+     "step": 83,
+     "workingRadius": 75,
+     "cellX": 159,
+     "cellY": 34
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 6,
+     "walkDy": 59,
+     "heading": 0,
+     "step": 82,
+     "workingRadius": 76
+    },
+    {
+     "kind": "erase",
+     "dx": 6,
+     "dy": 59,
+     "walkDx": 6,
+     "walkDy": 59,
+     "heading": 0,
+     "step": 82,
+     "workingRadius": 76,
+     "cellX": 160,
+     "cellY": 35
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 7,
+     "walkDy": 58,
+     "heading": 0,
+     "step": 81,
+     "workingRadius": 76
+    },
+    {
+     "kind": "erase",
+     "dx": 7,
+     "dy": 58,
+     "walkDx": 7,
+     "walkDy": 58,
+     "heading": 0,
+     "step": 81,
+     "workingRadius": 76,
+     "cellX": 159,
+     "cellY": 36
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 8,
+     "walkDy": 58,
+     "heading": 0,
+     "step": 80,
+     "workingRadius": 76
+    },
+    {
+     "kind": "erase",
+     "dx": 8,
+     "dy": 58,
+     "walkDx": 8,
+     "walkDy": 58,
+     "heading": 0,
+     "step": 80,
+     "workingRadius": 76,
+     "cellX": 158,
+     "cellY": 36
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 9,
+     "walkDy": 59,
+     "heading": 0,
+     "step": 79,
+     "workingRadius": 76
+    },
+    {
+     "kind": "erase",
+     "dx": 9,
+     "dy": 59,
+     "walkDx": 9,
+     "walkDy": 59,
+     "heading": 0,
+     "step": 79,
+     "workingRadius": 76,
+     "cellX": 157,
+     "cellY": 35
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 10,
+     "walkDy": 60,
+     "heading": 0,
+     "step": 78,
+     "workingRadius": 75
+    },
+    {
+     "kind": "erase",
+     "dx": 10,
+     "dy": 60,
+     "walkDx": 10,
+     "walkDy": 60,
+     "heading": 0,
+     "step": 78,
+     "workingRadius": 75,
+     "cellX": 156,
+     "cellY": 34
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 11,
+     "walkDy": 61,
+     "heading": 0,
+     "step": 77,
+     "workingRadius": 75
+    },
+    {
+     "kind": "erase",
+     "dx": 11,
+     "dy": 61,
+     "walkDx": 11,
+     "walkDy": 61,
+     "heading": 0,
+     "step": 77,
+     "workingRadius": 75,
+     "cellX": 155,
+     "cellY": 33
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 12,
+     "walkDy": 61,
+     "heading": 0,
+     "step": 76,
+     "workingRadius": 75
+    },
+    {
+     "kind": "erase",
+     "dx": 12,
+     "dy": 61,
+     "walkDx": 12,
+     "walkDy": 61,
+     "heading": 0,
+     "step": 76,
+     "workingRadius": 75,
+     "cellX": 154,
+     "cellY": 33
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 13,
+     "walkDy": 61,
+     "heading": 0,
+     "step": 75,
+     "workingRadius": 75
+    },
+    {
+     "kind": "erase",
+     "dx": 13,
+     "dy": 61,
+     "walkDx": 13,
+     "walkDy": 61,
+     "heading": 0,
+     "step": 75,
+     "workingRadius": 75,
+     "cellX": 153,
+     "cellY": 33
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 14,
+     "walkDy": 62,
+     "heading": 0,
+     "step": 74,
+     "workingRadius": 74
+    },
+    {
+     "kind": "erase",
+     "dx": 14,
+     "dy": 62,
+     "walkDx": 14,
+     "walkDy": 62,
+     "heading": 0,
+     "step": 74,
+     "workingRadius": 74,
+     "cellX": 152,
+     "cellY": 32
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 15,
+     "walkDy": 62,
+     "heading": 0,
+     "step": 73,
+     "workingRadius": 74
+    },
+    {
+     "kind": "erase",
+     "dx": 15,
+     "dy": 62,
+     "walkDx": 15,
+     "walkDy": 62,
+     "heading": 0,
+     "step": 73,
+     "workingRadius": 74,
+     "cellX": 151,
+     "cellY": 32
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 16,
+     "walkDy": 61,
+     "heading": 0,
+     "step": 72,
+     "workingRadius": 75
+    },
+    {
+     "kind": "erase",
+     "dx": 16,
+     "dy": 61,
+     "walkDx": 16,
+     "walkDy": 61,
+     "heading": 0,
+     "step": 72,
+     "workingRadius": 75,
+     "cellX": 150,
+     "cellY": 33
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 17,
+     "walkDy": 60,
+     "heading": 0,
+     "step": 71,
+     "workingRadius": 75
+    },
+    {
+     "kind": "erase",
+     "dx": 17,
+     "dy": 60,
+     "walkDx": 17,
+     "walkDy": 60,
+     "heading": 0,
+     "step": 71,
+     "workingRadius": 75,
+     "cellX": 149,
+     "cellY": 34
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 16,
+     "walkDy": 59,
+     "heading": 0,
+     "step": 70,
+     "workingRadius": 76
+    },
+    {
+     "kind": "erase",
+     "dx": 16,
+     "dy": 59,
+     "walkDx": 16,
+     "walkDy": 59,
+     "heading": 0,
+     "step": 70,
+     "workingRadius": 76,
+     "cellX": 150,
+     "cellY": 35
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 15,
+     "walkDy": 58,
+     "heading": 0,
+     "step": 69,
+     "workingRadius": 76
+    },
+    {
+     "kind": "erase",
+     "dx": 15,
+     "dy": 58,
+     "walkDx": 15,
+     "walkDy": 58,
+     "heading": 0,
+     "step": 69,
+     "workingRadius": 76,
+     "cellX": 151,
+     "cellY": 36
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 15,
+     "walkDy": 57,
+     "heading": 0,
+     "step": 68,
+     "workingRadius": 77
+    },
+    {
+     "kind": "erase",
+     "dx": 15,
+     "dy": 57,
+     "walkDx": 15,
+     "walkDy": 57,
+     "heading": 0,
+     "step": 68,
+     "workingRadius": 77,
+     "cellX": 151,
+     "cellY": 37
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 14,
+     "walkDy": 56,
+     "heading": 0,
+     "step": 67,
+     "workingRadius": 77
+    },
+    {
+     "kind": "erase",
+     "dx": 14,
+     "dy": 56,
+     "walkDx": 14,
+     "walkDy": 56,
+     "heading": 0,
+     "step": 67,
+     "workingRadius": 77,
+     "cellX": 152,
+     "cellY": 38
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 15,
+     "walkDy": 55,
+     "heading": 0,
+     "step": 66,
+     "workingRadius": 78
+    },
+    {
+     "kind": "erase",
+     "dx": 15,
+     "dy": 55,
+     "walkDx": 15,
+     "walkDy": 55,
+     "heading": 0,
+     "step": 66,
+     "workingRadius": 78,
+     "cellX": 151,
+     "cellY": 39
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 16,
+     "walkDy": 55,
+     "heading": 0,
+     "step": 65,
+     "workingRadius": 78
+    },
+    {
+     "kind": "erase",
+     "dx": 16,
+     "dy": 55,
+     "walkDx": 16,
+     "walkDy": 55,
+     "heading": 0,
+     "step": 65,
+     "workingRadius": 78,
+     "cellX": 150,
+     "cellY": 39
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 17,
+     "walkDy": 56,
+     "heading": 0,
+     "step": 64,
+     "workingRadius": 77
+    },
+    {
+     "kind": "erase",
+     "dx": 17,
+     "dy": 56,
+     "walkDx": 17,
+     "walkDy": 56,
+     "heading": 0,
+     "step": 64,
+     "workingRadius": 77,
+     "cellX": 149,
+     "cellY": 38
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 17,
+     "walkDy": 57,
+     "heading": 0,
+     "step": 63,
+     "workingRadius": 77
+    },
+    {
+     "kind": "erase",
+     "dx": 17,
+     "dy": 57,
+     "walkDx": 17,
+     "walkDy": 57,
+     "heading": 0,
+     "step": 63,
+     "workingRadius": 77,
+     "cellX": 149,
+     "cellY": 37
+    },
+    {
+     "kind": "backtrack",
+     "walkDx": 18,
+     "walkDy": 58,
      "heading": 0,
      "step": 62,
      "workingRadius": 76
     },
     {
-     "kind": "plot",
-     "dx": 17,
-     "dy": 57,
-     "heading": 0,
-     "step": 63,
-     "workingRadius": 76
-    },
-    {
-     "kind": "plot",
-     "dx": 17,
-     "dy": 56,
-     "heading": 0,
-     "step": 64,
-     "workingRadius": 77
-    },
-    {
-     "kind": "plot",
-     "dx": 16,
-     "dy": 55,
-     "heading": 0,
-     "step": 65,
-     "workingRadius": 77
-    },
-    {
-     "kind": "plot",
-     "dx": 15,
-     "dy": 55,
-     "heading": 0,
-     "step": 66,
-     "workingRadius": 78
-    },
-    {
-     "kind": "plot",
-     "dx": 14,
-     "dy": 56,
-     "heading": 0,
-     "step": 67,
-     "workingRadius": 78
-    },
-    {
-     "kind": "plot",
-     "dx": 15,
-     "dy": 57,
-     "heading": 0,
-     "step": 68,
-     "workingRadius": 77
-    },
-    {
-     "kind": "plot",
-     "dx": 15,
-     "dy": 58,
-     "heading": 0,
-     "step": 69,
-     "workingRadius": 77
-    },
-    {
-     "kind": "plot",
-     "dx": 16,
-     "dy": 59,
-     "heading": 0,
-     "step": 70,
-     "workingRadius": 76
-    },
-    {
-     "kind": "plot",
-     "dx": 17,
-     "dy": 60,
-     "heading": 0,
-     "step": 71,
-     "workingRadius": 76
-    },
-    {
-     "kind": "plot",
-     "dx": 16,
-     "dy": 61,
-     "heading": 0,
-     "step": 72,
-     "workingRadius": 75
-    },
-    {
-     "kind": "plot",
-     "dx": 15,
-     "dy": 62,
-     "heading": 0,
-     "step": 73,
-     "workingRadius": 75
-    },
-    {
-     "kind": "plot",
-     "dx": 14,
-     "dy": 62,
-     "heading": 0,
-     "step": 74,
-     "workingRadius": 74
-    },
-    {
-     "kind": "plot",
-     "dx": 13,
-     "dy": 61,
-     "heading": 0,
-     "step": 75,
-     "workingRadius": 74
-    },
-    {
-     "kind": "plot",
-     "dx": 12,
-     "dy": 61,
-     "heading": 0,
-     "step": 76,
-     "workingRadius": 75
-    },
-    {
-     "kind": "plot",
-     "dx": 11,
-     "dy": 61,
-     "heading": 0,
-     "step": 77,
-     "workingRadius": 75
-    },
-    {
-     "kind": "plot",
-     "dx": 10,
-     "dy": 60,
-     "heading": 0,
-     "step": 78,
-     "workingRadius": 75
-    },
-    {
-     "kind": "plot",
-     "dx": 9,
-     "dy": 59,
-     "heading": 0,
-     "step": 79,
-     "workingRadius": 75
-    },
-    {
-     "kind": "plot",
-     "dx": 8,
-     "dy": 58,
-     "heading": 0,
-     "step": 80,
-     "workingRadius": 76
-    },
-    {
-     "kind": "plot",
-     "dx": 7,
-     "dy": 58,
-     "heading": 0,
-     "step": 81,
-     "workingRadius": 76
-    },
-    {
-     "kind": "plot",
-     "dx": 6,
-     "dy": 59,
-     "heading": 0,
-     "step": 82,
-     "workingRadius": 76
-    },
-    {
-     "kind": "plot",
-     "dx": 7,
-     "dy": 60,
-     "heading": 0,
-     "step": 83,
-     "workingRadius": 76
-    },
-    {
-     "kind": "plot",
-     "dx": 7,
-     "dy": 61,
-     "heading": 0,
-     "step": 84,
-     "workingRadius": 75
-    },
-    {
-     "kind": "plot",
-     "dx": 8,
-     "dy": 62,
-     "heading": 0,
-     "step": 85,
-     "workingRadius": 75
-    },
-    {
-     "kind": "plot",
-     "dx": 9,
-     "dy": 63,
-     "heading": 0,
-     "step": 86,
-     "workingRadius": 74
-    },
-    {
-     "kind": "plot",
-     "dx": 10,
-     "dy": 64,
-     "heading": 0,
-     "step": 87,
-     "workingRadius": 74
-    },
-    {
-     "kind": "plot",
-     "dx": 11,
-     "dy": 64,
-     "heading": 0,
-     "step": 88,
-     "workingRadius": 73
-    },
-    {
-     "kind": "plot",
-     "dx": 12,
-     "dy": 64,
-     "heading": 0,
-     "step": 89,
-     "workingRadius": 73
-    },
-    {
-     "kind": "plot",
-     "dx": 13,
-     "dy": 64,
-     "heading": 0,
-     "step": 90,
-     "workingRadius": 73
-    },
-    {
-     "kind": "backtrack",
-     "dx": 13,
-     "dy": 64,
-     "heading": 0,
-     "step": 90,
-     "workingRadius": 73
-    },
-    {
      "kind": "erase",
-     "dx": 13,
-     "dy": 64,
-     "heading": 0,
-     "step": 90,
-     "workingRadius": 73
-    },
-    {
-     "kind": "backtrack",
-     "dx": 12,
-     "dy": 64,
-     "heading": 0,
-     "step": 89,
-     "workingRadius": 73
-    },
-    {
-     "kind": "erase",
-     "dx": 12,
-     "dy": 64,
-     "heading": 0,
-     "step": 89,
-     "workingRadius": 73
-    },
-    {
-     "kind": "backtrack",
-     "dx": 11,
-     "dy": 64,
-     "heading": 0,
-     "step": 88,
-     "workingRadius": 73
-    },
-    {
-     "kind": "erase",
-     "dx": 11,
-     "dy": 64,
-     "heading": 0,
-     "step": 88,
-     "workingRadius": 73
-    },
-    {
-     "kind": "backtrack",
-     "dx": 10,
-     "dy": 64,
-     "heading": 0,
-     "step": 87,
-     "workingRadius": 73
-    },
-    {
-     "kind": "erase",
-     "dx": 10,
-     "dy": 64,
-     "heading": 0,
-     "step": 87,
-     "workingRadius": 73
-    },
-    {
-     "kind": "backtrack",
-     "dx": 9,
-     "dy": 63,
-     "heading": 0,
-     "step": 86,
-     "workingRadius": 74
-    },
-    {
-     "kind": "erase",
-     "dx": 9,
-     "dy": 63,
-     "heading": 0,
-     "step": 86,
-     "workingRadius": 74
-    },
-    {
-     "kind": "backtrack",
-     "dx": 8,
-     "dy": 62,
-     "heading": 0,
-     "step": 85,
-     "workingRadius": 74
-    },
-    {
-     "kind": "erase",
-     "dx": 8,
-     "dy": 62,
-     "heading": 0,
-     "step": 85,
-     "workingRadius": 74
-    },
-    {
-     "kind": "backtrack",
-     "dx": 7,
-     "dy": 61,
-     "heading": 0,
-     "step": 84,
-     "workingRadius": 75
-    },
-    {
-     "kind": "erase",
-     "dx": 7,
-     "dy": 61,
-     "heading": 0,
-     "step": 84,
-     "workingRadius": 75
-    },
-    {
-     "kind": "backtrack",
-     "dx": 7,
-     "dy": 60,
-     "heading": 0,
-     "step": 83,
-     "workingRadius": 75
-    },
-    {
-     "kind": "erase",
-     "dx": 7,
-     "dy": 60,
-     "heading": 0,
-     "step": 83,
-     "workingRadius": 75
-    },
-    {
-     "kind": "backtrack",
-     "dx": 6,
-     "dy": 59,
-     "heading": 0,
-     "step": 82,
-     "workingRadius": 76
-    },
-    {
-     "kind": "erase",
-     "dx": 6,
-     "dy": 59,
-     "heading": 0,
-     "step": 82,
-     "workingRadius": 76
-    },
-    {
-     "kind": "backtrack",
-     "dx": 7,
-     "dy": 58,
-     "heading": 0,
-     "step": 81,
-     "workingRadius": 76
-    },
-    {
-     "kind": "erase",
-     "dx": 7,
-     "dy": 58,
-     "heading": 0,
-     "step": 81,
-     "workingRadius": 76
-    },
-    {
-     "kind": "backtrack",
-     "dx": 8,
-     "dy": 58,
-     "heading": 0,
-     "step": 80,
-     "workingRadius": 76
-    },
-    {
-     "kind": "erase",
-     "dx": 8,
-     "dy": 58,
-     "heading": 0,
-     "step": 80,
-     "workingRadius": 76
-    },
-    {
-     "kind": "backtrack",
-     "dx": 9,
-     "dy": 59,
-     "heading": 0,
-     "step": 79,
-     "workingRadius": 76
-    },
-    {
-     "kind": "erase",
-     "dx": 9,
-     "dy": 59,
-     "heading": 0,
-     "step": 79,
-     "workingRadius": 76
-    },
-    {
-     "kind": "backtrack",
-     "dx": 10,
-     "dy": 60,
-     "heading": 0,
-     "step": 78,
-     "workingRadius": 75
-    },
-    {
-     "kind": "erase",
-     "dx": 10,
-     "dy": 60,
-     "heading": 0,
-     "step": 78,
-     "workingRadius": 75
-    },
-    {
-     "kind": "backtrack",
-     "dx": 11,
-     "dy": 61,
-     "heading": 0,
-     "step": 77,
-     "workingRadius": 75
-    },
-    {
-     "kind": "erase",
-     "dx": 11,
-     "dy": 61,
-     "heading": 0,
-     "step": 77,
-     "workingRadius": 75
-    },
-    {
-     "kind": "backtrack",
-     "dx": 12,
-     "dy": 61,
-     "heading": 0,
-     "step": 76,
-     "workingRadius": 75
-    },
-    {
-     "kind": "erase",
-     "dx": 12,
-     "dy": 61,
-     "heading": 0,
-     "step": 76,
-     "workingRadius": 75
-    },
-    {
-     "kind": "backtrack",
-     "dx": 13,
-     "dy": 61,
-     "heading": 0,
-     "step": 75,
-     "workingRadius": 75
-    },
-    {
-     "kind": "erase",
-     "dx": 13,
-     "dy": 61,
-     "heading": 0,
-     "step": 75,
-     "workingRadius": 75
-    },
-    {
-     "kind": "backtrack",
-     "dx": 14,
-     "dy": 62,
-     "heading": 0,
-     "step": 74,
-     "workingRadius": 74
-    },
-    {
-     "kind": "erase",
-     "dx": 14,
-     "dy": 62,
-     "heading": 0,
-     "step": 74,
-     "workingRadius": 74
-    },
-    {
-     "kind": "backtrack",
-     "dx": 15,
-     "dy": 62,
-     "heading": 0,
-     "step": 73,
-     "workingRadius": 74
-    },
-    {
-     "kind": "erase",
-     "dx": 15,
-     "dy": 62,
-     "heading": 0,
-     "step": 73,
-     "workingRadius": 74
-    },
-    {
-     "kind": "backtrack",
-     "dx": 16,
-     "dy": 61,
-     "heading": 0,
-     "step": 72,
-     "workingRadius": 75
-    },
-    {
-     "kind": "erase",
-     "dx": 16,
-     "dy": 61,
-     "heading": 0,
-     "step": 72,
-     "workingRadius": 75
-    },
-    {
-     "kind": "backtrack",
-     "dx": 17,
-     "dy": 60,
-     "heading": 0,
-     "step": 71,
-     "workingRadius": 75
-    },
-    {
-     "kind": "erase",
-     "dx": 17,
-     "dy": 60,
-     "heading": 0,
-     "step": 71,
-     "workingRadius": 75
-    },
-    {
-     "kind": "backtrack",
-     "dx": 16,
-     "dy": 59,
-     "heading": 0,
-     "step": 70,
-     "workingRadius": 76
-    },
-    {
-     "kind": "erase",
-     "dx": 16,
-     "dy": 59,
-     "heading": 0,
-     "step": 70,
-     "workingRadius": 76
-    },
-    {
-     "kind": "backtrack",
-     "dx": 15,
-     "dy": 58,
-     "heading": 0,
-     "step": 69,
-     "workingRadius": 76
-    },
-    {
-     "kind": "erase",
-     "dx": 15,
-     "dy": 58,
-     "heading": 0,
-     "step": 69,
-     "workingRadius": 76
-    },
-    {
-     "kind": "backtrack",
-     "dx": 15,
-     "dy": 57,
-     "heading": 0,
-     "step": 68,
-     "workingRadius": 77
-    },
-    {
-     "kind": "erase",
-     "dx": 15,
-     "dy": 57,
-     "heading": 0,
-     "step": 68,
-     "workingRadius": 77
-    },
-    {
-     "kind": "backtrack",
-     "dx": 14,
-     "dy": 56,
-     "heading": 0,
-     "step": 67,
-     "workingRadius": 77
-    },
-    {
-     "kind": "erase",
-     "dx": 14,
-     "dy": 56,
-     "heading": 0,
-     "step": 67,
-     "workingRadius": 77
-    },
-    {
-     "kind": "backtrack",
-     "dx": 15,
-     "dy": 55,
-     "heading": 0,
-     "step": 66,
-     "workingRadius": 78
-    },
-    {
-     "kind": "erase",
-     "dx": 15,
-     "dy": 55,
-     "heading": 0,
-     "step": 66,
-     "workingRadius": 78
-    },
-    {
-     "kind": "backtrack",
-     "dx": 16,
-     "dy": 55,
-     "heading": 0,
-     "step": 65,
-     "workingRadius": 78
-    },
-    {
-     "kind": "erase",
-     "dx": 16,
-     "dy": 55,
-     "heading": 0,
-     "step": 65,
-     "workingRadius": 78
-    },
-    {
-     "kind": "backtrack",
-     "dx": 17,
-     "dy": 56,
-     "heading": 0,
-     "step": 64,
-     "workingRadius": 77
-    },
-    {
-     "kind": "erase",
-     "dx": 17,
-     "dy": 56,
-     "heading": 0,
-     "step": 64,
-     "workingRadius": 77
-    },
-    {
-     "kind": "backtrack",
-     "dx": 17,
-     "dy": 57,
-     "heading": 0,
-     "step": 63,
-     "workingRadius": 77
-    },
-    {
-     "kind": "erase",
-     "dx": 17,
-     "dy": 57,
-     "heading": 0,
-     "step": 63,
-     "workingRadius": 77
-    },
-    {
-     "kind": "backtrack",
      "dx": 18,
      "dy": 58,
+     "walkDx": 18,
+     "walkDy": 58,
      "heading": 0,
      "step": 62,
-     "workingRadius": 76
-    },
-    {
-     "kind": "erase",
-     "dx": 18,
-     "dy": 58,
-     "heading": 0,
-     "step": 62,
-     "workingRadius": 76
+     "workingRadius": 76,
+     "cellX": 148,
+     "cellY": 36
     },
     {
      "kind": "backtrack",
-     "dx": 19,
-     "dy": 59,
+     "walkDx": 19,
+     "walkDy": 59,
      "heading": 0,
      "step": 61,
      "workingRadius": 76
