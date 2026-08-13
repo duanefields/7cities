@@ -308,7 +308,7 @@ desynchronizes every later draw.
 The bounds differ for a paired command too, in two places that are easy to miss — `xLower` becomes
 `$4E + radius` and `yUpper` becomes `$0185 - (3 * radius + radius / 8)`, reserving room to the left
 and below for the partner. `LandMassPhase.bounds` models both; an earlier version of that code
-modelled neither.
+modeled neither.
 
 `$0ACB` is worth distinguishing from `$22B4`: it takes **one** draw and reduces it modulo the limit
 by repeated subtraction, self-modifying the operand of its own `CMP` and `SBC` at `$0AD9`, and
@@ -2065,3 +2065,28 @@ claim from the artifact itself before overturning a prior conclusion — reading
    `$C465` is a rolling checksum and `$C44D` a counter, this is most likely
    verification — but it is the only routine that touches the loaded data in
    bulk, so read it to the end before looking further afield.
+
+#### The walker's validation and unwind
+
+`$19CC` computes `($14 * $14 + $15 * $15) / $21` — a distance metric over the current radius.
+`$19EE` wraps it: recompute the radius via `$178A`, take `|metric - radius|`, and return carry set
+when that is 3 or more. So it answers **"is this point on the coastline circle"**, with a tolerance
+of 3.
+
+`$1A00` is the full candidate test: reject unless `$19EE` accepts, then scan the mask horizontally
+from `$0C - $0A` to `$0C` and again from `$0C + 1` to `$0C + 1 + $0A`, rejecting if any bit is
+already set. A point must therefore be at roughly the right radius *and* have about ten cells of
+clear water either side.
+
+**`$1B3B` clears a mask bit** — `LDA $13D3,X / EOR #$FF / AND ($29),Y / STA ($29),Y`. Land is not
+write-once: the walker erases what it drew as it unwinds. An earlier version of `LandMask` asserted
+the original had no way to clear a bit, which was wrong; `$1B3B` simply had not been read yet.
+
+`$1A48` erases the current cell and then, in one branch, **patches `$1B38` to `$60` (an `RTS`),
+calls `$1A69`, and patches it back to `$4C` (a `JMP`)** — temporarily disabling a routine for the
+duration of one call. That is the third distinct self-modification in this phase, after `$22B4`'s
+bounds and `$1657`'s `INC`/`DEC`, and like them it has to survive into the port rather than being
+tidied into a flag.
+
+`$1A69` steps left and up looking for the edge of existing land, then rewrites the heading `$1A`
+from comparisons against `$22` and `$23`/`$24`. It is the wall-following half of the walk.

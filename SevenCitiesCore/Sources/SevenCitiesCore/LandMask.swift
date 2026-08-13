@@ -82,12 +82,23 @@ public struct LandMask: Sendable, Equatable {
         return bytes[offset] & mask != 0
     }
 
-    /// Sets a cell (`$1728`: `ORA $13D3,X / STA ($29),Y`). Only ever sets — the
-    /// original has no routine that clears a mask bit.
+    /// Sets a cell (`$1728`: `ORA $13D3,X / STA ($29),Y`).
     public mutating func setLand(x: UInt8, y: Int) {
         guard Self.isAddressable(row: y) else { return }
         let (offset, mask) = Self.address(x: x, y: y)
         bytes[offset] |= mask
+    }
+
+    /// Clears a cell (`$1B3B`: `LDA $13D3,X / EOR #$FF / AND ($29),Y`).
+    ///
+    /// The coastline walker is a backtracking search and erases what it drew
+    /// when it unwinds, so land is not write-once. An earlier version of this
+    /// file asserted the original had no way to clear a bit, which was simply
+    /// wrong — `$1B3B` had not been read yet.
+    public mutating func clearLand(x: UInt8, y: Int) {
+        guard Self.isAddressable(row: y) else { return }
+        let (offset, mask) = Self.address(x: x, y: y)
+        bytes[offset] &= ~mask
     }
 
     /// Number of land cells within the map proper.
