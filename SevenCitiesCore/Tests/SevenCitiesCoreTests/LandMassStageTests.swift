@@ -141,3 +141,23 @@ func stageRunsUnaided(index: Int) throws {
 
 
 
+
+/// Writes the finished masks out as raw bitmaps so they can be looked at.
+///
+/// Diagnostic only, and off unless asked for: set `MASK_DUMP_DIR` to somewhere
+/// outside the repo. The masks are generated map data.
+///
+///     MASK_DUMP_DIR=/tmp swift test --filter dumpMasks
+@Test("diagnostic: dump finished masks",
+      .enabled(if: ProcessInfo.processInfo.environment["MASK_DUMP_DIR"] != nil))
+func dumpMasks() throws {
+    let dir = ProcessInfo.processInfo.environment["MASK_DUMP_DIR"]!
+    for seed: UInt16 in [0x1234, 0xBEEF, 0x0001] {
+        for config in [0, 2] {
+            let run = try LandMassStage.run(config: config, seed: seed)
+            let name = String(format: "mask_%04X_%d.bin", seed, config)
+            try Data(run.mask.mapBytes).write(to: URL(fileURLWithPath: dir + "/" + name))
+            print("  \(name): \(run.mask.landCells) land cells, \(run.islands.count) scattered islands")
+        }
+    }
+}

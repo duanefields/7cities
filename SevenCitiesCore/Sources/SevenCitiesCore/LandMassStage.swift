@@ -320,8 +320,13 @@ public enum LandMassStage {
     /// Places and walks the satellite that goes with a continent (`$2655`).
     ///
     /// It goes *inside* the continent, in the water its outline still encloses,
-    /// which is the whole trick: the flood fill that follows is seeded from the
-    /// continent's centre and swallows both.
+    /// which is the whole trick — and the trick is not what the name says.
+    /// The flood fill that follows is seeded from the continent's centre and
+    /// spreads through everything it can reach, which is everything except what
+    /// this little ring encloses. The ring is land surrounded by land and
+    /// disappears; its interior stays water. **This is the World Maker's inland
+    /// lake generator**, and every continent gets exactly one, 20 to 43 cells.
+    /// Measured across six generated worlds; see NOTES.md.
     private static func placeSatellite(centreX: UInt8, centreY: UInt16,
                                        rng: inout WorldMakerRNG,
                                        mask: inout LandMask, pool: inout SeedPool,

@@ -2360,8 +2360,24 @@ fixture — hooked on `$1728` and `$1B3B` — shows no trace of the interior at 
 `$1666` it finds `$54` clear, patches a command into `$0200` and arranges the walk for the satellite
 that goes with it; that walk finds `$54` set and reaches `$168D JMP $194A`. The satellite sits inside
 the continent's outline, so that single flood fills both, seeded from the continent's centre. Six
-walks produce four fills. The `$1666` branch and `$2629` behind it are still unported — the fixture
-supplies the order instead.
+walks produce four fills.
+
+### The "satellite" is a lake
+
+Rendering the finished mask settles what `$2629` is actually for, and it is not what the name in this
+port suggests. The radius-3 landmass it places sits *inside* the continent's outline, in water the
+flood fill has not reached yet. When the fill then runs from the continent's centre it spreads through
+everything it can reach — everything except what that little ring encloses. The ring itself is land
+surrounded by land and so invisible. What survives is its interior: **a small inland lake, 20 to 43
+cells, one per continent, every time.**
+
+Measured across six generated worlds: two continents give two lakes, one continent gives one, with no
+exceptions, and each lake's position is the satellite's position carried through the mirror. Since the
+port's masks match the original's digests bit for bit, the original does exactly the same.
+
+So `$2629` is the World Maker's inland-water generator, reached through the coastline walker. The code
+in this port still calls it a satellite, because that is what `$2794` literally walks — but the effect
+is a lake, and it is worth knowing before terrain gets ported on top of it.
 
 **And the map gets mirrored partway through.** `$4500 JSR $1C89` flips two independent coins. On the
 first it reverses all 256 bits of every row (`LSR A / ROL` through a scratch buffer at `$9100`,
