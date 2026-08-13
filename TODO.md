@@ -46,7 +46,13 @@ engineering record; this holds the work.
       wave files each radius-3 island into one or the other depending on whether
       its row is below 219, and also writes `$03DC`. Something downstream reads
       these — possibly the village or gold placement.
-- [ ] **Transliterate the coastline walker at `$15AD`.** The one thing between
+- [ ] **Finish the coastline walker.** Mostly done: the satellite fill matches
+      the original exactly and the continent's recorded prefix passes. The island
+      matches 79 of 93 plots, with the deep unwind reproducing event for event
+      but stopping one step early — the suspect is the unimplemented
+      `$16EC CPX $4F` guard. Then `$194A`, the interior flood fill, which is not
+      started. See NOTES.md for the rung table.
+- [ ] ~~**Transliterate the coastline walker at `$15AD`.**~~ superseded by the above. The one thing between
       here and a complete land-mass phase. A state machine (`$1A` = state,
       `$46` = step counter wrapping at 201) emitting 12-byte segment records,
       with a self-modified `INC`/`DEC` opcode at `$1657`. It has only one call

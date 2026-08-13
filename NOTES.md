@@ -2316,3 +2316,41 @@ port needs both generators; it does not need to snapshot them per step.
 
 The retry loop at `$1564` is also live, not dead code: measured over one continent, stepper calls
 consumed one draw 1,106 times, two draws 299 times and three draws once.
+
+### Walker port status
+
+The outline trace is ported and graded against three fills captured from the original
+(`walker_reference.json`, via `tools/walker_reference.py`).
+
+| Rung       | Plots | Backtracks | State                                    |
+| :--------- | ----: | ---------: | :--------------------------------------- |
+| satellite  |    23 |          0 | **exact**                                |
+| island     |    93 |         13 | 79 of 93; the unwind itself is exact     |
+| continent  |  150* |         30 | **passing** (recorded prefix)            |
+
+\* a prefix of 1,026 events; see the fixture's `truncated` flag.
+
+**Where the island stops.** The deep unwind at plot 79 reproduces event for event — eleven erases,
+`(189,4)` back through `(195,13)`, in identical order — so the ring contents and the erase order are
+right. Only the stopping point differs: the original resumes at `(196,12)`, the port at `(195,12)`,
+one unwind short. The prime suspect is `$16EC CPX $4F / BEQ $16E7`, which compares the ring index
+against `$4F` (set at `$2507` to `$46 + 1` when the search began) and takes a different exit —
+`PLA / PLA / JMP $1A48` — on unwinding all the way back to the search's own starting slot. That
+guard is not implemented.
+
+Ported and verified so far: offset resolution `$13E0`, the steppers `$1555`/`$1583`, the shape
+parameters `$1731`, radius modulation `$178A`/`$17A6`, the distance metric `$19CC`, candidate
+validation `$1A00`, the step evaluator `$1476` with its 3x3 scan, the candidate generator `$24FD`,
+the direction mapping `$25B9`, the main loop `$15AD`, the closure `$1690` and the span fill `$1648`.
+
+Still unported: `$194A`, the interior flood fill. An outline without it is a coastline with nothing
+inside.
+
+Three things about this code that no amount of reading the disassembly revealed, all found by
+diffing against traces:
+
+- A proposal that moves nothing **re-proposes without plotting** (`$25E6`). Treating it as an
+  iteration duplicates the cell.
+- The closure at `$1690` fires on `dx < 2`, **not** on `dx` reaching zero.
+- The unwind **erases before it restores** (`$16F0` precedes `$16F3`), so the cell cleared is the
+  one being stood on.

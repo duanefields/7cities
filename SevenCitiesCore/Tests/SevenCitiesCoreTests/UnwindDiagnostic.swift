@@ -5,7 +5,7 @@ import Testing
 
 /// Prints the port's plot/erase sequence so it can be lined up against the
 /// original's. Diagnostic only — enable when an outline diverges.
-@Test("diagnostic: island plot and erase sequence")
+@Test("diagnostic: island plot and erase sequence", .disabled("diagnostic; enable when an outline diverges"))
 func dumpIslandSequence() throws {
     let url = try #require(
         Bundle.module.url(forResource: "walker_reference", withExtension: "json",
@@ -33,7 +33,7 @@ func dumpIslandSequence() throws {
     _ = CoastlineWalker.traceOutline(&s, in: &mask,
         plot: { x, y in log.append("plot   (\(x),\(y))") },
         erase: { x, y in log.append("erase  (\(x),\(y))") })
-    for (i, line) in log.enumerated() where i >= 86 && i < 100 {
+    for (i, line) in log.enumerated() where i >= 70 && i < 100 {
         print("  \(i) \(line)")
     }
 }
