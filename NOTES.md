@@ -2559,6 +2559,28 @@ because the stubs sit above it.
 That is the difference between the remaining phases costing what the land-mass phase cost and costing
 several times more, so it is worth building before terrain.
 
+**Built, and it works.** `tools/vdrive.py` replaces the IEC layer outright rather than simulating it:
+`$1243`, `$12E6`, `$126C`, `$12F4`, `$1329`, `$1305` and `$1314` all become `RTS`, along with the
+line pokes underneath them, and Python does the work. The only subtlety is `$13BC`, the line
+*reader*, which has to come back non-negative for the one wait that survives (`$10E6`). Finding the
+receive routine took a wrong guess first: `$126C` looks like it, but it sends — the real receiver is
+`$1329`, which shifts `$DD00` into `$C9`.
+
+With it attached, `tools/wm_disk.py` runs the World Maker straight through the land-mass phase and on
+into writing the map: **200 sectors, tracks 22 to 34, 51,200 bytes, exactly the map.** Decoded with
+`map_preview`'s deblocker — a sector is a 32x16 tile block, and only in write order, not by track and
+sector index — it is **identical to the Swift port's mask, zero cells differing**. The original 6502
+and the port now agree on a real map disk.
+
+Two things that came out of it. The nibbles on that disk are only `0` and `$B` — deep water and plain
+— so the band writer runs *before* terrain and the terrain phases rewrite what it laid down. And the
+land count on the disk is 31,712, the port's figure for the same seed.
+
+What is not yet established is how long the terrain phases take. 900 million interpreted instructions
+took 820 seconds and left the generator still inside `$0B16`, so either it needs several times that
+or it is looping on something the stubs get wrong. That is the next thing to find out, and it is a
+question about the harness rather than about the port.
+
 ### Where the land-mass phase stands
 
 **Ported, all three configurations.** From a seed to the original's finished mask, checked at both of

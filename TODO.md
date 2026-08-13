@@ -66,12 +66,15 @@ engineering record; this holds the work.
 - [x] ~~**Port the walk's `$50` mode (`$1860`, `$186C`), which builds paired
       continents.**~~ **Done**, along with the isthmus at `$17C8` and the recovery
       at `$1A48` that it turned out to need. See NOTES.md.
-- [ ] **Build a virtual 1541 for `sim6502`.** The unblocking move for everything
-      after the land-mass phase. The World Maker writes the map with direct block
-      access only — `B-P`, `U2`, a 256-byte buffer per channel and the error
-      channel — so stubbing the hand-rolled IEC layer at `$1241`/`$123E`/`$12E6`/
-      `$12F4`/`$1314` and answering those three commands from a d64 is enough. No
-      serial timing required. See NOTES.md for the captured command stream.
+- [x] ~~**Build a virtual 1541 for `sim6502`.**~~ **Done** (`tools/vdrive.py`).
+      The World Maker now runs past the land-mass phase and writes a real map
+      disk — 200 sectors, tracks 22 to 34 — whose land and water match the Swift
+      port's mask exactly. `tools/wm_disk.py` drives it.
+- [ ] **Find out why the terrain phases do not finish.** 900 million interpreted
+      instructions (820s) leave the generator still inside `$0B16`. Either the
+      phases need several times that, or one of `vdrive.py`'s stubs has it in a
+      loop. Instrument which phase entries it reaches and how the distinct-PC set
+      grows over time before assuming either.
 - [ ] **Confirm the band structure.** The finished map is assembled on disk —
       51,200 bytes of nibbles will not fit in a C64 — and `$2C14` bounds its
       row counter at 208, which is very likely the band height. Still unknown:
