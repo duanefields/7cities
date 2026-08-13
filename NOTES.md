@@ -2529,6 +2529,36 @@ why it stayed hidden until the pair was ported. The same is true of `$1880 STX $
 marks the ring unwrapped, and without that the unwind runs past the slot where the original stopped
 and off into records left over from before the isthmus.
 
+### What the World Maker does next, and what it takes to follow it
+
+The land-mass phase ends `JMP $0C89`, and `$0C89` starts by printing **"INSERT A 'BLANK' DISK IN
+DRIVE #1"**. From there the map goes to disk a band at a time: `$0C9B` unpacks the 1-bit mask into
+4-bit nibbles — `ASL` on its *own operand bytes*, using the instruction stream as scratch — and the
+result is written out. Every phase after the land mass is interleaved with that, at band granularity.
+
+So the interpreter stops there, and it stops immediately: two calls past `PHASE_DONE` it is in
+`$13BC`, debouncing `$DD00`. Measured, 60 million steps and 17 million reads of that one address.
+
+**But the protocol turns out to be trivial.** Stubbing the IEC layer — `$1241` LISTEN, `$123E` TALK,
+`$12E6` secondary address, `$12F4` send, `$1314` UNLISTEN, all hand-rolled reimplementations of the
+Kernal routines — and watching what would have gone down the wire shows the World Maker using nothing
+but **direct block access**:
+
+```text
+    B-P: 5 0            set the buffer pointer, channel 5, offset 0
+    <256 bytes>         the band, on channel $65
+    U2: 5 0 22 17       write buffer 5 to track 22, sector 17
+    TALK                read the error channel
+```
+
+No files, no directory, no BAM allocation. A virtual 1541 good enough to run the rest of the World
+Maker therefore needs three DOS commands (`B-P`, `U1`, `U2`), a 256-byte buffer per channel, a d64
+image behind it and `00, OK,00,00` on the error channel — and it needs none of the serial timing,
+because the stubs sit above it.
+
+That is the difference between the remaining phases costing what the land-mass phase cost and costing
+several times more, so it is worth building before terrain.
+
 ### Where the land-mass phase stands
 
 **Ported, all three configurations.** From a seed to the original's finished mask, checked at both of
