@@ -485,7 +485,8 @@ Enough of the pieces are now identified to describe the mechanism:
 | `$1B4C` | test the mask bit at column `$14` (`$1B4E` is the entry with X already set)   |
 | `$13E0` | address a point **relative to the current heading**, negating by `$1A`        |
 | `$1728` | `$13E0` then `ORA $13D3,X / STA ($29),Y` — **plot**, the only mask write      |
-| `$16BB` | pointer to `$9100 + $46 * 12` — the record ring, 201 entries of 12 bytes      |
+| `$16BB` | pointer to `$9100 + $46 * 12` — the walker's record ring                      |
+| `$194A` | scanline flood fill of the traced outline, using `$9100` with a 3-byte stride  |
 | `$1476` | evaluate a candidate step; carry set rejects it                               |
 | `$1648` | span fill between `$15` and `$B0`, with the self-modified `INC`/`DEC`         |
 
@@ -2181,3 +2182,30 @@ That also gives an incremental order for porting the walker, easiest first:
 
 The satellite exercises the walk, the plot path and the candidate tests with **no backtracking at
 all**, so it isolates the parts that can be got right before the undo ring matters.
+
+
+#### `$194A` is the interior fill, and `$9100` is shared
+
+The walker traces an outline; it does not fill it. `$194A` does that, and it is a **scanline flood
+fill**:
+
+```text
+$194E  DEC $22 while the cell is land          ; find the left edge
+$1961  INC $22 while it is not                 ; find the span start
+$1976  fill leftwards with ORA $13D3,X / STA ($29),Y until a set bit stops it
+$198D  seed the row above ($29 -= $20) and below (two $289D), guarded by $1900
+$19AE  pop the next span off $9100 and repeat until $46 wraps to $FF
+```
+
+So the phase is two stages per landmass: **trace a perturbed circle, then flood its interior**.
+
+**The region at `$9100` is shared, with different record sizes.** `$16BF` computes
+`$9100 + $46 * Y` and the stride comes from the caller: `$16BB` passes 12 for the walker's undo
+records, while `$19B0` passes 3 for the flood fill's span stack of `(x, pointer low, pointer
+high)`. An earlier note here called it "a ring of 201 twelve-byte records" without qualification;
+that is only true of the walker's use of it.
+
+This is also where `$1900` earns its bounds guard. The flood fill moves the row pointer up and down
+by whole rows, so it is the routine most likely to walk off the buffer — which explains why it is
+called 68 times for an island and 530 times for a satellite, and not at all during a continent's
+outline trace.
