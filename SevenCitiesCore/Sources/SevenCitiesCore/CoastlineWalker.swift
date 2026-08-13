@@ -263,3 +263,71 @@ extension CoastlineWalker {
         return true
     }
 }
+
+// MARK: - The step evaluator
+
+extension CoastlineWalker {
+
+    /// `$13DA`, read as a signed table of nine direction pairs.
+    ///
+    /// The bytes are `01 FF 00 00 FF 01`, and `$1476` indexes them twice — once
+    /// at `2 * (direction mod 3) + horizontalBase` for x, once at
+    /// `2 * (direction div 3) + verticalBase` for y. So `direction` 0...8
+    /// enumerates a 3x3 neighborhood of `+1`, `0`, `-1` on each axis, with the
+    /// bases rotating it into the current quadrant.
+    static let directionTable: [UInt8] = [0x01, 0xFF, 0x00, 0x00, 0xFF, 0x01]
+
+    /// Proposes the candidate for one of the nine directions (`$1476`).
+    ///
+    /// Writes ``WalkerState/candidate`` and reports whether it is worth testing
+    /// at all. The early refusal at `$14AA` only applies when `$0E` is set and
+    /// the heading is even, and rejects candidates whose x has fallen below 2 —
+    /// keeping the walk off the left edge.
+    static func propose(_ s: inout WalkerState, direction: UInt8,
+                        horizontalBase: UInt8, verticalBase: UInt8,
+                        edgeGuard: Bool) -> Bool {
+        // $1476: direction mod 3, by repeated subtraction as the original does.
+        var horizontal = direction
+        if horizontal >= 3 { horizontal &-= 3 }
+        if horizontal >= 3 { horizontal &-= 3 }
+        let xIndex = Int((horizontal << 1) &+ horizontalBase)
+        s.candidate.dx = directionTable[xIndex] &+ s.offset.dx
+
+        // $1491: direction div 3, counted rather than divided.
+        var vertical: UInt8 = 0
+        if direction >= 3 { vertical += 1 }
+        if direction >= 6 { vertical += 1 }
+        let yIndex = Int((vertical << 1) &+ verticalBase)
+        s.candidate.dy = directionTable[yIndex] &+ s.offset.dy
+
+        // $14AA: refuse near the left edge, even headings only.
+        if edgeGuard && s.heading & 1 == 0 && s.candidate.dx < 2 { return false }
+        return true
+    }
+
+    /// Where the 3x3 scan starts, given a resolved candidate cell (`$14C0`).
+    ///
+    /// The original decrements both the column and the row *before* `$141C`
+    /// builds the row pointer, so the block runs down and right from one cell
+    /// up and left of the candidate — it surrounds the candidate rather than
+    /// being anchored on it.
+    static func scanOrigin(column: UInt8, row: Int) -> (column: UInt8, row: Int) {
+        (column &- 1, row - 1)
+    }
+
+    /// Counts land in a 3x3 block (`$14E0`).
+    ///
+    /// Nine cells accumulated into the counters at `$35`, three across then a
+    /// row down via `$289D`, three times. Takes the origin rather than deriving
+    /// it so the counting and the origin arithmetic can fail separately.
+    static func neighborCount(fromColumn column: UInt8, row: Int,
+                              in mask: LandMask) -> Int {
+        var count = 0
+        for dy in 0..<3 {
+            for dx in 0..<3 where mask.isLand(x: column &+ UInt8(dx), y: row + dy) {
+                count += 1
+            }
+        }
+        return count
+    }
+}
