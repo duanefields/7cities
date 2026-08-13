@@ -61,3 +61,73 @@ public enum CoastlineWalker {
         return (x, Int(y))
     }
 }
+
+// MARK: - The per-step advance
+
+extension CoastlineWalker {
+
+    /// Advances one axis by one cell, or declines to (`$1555` and `$1583`).
+    ///
+    /// These are the walk's only consumers of randomness, so they set the whole
+    /// sequence — and they consume a *variable* number of draws, because the
+    /// retry at `$1564` redraws while a value comes up `$FF`. Measured over one
+    /// continent, calls took one draw 1,106 times, two 299 times and three once.
+    /// A port that lands on the right coordinate having burned a different
+    /// number of draws desynchronizes everything after it.
+    ///
+    /// The threshold decides: a draw at or above ``WalkerState/threshold``
+    /// advances, below it the step is declined. Since `$18` grows with the
+    /// coordinate, an axis becomes progressively less willing to move — which is
+    /// what curves the walk.
+    ///
+    /// The direction comes from the signed table at `$13DA` (`01 FF 00 00 FF
+    /// 01`) indexed by `heading & 1`, and `EOR #$FE` flips it, turning `$01`
+    /// into `$FF` and back. One table serves both directions.
+    ///
+    /// - Returns: whether the coordinate moved.
+    @discardableResult
+    static func advance(_ state: inout WalkerState, axis: Axis) -> Bool {
+        // $1555 / $1583: draw, then compare against the threshold.
+        let draw = state.rng.next()
+        var flip: UInt8 = 0
+
+        if draw < state.threshold {
+            // $1560 / $158E: the bias path is only taken when `$19` disagrees
+            // with the routine, and the caller always picks the matching one,
+            // so in the walk this simply declines the step. Transcribed as the
+            // original branches rather than simplified away, because a future
+            // caller could pick differently.
+            let disagrees = (axis == .x) ? (state.axis != 0) : (state.axis == 0)
+            guard disagrees else { return false }
+
+            var retry: UInt8
+            repeat { retry = state.rng.next() } while retry == 0xFF
+            let bias = (axis == .x) ? state.biasX : state.biasY
+            if retry < bias { return false }
+            flip = 0xFE
+        }
+
+        // $1573 / $159D: signed step, sign flipped when `flip` is $FE.
+        //
+        // The two steppers index *different* tables. `$1555` reads `$13DA`
+        // (`01 FF`), `$1583` reads `$13DE` (`FF 01`) — the same pair reversed,
+        // four bytes further along. Using one for both would mirror every
+        // vertical step.
+        let table = (axis == .x) ? signedStep : signedStepVertical
+        let delta = table[Int(state.heading & 1)] ^ flip
+        switch axis {
+        case .x: state.stepped.dx = state.stepped.dx &+ delta
+        case .y: state.stepped.dy = state.stepped.dy &+ delta
+        }
+        return true
+    }
+
+    /// Which coordinate a step advances.
+    enum Axis { case x, y }
+
+    /// `$13DA`, the signed direction table: `+1` and `-1`, indexed by
+    /// `heading & 1`. `$1583` reads it four bytes further along at `$13DE`,
+    /// which is the same pair in the opposite order.
+    static let signedStep: [UInt8] = [0x01, 0xFF]
+    static let signedStepVertical: [UInt8] = [0xFF, 0x01]
+}

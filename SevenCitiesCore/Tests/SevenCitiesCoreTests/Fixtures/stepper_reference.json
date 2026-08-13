@@ -8,8 +8,9 @@
    "steps": [
     {
      "axis": "x",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 8,
+     "rngLow": 12,
      "threshold": 0,
      "axisSelect": 0,
      "biasX": 0,
@@ -19,13 +20,14 @@
      "inY": 3,
      "outX": 1,
      "outY": 3,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 12,
+     "rngLowAfter": 21
     },
     {
      "axis": "y",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 12,
+     "rngLow": 21,
      "threshold": 255,
      "axisSelect": 0,
      "biasX": 0,
@@ -35,13 +37,14 @@
      "inY": 3,
      "outX": 1,
      "outY": 4,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 74,
+     "rngLowAfter": 136
     },
     {
      "axis": "x",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 74,
+     "rngLow": 136,
      "threshold": 64,
      "axisSelect": 0,
      "biasX": 0,
@@ -51,13 +54,14 @@
      "inY": 4,
      "outX": 2,
      "outY": 4,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 136,
+     "rngLowAfter": 187
     },
     {
      "axis": "y",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 136,
+     "rngLow": 187,
      "threshold": 0,
      "axisSelect": 0,
      "biasX": 0,
@@ -67,13 +71,14 @@
      "inY": 4,
      "outX": 2,
      "outY": 3,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 187,
+     "rngLowAfter": 235
     },
     {
      "axis": "x",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 187,
+     "rngLow": 235,
      "threshold": 128,
      "axisSelect": 0,
      "biasX": 0,
@@ -83,13 +88,14 @@
      "inY": 3,
      "outX": 3,
      "outY": 3,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 235,
+     "rngLowAfter": 147
     },
     {
      "axis": "y",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 235,
+     "rngLow": 147,
      "threshold": 0,
      "axisSelect": 0,
      "biasX": 0,
@@ -99,13 +105,14 @@
      "inY": 3,
      "outX": 3,
      "outY": 2,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 147,
+     "rngLowAfter": 19
     },
     {
      "axis": "y",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 147,
+     "rngLow": 19,
      "threshold": 128,
      "axisSelect": 1,
      "biasX": 0,
@@ -115,13 +122,14 @@
      "inY": 2,
      "outX": 3,
      "outY": 1,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 19,
+     "rngLowAfter": 210
     },
     {
      "axis": "x",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 19,
+     "rngLow": 210,
      "threshold": 255,
      "axisSelect": 1,
      "biasX": 0,
@@ -131,13 +139,14 @@
      "inY": 1,
      "outX": 2,
      "outY": 1,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 134,
+     "rngLowAfter": 46
     },
     {
      "axis": "y",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 134,
+     "rngLow": 46,
      "threshold": 64,
      "axisSelect": 1,
      "biasX": 0,
@@ -147,13 +156,14 @@
      "inY": 1,
      "outX": 2,
      "outY": 0,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 46,
+     "rngLowAfter": 165
     },
     {
      "axis": "x",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 46,
+     "rngLow": 165,
      "threshold": 0,
      "axisSelect": 1,
      "biasX": 0,
@@ -163,13 +173,14 @@
      "inY": 0,
      "outX": 3,
      "outY": 0,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 165,
+     "rngLowAfter": 27
     },
     {
      "axis": "y",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 165,
+     "rngLow": 27,
      "threshold": 0,
      "axisSelect": 1,
      "biasX": 0,
@@ -179,13 +190,14 @@
      "inY": 0,
      "outX": 3,
      "outY": 1,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 27,
+     "rngLowAfter": 162
     },
     {
      "axis": "x",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 27,
+     "rngLow": 162,
      "threshold": 255,
      "axisSelect": 1,
      "biasX": 0,
@@ -195,13 +207,14 @@
      "inY": 1,
      "outX": 4,
      "outY": 1,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 147,
+     "rngLowAfter": 174
     },
     {
      "axis": "y",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 147,
+     "rngLow": 174,
      "threshold": 64,
      "axisSelect": 1,
      "biasX": 0,
@@ -211,13 +224,14 @@
      "inY": 1,
      "outX": 4,
      "outY": 2,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 174,
+     "rngLowAfter": 134
     },
     {
      "axis": "x",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 174,
+     "rngLow": 134,
      "threshold": 0,
      "axisSelect": 1,
      "biasX": 0,
@@ -227,13 +241,14 @@
      "inY": 2,
      "outX": 3,
      "outY": 2,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 134,
+     "rngLowAfter": 228
     },
     {
      "axis": "y",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 134,
+     "rngLow": 228,
      "threshold": 128,
      "axisSelect": 1,
      "biasX": 0,
@@ -243,13 +258,14 @@
      "inY": 2,
      "outX": 3,
      "outY": 2,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 228,
+     "rngLowAfter": 14
     },
     {
      "axis": "x",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 228,
+     "rngLow": 14,
      "threshold": 0,
      "axisSelect": 1,
      "biasX": 0,
@@ -259,13 +275,14 @@
      "inY": 2,
      "outX": 2,
      "outY": 2,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 14,
+     "rngLowAfter": 95
     },
     {
      "axis": "y",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 95,
+     "rngLow": 229,
      "threshold": 128,
      "axisSelect": 1,
      "biasX": 0,
@@ -275,13 +292,14 @@
      "inY": 2,
      "outX": 2,
      "outY": 3,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 229,
+     "rngLowAfter": 204
     },
     {
      "axis": "x",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 229,
+     "rngLow": 204,
      "threshold": 255,
      "axisSelect": 1,
      "biasX": 0,
@@ -291,13 +309,14 @@
      "inY": 3,
      "outX": 3,
      "outY": 3,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 246,
+     "rngLowAfter": 30
     },
     {
      "axis": "y",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 119,
+     "rngLow": 184,
      "threshold": 64,
      "axisSelect": 1,
      "biasX": 0,
@@ -307,13 +326,14 @@
      "inY": 1,
      "outX": 1,
      "outY": 2,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 184,
+     "rngLowAfter": 217
     },
     {
      "axis": "x",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 184,
+     "rngLow": 217,
      "threshold": 255,
      "axisSelect": 1,
      "biasX": 0,
@@ -323,13 +343,14 @@
      "inY": 2,
      "outX": 2,
      "outY": 2,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 62,
+     "rngLowAfter": 61
     },
     {
      "axis": "x",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 48,
+     "rngLow": 98,
      "threshold": 0,
      "axisSelect": 0,
      "biasX": 0,
@@ -339,13 +360,14 @@
      "inY": 2,
      "outX": 1,
      "outY": 2,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 98,
+     "rngLowAfter": 213
     },
     {
      "axis": "y",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 98,
+     "rngLow": 213,
      "threshold": 255,
      "axisSelect": 0,
      "biasX": 0,
@@ -355,12 +377,13 @@
      "inY": 2,
      "outX": 1,
      "outY": 3,
-     "rngHighAfter": 201,
+     "rngHighAfter": 174,
      "rngLowAfter": 35
     },
     {
      "axis": "x",
-     "rngHigh": 201,
+     "generator": "$0A9D",
+     "rngHigh": 174,
      "rngLow": 35,
      "threshold": 64,
      "axisSelect": 0,
@@ -371,13 +394,14 @@
      "inY": 3,
      "outX": 2,
      "outY": 3,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 35,
+     "rngLowAfter": 176
     },
     {
      "axis": "y",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 35,
+     "rngLow": 176,
      "threshold": 255,
      "axisSelect": 0,
      "biasX": 0,
@@ -387,13 +411,14 @@
      "inY": 3,
      "outX": 2,
      "outY": 4,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 83,
+     "rngLowAfter": 128
     },
     {
      "axis": "x",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 83,
+     "rngLow": 128,
      "threshold": 128,
      "axisSelect": 0,
      "biasX": 0,
@@ -403,13 +428,14 @@
      "inY": 4,
      "outX": 3,
      "outY": 4,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 128,
+     "rngLowAfter": 134
     },
     {
      "axis": "y",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 128,
+     "rngLow": 134,
      "threshold": 0,
      "axisSelect": 0,
      "biasX": 0,
@@ -419,13 +445,14 @@
      "inY": 4,
      "outX": 3,
      "outY": 3,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 134,
+     "rngLowAfter": 171
     },
     {
      "axis": "y",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 171,
+     "rngLow": 241,
      "threshold": 192,
      "axisSelect": 1,
      "biasX": 0,
@@ -435,13 +462,14 @@
      "inY": 3,
      "outX": 3,
      "outY": 3,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 241,
+     "rngLowAfter": 19
     },
     {
      "axis": "x",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 241,
+     "rngLow": 19,
      "threshold": 255,
      "axisSelect": 1,
      "biasX": 0,
@@ -451,13 +479,14 @@
      "inY": 3,
      "outX": 2,
      "outY": 3,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 40,
+     "rngLowAfter": 45
     },
     {
      "axis": "y",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 21,
+     "rngLow": 29,
      "threshold": 128,
      "axisSelect": 1,
      "biasX": 0,
@@ -467,13 +496,14 @@
      "inY": 2,
      "outX": 4,
      "outY": 2,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 29,
+     "rngLowAfter": 119
     },
     {
      "axis": "x",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 29,
+     "rngLow": 119,
      "threshold": 255,
      "axisSelect": 1,
      "biasX": 0,
@@ -483,13 +513,14 @@
      "inY": 2,
      "outX": 3,
      "outY": 2,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 200,
+     "rngLowAfter": 217
     },
     {
      "axis": "y",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 217,
+     "rngLow": 235,
      "threshold": 64,
      "axisSelect": 1,
      "biasX": 0,
@@ -499,13 +530,14 @@
      "inY": 1,
      "outX": 4,
      "outY": 0,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 235,
+     "rngLowAfter": 105
     },
     {
      "axis": "x",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 235,
+     "rngLow": 105,
      "threshold": 255,
      "axisSelect": 1,
      "biasX": 0,
@@ -515,13 +547,14 @@
      "inY": 0,
      "outX": 3,
      "outY": 0,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 184,
+     "rngLowAfter": 233
     },
     {
      "axis": "y",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 184,
+     "rngLow": 233,
      "threshold": 0,
      "axisSelect": 1,
      "biasX": 0,
@@ -531,13 +564,14 @@
      "inY": 0,
      "outX": 3,
      "outY": 1,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 233,
+     "rngLowAfter": 62
     },
     {
      "axis": "x",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 233,
+     "rngLow": 62,
      "threshold": 255,
      "axisSelect": 1,
      "biasX": 0,
@@ -547,13 +581,14 @@
      "inY": 1,
      "outX": 4,
      "outY": 1,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 66,
+     "rngLowAfter": 207
     },
     {
      "axis": "y",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 66,
+     "rngLow": 207,
      "threshold": 64,
      "axisSelect": 1,
      "biasX": 0,
@@ -563,13 +598,14 @@
      "inY": 1,
      "outX": 4,
      "outY": 2,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 207,
+     "rngLowAfter": 81
     },
     {
      "axis": "x",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 207,
+     "rngLow": 81,
      "threshold": 0,
      "axisSelect": 1,
      "biasX": 0,
@@ -579,13 +615,14 @@
      "inY": 2,
      "outX": 3,
      "outY": 2,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 81,
+     "rngLowAfter": 231
     },
     {
      "axis": "y",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 81,
+     "rngLow": 231,
      "threshold": 128,
      "axisSelect": 1,
      "biasX": 0,
@@ -595,13 +632,14 @@
      "inY": 2,
      "outX": 3,
      "outY": 2,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 231,
+     "rngLowAfter": 124
     },
     {
      "axis": "x",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 231,
+     "rngLow": 124,
      "threshold": 0,
      "axisSelect": 1,
      "biasX": 0,
@@ -611,13 +649,14 @@
      "inY": 2,
      "outX": 2,
      "outY": 2,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 124,
+     "rngLowAfter": 242
     },
     {
      "axis": "x",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 242,
+     "rngLow": 97,
      "threshold": 128,
      "axisSelect": 0,
      "biasX": 0,
@@ -627,13 +666,14 @@
      "inY": 2,
      "outX": 1,
      "outY": 2,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 97,
+     "rngLowAfter": 133
     },
     {
      "axis": "y",
-     "rngHigh": 201,
-     "rngLow": 35,
+     "generator": "$0A9D",
+     "rngHigh": 97,
+     "rngLow": 133,
      "threshold": 0,
      "axisSelect": 0,
      "biasX": 0,
@@ -643,8 +683,8 @@
      "inY": 2,
      "outX": 1,
      "outY": 3,
-     "rngHighAfter": 201,
-     "rngLowAfter": 35
+     "rngHighAfter": 133,
+     "rngLowAfter": 169
     }
    ]
   },
@@ -655,6 +695,7 @@
    "steps": [
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 14,
      "rngLow": 199,
      "threshold": 0,
@@ -671,6 +712,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 199,
      "rngLow": 228,
      "threshold": 128,
@@ -687,6 +729,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 228,
      "rngLow": 166,
      "threshold": 18,
@@ -703,6 +746,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 166,
      "rngLow": 94,
      "threshold": 192,
@@ -719,6 +763,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 94,
      "rngLow": 240,
      "threshold": 36,
@@ -735,6 +780,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 240,
      "rngLow": 155,
      "threshold": 255,
@@ -751,6 +797,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 43,
      "rngLow": 199,
      "threshold": 54,
@@ -767,6 +814,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 199,
      "rngLow": 185,
      "threshold": 160,
@@ -783,6 +831,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 185,
      "rngLow": 243,
      "threshold": 72,
@@ -799,6 +848,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 243,
      "rngLow": 150,
      "threshold": 192,
@@ -815,6 +865,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 121,
      "rngLow": 112,
      "threshold": 90,
@@ -831,6 +882,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 112,
      "rngLow": 194,
      "threshold": 192,
@@ -847,6 +899,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 126,
      "rngLow": 5,
      "threshold": 108,
@@ -863,6 +916,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 5,
      "rngLow": 154,
      "threshold": 128,
@@ -879,6 +933,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 163,
      "rngLow": 196,
      "threshold": 126,
@@ -895,6 +950,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 196,
      "rngLow": 83,
      "threshold": 95,
@@ -911,6 +967,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 83,
      "rngLow": 95,
      "threshold": 126,
@@ -927,6 +984,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 95,
      "rngLow": 120,
      "threshold": 159,
@@ -943,6 +1001,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 152,
      "rngLow": 193,
      "threshold": 126,
@@ -959,6 +1018,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 193,
      "rngLow": 107,
      "threshold": 159,
@@ -975,6 +1035,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 87,
      "rngLow": 18,
      "threshold": 126,
@@ -991,6 +1052,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 18,
      "rngLow": 39,
      "threshold": 159,
@@ -1007,6 +1069,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 39,
      "rngLow": 208,
      "threshold": 126,
@@ -1023,6 +1086,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 208,
      "rngLow": 89,
      "threshold": 223,
@@ -1039,6 +1103,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 213,
      "rngLow": 195,
      "threshold": 126,
@@ -1055,6 +1120,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 195,
      "rngLow": 118,
      "threshold": 223,
@@ -1071,6 +1137,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 7,
      "rngLow": 37,
      "threshold": 126,
@@ -1087,6 +1154,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 37,
      "rngLow": 88,
      "threshold": 223,
@@ -1103,6 +1171,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 93,
      "rngLow": 192,
      "threshold": 126,
@@ -1119,6 +1188,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 192,
      "rngLow": 156,
      "threshold": 223,
@@ -1135,6 +1205,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 236,
      "rngLow": 105,
      "threshold": 108,
@@ -1151,6 +1222,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 105,
      "rngLow": 181,
      "threshold": 223,
@@ -1167,6 +1239,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 188,
      "rngLow": 118,
      "threshold": 90,
@@ -1183,6 +1256,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 118,
      "rngLow": 202,
      "threshold": 191,
@@ -1199,6 +1273,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 113,
      "rngLow": 239,
      "threshold": 72,
@@ -1215,6 +1290,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 239,
      "rngLow": 41,
      "threshold": 159,
@@ -1231,6 +1307,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 178,
      "rngLow": 233,
      "threshold": 54,
@@ -1247,6 +1324,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 233,
      "rngLow": 46,
      "threshold": 95,
@@ -1263,6 +1341,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 66,
      "rngLow": 229,
      "threshold": 54,
@@ -1279,6 +1358,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 229,
      "rngLow": 251,
      "threshold": 95,
@@ -1295,6 +1375,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 9,
      "rngLow": 146,
      "threshold": 36,
@@ -1311,6 +1392,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 146,
      "rngLow": 188,
      "threshold": 63,
@@ -1327,6 +1409,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 46,
      "rngLow": 202,
      "threshold": 18,
@@ -1343,6 +1426,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 202,
      "rngLow": 228,
      "threshold": 63,
@@ -1359,6 +1443,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 228,
      "rngLow": 187,
      "threshold": 0,
@@ -1375,6 +1460,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 187,
      "rngLow": 11,
      "threshold": 128,
@@ -1391,6 +1477,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 11,
      "rngLow": 146,
      "threshold": 18,
@@ -1407,6 +1494,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 146,
      "rngLow": 185,
      "threshold": 192,
@@ -1423,6 +1511,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 123,
      "rngLow": 151,
      "threshold": 36,
@@ -1439,6 +1528,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 151,
      "rngLow": 57,
      "threshold": 192,
@@ -1455,6 +1545,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 114,
      "rngLow": 194,
      "threshold": 54,
@@ -1471,6 +1562,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 194,
      "rngLow": 123,
      "threshold": 160,
@@ -1487,6 +1579,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 80,
      "rngLow": 199,
      "threshold": 72,
@@ -1503,6 +1596,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 199,
      "rngLow": 126,
      "threshold": 160,
@@ -1519,6 +1613,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 13,
      "rngLow": 154,
      "threshold": 90,
@@ -1535,6 +1630,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 154,
      "rngLow": 182,
      "threshold": 128,
@@ -1551,6 +1647,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 182,
      "rngLow": 145,
      "threshold": 108,
@@ -1567,6 +1664,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 145,
      "rngLow": 36,
      "threshold": 128,
@@ -1583,6 +1681,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 40,
      "rngLow": 95,
      "threshold": 108,
@@ -1599,6 +1698,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 95,
      "rngLow": 191,
      "threshold": 128,
@@ -1622,6 +1722,7 @@
    "steps": [
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 94,
      "rngLow": 240,
      "threshold": 0,
@@ -1638,6 +1739,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 240,
      "rngLow": 155,
      "threshold": 120,
@@ -1654,6 +1756,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 43,
      "rngLow": 199,
      "threshold": 2,
@@ -1670,6 +1773,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 199,
      "rngLow": 185,
      "threshold": 112,
@@ -1686,6 +1790,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 185,
      "rngLow": 243,
      "threshold": 4,
@@ -1702,6 +1807,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 243,
      "rngLow": 150,
      "threshold": 120,
@@ -1718,6 +1824,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 150,
      "rngLow": 121,
      "threshold": 6,
@@ -1734,6 +1841,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 121,
      "rngLow": 112,
      "threshold": 136,
@@ -1750,6 +1858,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 112,
      "rngLow": 194,
      "threshold": 8,
@@ -1766,6 +1875,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 194,
      "rngLow": 126,
      "threshold": 144,
@@ -1782,6 +1892,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 5,
      "rngLow": 154,
      "threshold": 10,
@@ -1798,6 +1909,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 154,
      "rngLow": 163,
      "threshold": 136,
@@ -1814,6 +1926,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 163,
      "rngLow": 196,
      "threshold": 12,
@@ -1830,6 +1943,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 196,
      "rngLow": 83,
      "threshold": 144,
@@ -1846,6 +1960,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 95,
      "rngLow": 120,
      "threshold": 14,
@@ -1862,6 +1977,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 120,
      "rngLow": 152,
      "threshold": 136,
@@ -1878,6 +1994,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 152,
      "rngLow": 193,
      "threshold": 16,
@@ -1894,6 +2011,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 193,
      "rngLow": 107,
      "threshold": 140,
@@ -1910,6 +2028,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 87,
      "rngLow": 18,
      "threshold": 18,
@@ -1926,6 +2045,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 18,
      "rngLow": 39,
      "threshold": 140,
@@ -1942,6 +2062,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 39,
      "rngLow": 208,
      "threshold": 20,
@@ -1958,6 +2079,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 208,
      "rngLow": 89,
      "threshold": 156,
@@ -1974,6 +2096,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 89,
      "rngLow": 213,
      "threshold": 22,
@@ -1990,6 +2113,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 213,
      "rngLow": 195,
      "threshold": 160,
@@ -2006,6 +2130,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 118,
      "rngLow": 7,
      "threshold": 24,
@@ -2022,6 +2147,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 7,
      "rngLow": 37,
      "threshold": 160,
@@ -2038,6 +2164,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 88,
      "rngLow": 93,
      "threshold": 26,
@@ -2054,6 +2181,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 93,
      "rngLow": 192,
      "threshold": 152,
@@ -2070,6 +2198,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 192,
      "rngLow": 156,
      "threshold": 28,
@@ -2086,6 +2215,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 156,
      "rngLow": 171,
      "threshold": 156,
@@ -2102,6 +2232,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 171,
      "rngLow": 203,
      "threshold": 30,
@@ -2118,6 +2249,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 203,
      "rngLow": 185,
      "threshold": 172,
@@ -2134,6 +2266,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 185,
      "rngLow": 236,
      "threshold": 32,
@@ -2150,6 +2283,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 236,
      "rngLow": 105,
      "threshold": 176,
@@ -2166,6 +2300,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 105,
      "rngLow": 181,
      "threshold": 34,
@@ -2182,6 +2317,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 181,
      "rngLow": 188,
      "threshold": 188,
@@ -2198,6 +2334,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 118,
      "rngLow": 202,
      "threshold": 36,
@@ -2214,6 +2351,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 202,
      "rngLow": 113,
      "threshold": 172,
@@ -2230,6 +2368,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 113,
      "rngLow": 239,
      "threshold": 38,
@@ -2246,6 +2385,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 239,
      "rngLow": 41,
      "threshold": 184,
@@ -2262,6 +2402,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 178,
      "rngLow": 233,
      "threshold": 40,
@@ -2278,6 +2419,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 233,
      "rngLow": 46,
      "threshold": 168,
@@ -2294,6 +2436,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 66,
      "rngLow": 229,
      "threshold": 42,
@@ -2310,6 +2453,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 229,
      "rngLow": 251,
      "threshold": 160,
@@ -2326,6 +2470,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 9,
      "rngLow": 146,
      "threshold": 44,
@@ -2342,6 +2487,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 146,
      "rngLow": 188,
      "threshold": 140,
@@ -2358,6 +2504,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 46,
      "rngLow": 202,
      "threshold": 46,
@@ -2374,6 +2521,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 202,
      "rngLow": 228,
      "threshold": 132,
@@ -2390,6 +2538,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 228,
      "rngLow": 187,
      "threshold": 48,
@@ -2406,6 +2555,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 187,
      "rngLow": 11,
      "threshold": 136,
@@ -2422,6 +2572,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 11,
      "rngLow": 146,
      "threshold": 48,
@@ -2438,6 +2589,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 146,
      "rngLow": 185,
      "threshold": 152,
@@ -2454,6 +2606,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 57,
      "rngLow": 114,
      "threshold": 50,
@@ -2470,6 +2623,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 114,
      "rngLow": 194,
      "threshold": 156,
@@ -2486,6 +2640,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 123,
      "rngLow": 80,
      "threshold": 52,
@@ -2502,6 +2657,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 80,
      "rngLow": 199,
      "threshold": 144,
@@ -2518,6 +2674,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 126,
      "rngLow": 13,
      "threshold": 54,
@@ -2534,6 +2691,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 13,
      "rngLow": 154,
      "threshold": 144,
@@ -2550,6 +2708,7 @@
     },
     {
      "axis": "x",
+     "generator": "$0AE2",
      "rngHigh": 154,
      "rngLow": 182,
      "threshold": 56,
@@ -2566,6 +2725,7 @@
     },
     {
      "axis": "y",
+     "generator": "$0AE2",
      "rngHigh": 182,
      "rngLow": 145,
      "threshold": 148,

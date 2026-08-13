@@ -12,6 +12,13 @@ everything after it, and the finished mask is the only place that would show up.
 
 `$1555` steps x and writes `$44`; `$1583` steps y and writes `$45`. Exactly one
 runs per iteration, chosen at `$252C` by whichever of `$14`/`$15` is smaller.
+
+**Which generator is active has to be read, not assumed.** `$0B11` is patched
+between `$0AE2` (state in `$CD`/`$CF`) and `$0A9D` (state in `$1F`/`$20`), so a
+fixture that records `$CD`/`$CF` unconditionally captures a generator the
+satellite never touches — its bytes sit unchanged across every step while the
+walk draws from the other one. Both pairs are recorded here along with the
+installed vector.
 """
 import json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -39,17 +46,22 @@ def capture(seed, config, index, cap):
         if seen[0] != index + 1 or len(out) >= cap:
             return
         if pc in (STEP_X, STEP_Y):
+            vector = cpu.rd(0x0B11) | cpu.rd(0x0B12) << 8
+            hi, lo = (0xCD, 0xCF) if vector == 0x0AE2 else (0x1F, 0x20)
             pending[0] = {
                 "axis": "x" if pc == STEP_X else "y",
-                "rngHigh": cpu.rd(0xCD), "rngLow": cpu.rd(0xCF),
+                "generator": f"${vector:04X}",
+                "rngHigh": cpu.rd(hi), "rngLow": cpu.rd(lo),
+                "_hi": hi, "_lo": lo,
                 "threshold": cpu.rd(0x18), "axisSelect": cpu.rd(0x19),
                 "biasX": cpu.rd(0xB1), "biasY": cpu.rd(0xB2),
                 "heading": cpu.rd(0x1A),
                 "inX": cpu.rd(0x44), "inY": cpu.rd(0x45),
             }
         elif pc in (RET_X, RET_Y) and pending[0]:
+            hi, lo = pending[0].pop("_hi"), pending[0].pop("_lo")
             pending[0].update(outX=cpu.rd(0x44), outY=cpu.rd(0x45),
-                              rngHighAfter=cpu.rd(0xCD), rngLowAfter=cpu.rd(0xCF))
+                              rngHighAfter=cpu.rd(hi), rngLowAfter=cpu.rd(lo))
             out.append(pending[0])
             pending[0] = None
 
@@ -69,8 +81,9 @@ def main():
                     if (s["outX"], s["outY"]) != (s["inX"], s["inY"]))
         doc["cases"].append({"label": label, "seed": seed, "config": config,
                              "steps": steps})
+        gens = sorted({s["generator"] for s in steps})
         print(f"  {label:<10} {len(steps):3d} steps, {moved} advanced, "
-              f"{len(steps) - moved} held", flush=True)
+              f"{len(steps) - moved} held, generator {' '.join(gens)}", flush=True)
     path = f"{FIX}/stepper_reference.json"
     json.dump(doc, open(path, "w"), indent=1)
     print(f"\nwrote -> {os.path.relpath(path, ROOT)} "
