@@ -76,6 +76,13 @@ INTERIOR_WRITE = 0x1987
 
 SEED, CONFIG = 0x1234, 0
 
+# The replay fixture is one case, because each of its outline steps carries 256
+# bytes of zero page. The self-driving port needs no zero page at all — only the
+# seed — so it is graded on all nine, with just the step list and the mask digest
+# where the port stops.
+UNAIDED = [(seed, config) for seed in (0x1234, 0xBEEF, 0x0001)
+           for config in (0, 1, 2)]
+
 
 def sha(text):
     return hashlib.sha256(text.encode()).hexdigest()
@@ -161,6 +168,31 @@ def main():
         print(f"  {i}  {s['kind']:<8} {note:<34}"
               f"{len(s['writes']):>6} writes", flush=True)
     print(f"\n  stage end: {final['landCells']:,} land cells")
+
+    # The compact section: every seed and configuration, truncated where the port
+    # has to stop, which is the mirror at the end of the first command.
+    out["unaided"] = []
+    for seed, config in UNAIDED:
+        steps, _ = capture(seed, config)
+        cut = next((i for i, s in enumerate(steps) if s["kind"] == "mirror"), None)
+        if cut is None or cut + 1 >= len(steps):
+            print(f"  seed ${seed:04X} config {config}: no mirror, skipped",
+                  flush=True)
+            continue
+        compact = []
+        for s in steps[:cut + 1]:
+            entry = {"kind": s["kind"]}
+            if s["kind"] == "mirror":
+                entry["horizontal"], entry["vertical"] = s["horizontal"], s["vertical"]
+            else:
+                entry["x"], entry["y"] = s["x"], s["y"]
+                if s["kind"] == "outline":
+                    entry["radius"] = s["radius"]
+            compact.append(entry)
+        out["unaided"].append({"seed": seed, "config": config, "steps": compact,
+                               "maskSha256": steps[cut + 1]["maskBefore"]})
+        print(f"  seed ${seed:04X} config {config}: {len(compact)} steps to the "
+              f"mirror", flush=True)
 
     path = f"{FIX}/interior_reference.json"
     with open(path, "w") as fh:

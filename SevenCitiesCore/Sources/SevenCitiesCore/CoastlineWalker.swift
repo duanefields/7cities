@@ -100,8 +100,15 @@ extension CoastlineWalker {
             let disagrees = (axis == .x) ? (state.axis != 0) : (state.axis == 0)
             guard disagrees else { return false }
 
-            var retry: UInt8
-            repeat { retry = state.rng.next() } while retry == 0xFF
+            // **Only the horizontal stepper redraws.** `$1564` loops while the
+            // value comes up `$FF`; `$1592` takes whatever it gets. The two
+            // routines are otherwise the same shape, which is exactly why the
+            // port had the retry on both — and it stays invisible until a turn
+            // clears the biases and opens this path at all.
+            var retry = state.rng.next()
+            if axis == .x {
+                while retry == 0xFF { retry = state.rng.next() }
+            }
             let bias = (axis == .x) ? state.biasX : state.biasY
             if retry < bias { return false }
             flip = 0xFE
@@ -530,11 +537,16 @@ extension CoastlineWalker {
                         && accepts(&s, in: mask)
                     if usable { break }
                 }
+                // $16AF: the candidate is plotted, and **not adopted**. It is
+                // passed to `$1728` in the registers; `$14`/`$15` are left alone,
+                // so the span fill that follows starts from where the walk
+                // actually stands rather than from the cell just drawn. Adopting
+                // it here costs one extra cell in the seam whenever the two
+                // differ.
                 let (column, row) = cell(offset: s.candidate, heading: s.heading,
                                          centerX: s.centerX, centerY: s.centerY)
                 mask.setLand(x: column, y: row)
                 plot(column, row)
-                s.offset = s.candidate
                 spanFill(&s, in: &mask, plot: plot)
                 return .closed
             }

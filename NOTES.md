@@ -2379,6 +2379,34 @@ than its program counter, and noticing three unfamiliar addresses in the tally: 
 mirrors, with a mask digest before each step and one at the end. `InteriorFillTests` replays it from
 an empty mask: eleven steps, 31,307 land cells, every write sequence and every digest exact.
 
+### Driving the stage without the fixture
+
+`LandMassStage` is the loop itself — `$2158`'s command table, the placement at `$21B0`-`$227F`, the
+walk, the satellite, the fill and the mirror — and it runs from a seed and a configuration alone.
+`LandMassStageTests` grades it on all nine seed/configuration pairs the other fixtures use.
+
+The satellite is the interesting part. `$2655` looks for a spot by scanning the column through the
+continent's centre for the coast above and below, pulling that window in by two, and then drawing a
+row inside it and a column inside the water span of that row (`$28AB`). Rows 185 to 214 are excluded
+outright. What it draws has to be at least sixteen cells from the continent's centre on one axis or
+the other, and then pass `$22F7` three times, at radii 16, 7 and 12 — which is not the redundancy it
+looks like, because `$22F7` samples a cross rather than an area and a smaller radius can fail where a
+larger one passed. The seed for its walk comes from a pool of 21 constants at `$229B` that `$1666`
+copies to `$0200` with three entries pre-spent, and it walks on the *second* generator with `$1666`
+patched to `RTS` so it neither recurses nor floods.
+
+**Where it stops, and why it has to.** `$2277 JSR $44EF` does more than mirror. Past `$4500` it scans
+the mask's land extents and places something with them — about 300 instructions spread over `$41E6`
+to `$47C5`, plus a long tail through `$1C2A`-`$1E98` — and it makes seven draws on the shared
+generator whose bounds come from what it finds. They cannot be faked, so the port stops there and
+says so. That covers the first command in full: both continents, both satellites, both fills and the
+mirror.
+
+Configuration 1 is refused outright. Its continent is paired, and the partner is not placed by the
+placement loop at all — the walk itself reaches `$160C JMP $186C`, saves its state, sets `$50`, and
+re-enters `$15AD` for the second landmass. One `$23D3` produces two continents, and one pass of
+`$2629` then places two satellites rather than one. None of that is ported.
+
 Five things about this code that no amount of reading the disassembly revealed, all found by diffing
 against traces:
 
@@ -2389,6 +2417,17 @@ against traces:
   one being stood on.
 - `$16D1` returns to `$260B`, **not** to `$2603`. See below.
 - The turn at `$1622` **always clears both biases**. See below.
+- **Only the horizontal stepper redraws on `$FF`.** `$1564` loops; `$1592` takes what it gets.
+- **The closure plots the candidate without adopting it.** `$16AF` passes `$16`/`$17` to `$1728` in
+  the registers and leaves `$14`/`$15` alone, so the span fill that follows starts from where the
+  walk stands, not from the cell just drawn.
+
+Those last two are a matched pair, in the sense that both are places where two nearly identical
+pieces of code differ in one detail, and both stayed hidden for the same reason: they need a
+continent that turns with the biases cleared, or a closure whose candidate has moved off the walk's
+own position. The satellite and the island never produce either. Each shows up as a single wrong
+cell 700-odd writes into a continent, in a different seed and configuration from the one being
+tested at the time.
 
 **How the direction search resumes after an unwind.** `$1E` counts attempts, and its invariant is
 that it always equals the number of marked slots in the tried set at `$2C`-`$34`. Two are marked

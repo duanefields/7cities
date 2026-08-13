@@ -59,16 +59,23 @@ engineering record; this holds the work.
       an empty mask: eleven steps, 31,307 land cells, every write sequence and
       every mask digest matching the original bit for bit
       (`tools/interior_reference.py`, `InteriorFillTests`).
-- [ ] **Port `$1666` and `$2629`, which decide the order.** The replay above is
-      driven by a recorded step list because the original's own sequencing is not
-      understood: a continent's walk patches a command into `$0200` and arranges
-      the paired satellite's walk, and only that walk reaches the flood fill.
-      `$54` is the flag that selects between them. Until this is ported the stage
-      cannot run without the fixture.
-- [ ] **Find what calls `$4500`.** Nothing in `$0800`-`$94FF` names it, so it is
-      reached from a table. It is the mirror pass's caller and it runs partway
-      through the land-mass stage, which means the stage boundaries in NOTES are
-      not as clean as they look.
+- [x] ~~**Port `$1666` and `$2629`, which decide the order.**~~ **Done.**
+      `LandMassStage` runs the command table, the placement loop, the walk, the
+      paired satellite search at `$2655` and the mirror from a seed alone, and
+      matches the original on all nine seed/configuration pairs. It stops after
+      the first command; see below.
+- [ ] **Port `$4500`.** It is where the stage stops. Called from `$44EF` at the
+      end of the first command, it mirrors the mask and then scans its land
+      extents and places something with them — roughly 300 instructions over
+      `$41E6`-`$47C5` with a tail through `$1C2A`-`$1E98`. It makes seven draws
+      on the shared generator with mask-derived bounds, so nothing after it can
+      run until it does. Probably the landing site or the first city; find out
+      what it writes.
+- [ ] **Port the walk's `$50` mode (`$1860`, `$186C`), which builds paired
+      continents.** Configuration 1's command places one continent and gets two:
+      the walk reaches `$160C JMP $186C`, saves state, and re-enters `$15AD` for
+      the partner. `$2629` then places two satellites instead of one.
+      `LandMassStage` refuses configuration 1 until this exists.
 - [ ] **Confirm the band structure.** The finished map is assembled on disk —
       51,200 bytes of nibbles will not fit in a C64 — and `$2C14` bounds its
       row counter at 208, which is very likely the band height. Still unknown:

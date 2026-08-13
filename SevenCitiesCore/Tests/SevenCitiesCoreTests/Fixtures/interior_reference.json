@@ -1658,5 +1658,337 @@
   }
  ],
  "maskSha256": "1768bf75ec8c3f112b20f991b35f8ba63ffbe4715b8c1b5e3771e02a6216f6a7",
- "landCells": 31307
+ "landCells": 31307,
+ "unaided": [
+  {
+   "seed": 4660,
+   "config": 0,
+   "steps": [
+    {
+     "kind": "outline",
+     "x": 166,
+     "y": 94,
+     "radius": 70
+    },
+    {
+     "kind": "outline",
+     "x": 201,
+     "y": 93,
+     "radius": 3
+    },
+    {
+     "kind": "interior",
+     "x": 166,
+     "y": 94
+    },
+    {
+     "kind": "outline",
+     "x": 89,
+     "y": 247,
+     "radius": 70
+    },
+    {
+     "kind": "outline",
+     "x": 106,
+     "y": 267,
+     "radius": 3
+    },
+    {
+     "kind": "interior",
+     "x": 89,
+     "y": 247
+    },
+    {
+     "kind": "mirror",
+     "horizontal": true,
+     "vertical": true
+    }
+   ],
+   "maskSha256": "ed8b6b8054cdad3177f661cba199ac5ddcd25a4647765207ac88492dc8d3a745"
+  },
+  {
+   "seed": 4660,
+   "config": 1,
+   "steps": [
+    {
+     "kind": "outline",
+     "x": 166,
+     "y": 94,
+     "radius": 70
+    },
+    {
+     "kind": "outline",
+     "x": 187,
+     "y": 74,
+     "radius": 3
+    },
+    {
+     "kind": "outline",
+     "x": 102,
+     "y": 159,
+     "radius": 3
+    },
+    {
+     "kind": "interior",
+     "x": 166,
+     "y": 94
+    },
+    {
+     "kind": "mirror",
+     "horizontal": false,
+     "vertical": true
+    }
+   ],
+   "maskSha256": "12ecb0d318b38607423e4ed2e8df93826e1a8953fa26c0801e96b65114cc1ef5"
+  },
+  {
+   "seed": 4660,
+   "config": 2,
+   "steps": [
+    {
+     "kind": "outline",
+     "x": 166,
+     "y": 199,
+     "radius": 70
+    },
+    {
+     "kind": "outline",
+     "x": 168,
+     "y": 173,
+     "radius": 3
+    },
+    {
+     "kind": "interior",
+     "x": 166,
+     "y": 199
+    },
+    {
+     "kind": "mirror",
+     "horizontal": false,
+     "vertical": false
+    }
+   ],
+   "maskSha256": "9111d3d698885cff676a62c3c99792345cff3db93385b20cae420814fcc36923"
+  },
+  {
+   "seed": 48879,
+   "config": 0,
+   "steps": [
+    {
+     "kind": "outline",
+     "x": 109,
+     "y": 104,
+     "radius": 70
+    },
+    {
+     "kind": "outline",
+     "x": 164,
+     "y": 102,
+     "radius": 3
+    },
+    {
+     "kind": "interior",
+     "x": 109,
+     "y": 104
+    },
+    {
+     "kind": "outline",
+     "x": 120,
+     "y": 290,
+     "radius": 70
+    },
+    {
+     "kind": "outline",
+     "x": 111,
+     "y": 270,
+     "radius": 3
+    },
+    {
+     "kind": "interior",
+     "x": 120,
+     "y": 290
+    },
+    {
+     "kind": "mirror",
+     "horizontal": true,
+     "vertical": false
+    }
+   ],
+   "maskSha256": "c181e072a9c1afd107fe6fc9d062d26b7e49e03cec29157c82946fc46a347289"
+  },
+  {
+   "seed": 48879,
+   "config": 1,
+   "steps": [
+    {
+     "kind": "outline",
+     "x": 109,
+     "y": 104,
+     "radius": 70
+    },
+    {
+     "kind": "outline",
+     "x": 75,
+     "y": 99,
+     "radius": 3
+    },
+    {
+     "kind": "outline",
+     "x": 115,
+     "y": 247,
+     "radius": 3
+    },
+    {
+     "kind": "interior",
+     "x": 109,
+     "y": 104
+    },
+    {
+     "kind": "mirror",
+     "horizontal": true,
+     "vertical": true
+    }
+   ],
+   "maskSha256": "5fadf760b62ede81ee6535c2c0d09455ebf495f73b658478f185e50a192b888b"
+  },
+  {
+   "seed": 48879,
+   "config": 2,
+   "steps": [
+    {
+     "kind": "outline",
+     "x": 109,
+     "y": 113,
+     "radius": 70
+    },
+    {
+     "kind": "outline",
+     "x": 164,
+     "y": 102,
+     "radius": 3
+    },
+    {
+     "kind": "interior",
+     "x": 109,
+     "y": 113
+    },
+    {
+     "kind": "mirror",
+     "horizontal": false,
+     "vertical": true
+    }
+   ],
+   "maskSha256": "43414653e695f9b18b6b1359cf072ed5155e3035d881d6d02196d2cb39e08511"
+  },
+  {
+   "seed": 1,
+   "config": 0,
+   "steps": [
+    {
+     "kind": "outline",
+     "x": 119,
+     "y": 285,
+     "radius": 70
+    },
+    {
+     "kind": "outline",
+     "x": 111,
+     "y": 314,
+     "radius": 3
+    },
+    {
+     "kind": "interior",
+     "x": 119,
+     "y": 285
+    },
+    {
+     "kind": "outline",
+     "x": 147,
+     "y": 83,
+     "radius": 70
+    },
+    {
+     "kind": "outline",
+     "x": 114,
+     "y": 100,
+     "radius": 3
+    },
+    {
+     "kind": "interior",
+     "x": 147,
+     "y": 83
+    },
+    {
+     "kind": "mirror",
+     "horizontal": true,
+     "vertical": false
+    }
+   ],
+   "maskSha256": "778a6b3d18212189cb044ce59ad0ccaa758284a07821ac87a866e57eb818ec2d"
+  },
+  {
+   "seed": 1,
+   "config": 1,
+   "steps": [
+    {
+     "kind": "outline",
+     "x": 119,
+     "y": 141,
+     "radius": 70
+    },
+    {
+     "kind": "outline",
+     "x": 92,
+     "y": 133,
+     "radius": 3
+    },
+    {
+     "kind": "outline",
+     "x": 97,
+     "y": 221,
+     "radius": 3
+    },
+    {
+     "kind": "interior",
+     "x": 119,
+     "y": 141
+    },
+    {
+     "kind": "mirror",
+     "horizontal": false,
+     "vertical": true
+    }
+   ],
+   "maskSha256": "4efcc6ce93274f1231b964614913649960942accbb97d01eab8145bd99c8b790"
+  },
+  {
+   "seed": 1,
+   "config": 2,
+   "steps": [
+    {
+     "kind": "outline",
+     "x": 119,
+     "y": 141,
+     "radius": 70
+    },
+    {
+     "kind": "outline",
+     "x": 156,
+     "y": 157,
+     "radius": 3
+    },
+    {
+     "kind": "interior",
+     "x": 119,
+     "y": 141
+    },
+    {
+     "kind": "mirror",
+     "horizontal": true,
+     "vertical": false
+    }
+   ],
+   "maskSha256": "455b0f59a6ad53dad1c25ff7f3dc65cf80b7a2416e33f3a5ab77f2563dc7a3c3"
+  }
+ ]
 }
