@@ -331,3 +331,99 @@ extension CoastlineWalker {
         return count
     }
 }
+
+// MARK: - The walk
+
+extension CoastlineWalker {
+
+    /// One entry in the undo ring at `$9100` (`$15CA`).
+    ///
+    /// Twelve bytes: the nine tried-direction flags from `$2C`-`$34`, then the
+    /// offset and heading. The flags are the reason the ring exists — restoring
+    /// them resumes the direction search where it left off, so an unwind does
+    /// not re-try directions already known to fail.
+    ///
+    /// It does **not** hold the generator. Backtracking rewinds position, not
+    /// randomness.
+    public struct UndoRecord: Sendable {
+        public var tried: [UInt8]        // $2C-$34
+        public var offset: Offset        // $14/$15
+        public var heading: UInt8        // $1A
+    }
+
+    /// The ring's capacity (`$15BD`: `CMP #$C9`).
+    public static let ringCapacity = 201
+
+    /// Chooses the axis and threshold, then advances one coordinate (`$24FD`).
+    ///
+    /// Both axes move each iteration, and the order matters. The **smaller**
+    /// coordinate goes first — ties broken by a coin flip at `$252D` — with a
+    /// threshold scaled from its own value, so an axis that has run ahead
+    /// becomes reluctant. The other follows with a threshold derived from the
+    /// radius error, which is what pulls the walk back onto the circle.
+    static func proposeStep(_ s: inout WalkerState) {
+        modulateRadius(&s)
+
+        // $2520: the smaller coordinate steps first.
+        if s.offset.dx < s.offset.dy {
+            s.axis = 0
+        } else if s.offset.dx > s.offset.dy {
+            s.axis = 1
+        } else {
+            s.axis = s.rng.next() & 0x80 != 0 ? 1 : 0
+        }
+
+        // $2534: threshold from the chosen coordinate, clamped on overflow.
+        let coordinate = s.axis == 0 ? s.offset.dx : s.offset.dy
+        let scaled = Arithmetic.multiply(coordinate, s.inverseSpan)
+        s.threshold = scaled.high != 0 ? 0xFF : scaled.low
+
+        s.stepped = s.offset
+        advance(&s, axis: s.axis == 0 ? .x : .y)
+
+        // $2559: threshold from the radius error for the second axis.
+        let metric = distanceMetric(s)
+        if s.target < metric {
+            s.threshold = 0
+        } else {
+            let slack = s.target &- metric
+            if slack == 0 {
+                s.threshold = 0xFF
+            } else {
+                let product = Arithmetic.multiply(slack, s.inverseSlack)
+                s.threshold = product.high != 0 ? 0xFF : product.low
+            }
+        }
+
+        // $2578: the threshold is inverted for two of the four quadrants.
+        if s.axis != 0 {
+            if s.heading != 1 && s.heading != 3 { s.threshold ^= 0xFF }
+            advance(&s, axis: .x)
+        } else {
+            if s.heading != 0 && s.heading != 2 { s.threshold ^= 0xFF }
+            advance(&s, axis: .y)
+        }
+    }
+
+    /// Turns the stepper's movement into one of the nine direction indices
+    /// (`$25B9`).
+    ///
+    /// Index 4 is "no movement", and the mapping is deliberately arithmetic
+    /// rather than a lookup: the x delta shifts the index by one and the y delta
+    /// by three, each sign-flipped when its base is zero.
+    static func directionIndex(_ s: WalkerState,
+                               horizontalBase: UInt8, verticalBase: UInt8) -> UInt8 {
+        var index: UInt8 = 4
+        var dx = s.stepped.dx &- s.offset.dx
+        if dx != 0 {
+            if horizontalBase == 0 { dx ^= 0xFE }
+            index = index &+ dx
+        }
+        var dy = s.stepped.dy &- s.offset.dy
+        if dy != 0 {
+            if verticalBase == 0 { dy ^= 0xFE }
+            for _ in 0..<3 { index = index &+ dy }
+        }
+        return index
+    }
+}
