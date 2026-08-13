@@ -2240,3 +2240,37 @@ Putting the pieces together, a landmass is built in three steps:
    stride.
 
 A port needs all three. Getting only the first produces coastlines with nothing inside them.
+
+#### The candidate generator at `$24FD` — the other half of the walk loop
+
+`$15AD` is only half of it. `$16B8` does `JMP $24FD`, and that region — which the routine listing
+gives no hint belongs to the walker — generates the next candidate before control returns to
+`$15AD` to commit it.
+
+```text
+$24FD  JSR $178A                     ; recompute $21 and the shape parameters
+$2520  compare $14 against $15       ; which axis to advance
+$2528    equal -> a coin flip via $0B10 / BMI
+$2532  STY $19                       ; 0 = step x, 1 = step y
+$2534  LDA $0014,Y / LDY $10 / JSR $0A51 ; the chosen coordinate x $10
+$253C  clamp to $FF if the high byte is set
+$2542  STA $18                       ; the step threshold
+$2544  $44 = $14, $45 = $15          ; candidate starts as current
+$254C  JSR $1555 or $1583            ; advance exactly one axis
+$2559  JSR $19CC                     ; distance metric, then the $12 / $11 tests
+```
+
+Two things this settles.
+
+**The walk always advances its smaller coordinate**, breaking ties with a coin flip. That is what
+carries it around the arc: `dx` rises while `dy` falls, and whichever is behind moves next.
+
+**`$18` and `$19` are computed per step, not inherited.** An earlier reading here searched for
+writers of `$18`, found them all outside `$14xx`-`$1Bxx`, and concluded they came from another
+phase. They come from `$2542`, which *is* in the walk path — just not in the address range the
+walker appeared to occupy. `$18` is the chosen coordinate scaled by `$10` (itself `$80 / $0F`), so
+the further along an axis the walk has gone, the larger `$18` and the less likely `$1555`/`$1583`
+are to step again. That is the mechanism that bends a straight walk into an arc.
+
+So the loop spans two regions: `$15AD`-`$16BB` commits and turns, `$24FD`-`$25A0` proposes. Neither
+is comprehensible alone, and nothing in the call graph marks them as one routine.
