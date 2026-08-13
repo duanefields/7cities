@@ -121,8 +121,23 @@ def blobs(grid):
 
 
 def boot(code):
+    """Reset to a BASIC prompt and load `game3`, recovering a wedged machine.
+
+    `game3` runs with ROM banked out (`$01 = $35`). If a run ends with the CPU
+    halted inside it — a checkpoint left armed, a harness crash — the next reset
+    has no ROM to reset *into*: `$FFFC` reads RAM, and VICE answers "Machine
+    power cycled" while the PC never moves. That has wedged the emulator twice in
+    this project, once beyond recovery.
+
+    Pausing and restoring `$01` to `$37` **before** resetting fixes it, so do that
+    every time rather than only after something has already gone wrong.
+    """
     clear_checkpoints()
+    call("vice_execution_pause")
+    call("vice_memory_write", address="$0001", data=[0x37])
+    call("vice_machine_reset", mode="hard")
     call("vice_execution_run")
+    time.sleep(1)
     call("vice_machine_config_set", resources={"WarpMode": 1})
     call("vice_disk_detach", unit=8)
     time.sleep(1)

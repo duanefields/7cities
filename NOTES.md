@@ -804,6 +804,36 @@ Do not try a third.
 payload)` in write order. That gives ground truth for the layout with no inference: exactly
 which bytes land in which sector, and in what order rows are produced.
 
+### A 6502 interpreter, for stepping generation in-process (`tools/sim6502.py`)
+
+Built because the coastline walker cannot be debugged any other way. It is a backtracking search
+with three self-modifications and a stack-discarding non-local exit; transcribing it and comparing
+the finished 12,800-byte mask yields exactly one bit of feedback — "the walk went somewhere else" —
+with no way to localize a fault. Running the original in-process makes every intermediate state
+observable, so a port can be diffed against it step by step. Every later phase gets the same.
+
+Scope is official NMOS opcodes, binary arithmetic, no interrupts, no I/O beyond a read hook.
+Unknown opcodes **raise** rather than being skipped: a silently ignored instruction produces
+plausible, wrong output, which is the exact failure this tool exists to prevent. Decimal mode
+raises too.
+
+**It is validated against the real chip, not against itself.** `--check` replays the LFSR at
+`$0AE2` and the multiply and divide at `$0A51`/`$0A6E` against fixtures captured from the 6502
+running under VICE — 5 sequences and 3,840 arithmetic cases. Those fixtures were produced
+independently, so agreement is evidence about the interpreter rather than about the routines.
+
+Two things it cannot do, both learned by running into them:
+
+- **It cannot boot the World Maker.** Initialization talks to the 1541 over the serial bus:
+  `$13BC` reads `$DD00` twice to debounce and shifts the DATA line into carry, and `$1287`/`$128C`
+  spin on the result. With no drive that never completes — measured at 855,591 reads of `$DD00`
+  and no progress. `tools/wm_snapshot.py` therefore lets the emulator do the boot and dumps RAM at
+  `$212A`; the interpreter starts from there, which also guarantees the initial state matches the
+  one the reference masks came from. Snapshots are 64 KB of the game's own code, so they are game
+  data and live in `local/`.
+- **`$D012` must read `$FE`**, or the raster sync at `$0A49` spins forever. Nothing else advances
+  it without interrupts.
+
 ### Harness gotchas (all cost real time — do not rediscover)
 
 - **A leftover checkpoint leaves the CPU paused.** Every later step then silently does
@@ -825,6 +855,12 @@ which bytes land in which sector, and in what order rows are produced.
     so waiting for a match spins until the timeout.
 
   `hit_count` is unambiguous: zero until the checkpoint fires, nonzero after.
+- **Restore `$01` to `$37` before resetting.** `game3` runs with ROM banked out (`$01 = $35`). If a
+  run ends with the CPU halted inside it, the next reset has no ROM to reset *into* — `$FFFC` reads
+  RAM, and VICE answers "Machine power cycled" while the PC never moves. Symptoms include a PC that
+  reads back as `0x10002`, which is not even a valid 16-bit address. This wedged the emulator twice
+  in one session, once badly enough to need a manual restart. `boot()` now pauses, writes `$37` to
+  `$01` and resets before doing anything else, every time rather than only in recovery.
 - **Use execution checkpoints, not store checkpoints.** Every `exec=True` experiment in this
   project has worked first time. The one `store=True` watchpoint — on `$21`, to find what writes it
   — recorded a single write, stalled for four minutes, and left the emulator **unrecoverable**.
