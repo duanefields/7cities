@@ -82,30 +82,49 @@ public struct WalkerState: Sendable {
     /// `$B0` — the command's nominal radius, constant for the fill.
     public var radius: UInt8
 
-    /// The block `$1B55` copies from `$47`-`$4D` into `$1F`-`$25`.
+    // MARK: - The paired continent
+
+    /// `$43` bit 7 — this command builds two continents joined by an isthmus.
+    ///
+    /// Only the sign is ever read (`BIT $43 / BMI`), and only configuration 1's
+    /// command sets it.
+    public var paired: Bool = false
+    /// `$50` — set once the walk has left the first continent and is tracing the
+    /// partner. It gates three things that are otherwise dead code: the switch
+    /// back at `$15ED`, the extra refusal at `$1537`, and `$1860`'s own entry.
+    public var mode: Bool = false
+    /// `$4E` — how far along the first continent the isthmus starts, drawn at
+    /// `$2186`. `$FF` once it has been used, which is what stops `$2519` from
+    /// firing twice.
+    public var pairOffset: UInt8 = 0xFF
+    /// `$B4` — the first continent's centre plus five. While tracing the partner,
+    /// `$1537` refuses any candidate left of it, so the two cannot overlap.
+    public var bridgeLimit: UInt8 = 0
+    /// `$B5`/`$B6` — the row the partner's walk has to climb back above before
+    /// `$15ED` hands control to the first continent again.
+    public var switchRow: UInt16 = 0
+
+    /// The block `$17C8` files into `$47`-`$4D` and `$1B55` restores.
     ///
     /// **Not the undo record**, which is written at `$15CA` and restored by
-    /// `$16D1`, and which holds `$2C`-`$34` plus the position and heading. This
-    /// is a separate save-and-restore used by `$1879` and `$1AED`; conflating
-    /// the two produced a wrong claim about backtracking rewinding randomness.
-    public struct Saved: Sendable {
-        public var rng: WorldMakerRNG
+    /// `$16D1`, and which holds `$2C`-`$34` plus the position and heading.
+    ///
+    /// The original copies seven bytes, `$1F`-`$25`, of which the first two are
+    /// the *second* generator — inert during a continent's walk, which draws from
+    /// `$CD`/`$CF`. So the walk's randomness runs straight through the switch
+    /// without a break, and only the geometry is saved.
+    public struct Partner: Sendable, Equatable {
         public var workingRadius: UInt8
         public var centerX: UInt8
         public var centerY: UInt16
         public var shape: UInt8
     }
 
-    /// Captures the block `$1B55` would copy.
-    public var saved: Saved {
-        get { Saved(rng: rng, workingRadius: workingRadius, centerX: centerX,
-                    centerY: centerY, shape: shape) }
-        set {
-            rng = newValue.rng
-            workingRadius = newValue.workingRadius
-            centerX = newValue.centerX
-            centerY = newValue.centerY
-            shape = newValue.shape
-        }
-    }
+    /// What the first continent left behind when the isthmus took over.
+    public var partner: Partner?
+
+    /// `$5D`-`$61`: the mirror image — what `$186C` files away as it *leaves* the
+    /// partner. `$2646` reads it back so `$2655` can go looking for a satellite in
+    /// the second continent as well as the first.
+    public var partnerGeometry: Partner?
 }

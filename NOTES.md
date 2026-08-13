@@ -2490,15 +2490,51 @@ generator and from the same seed pool — which by this point is pristine, `$167
 after the last continent, and which is **not** rebuilt between islands the way `$1666` rebuilds it
 between continents.
 
+### The paired continent
+
+Configuration 1's command places **one** continent and gets two, and the second is not placed at all
+— it is grown by the walk itself. Four routines do it, and the mechanism is the most involved thing
+in the phase.
+
+`$2519` watches the second quadrant. When `dx` comes back down **below** `$4E`, the pair offset drawn
+at `$2186`, `$24FD` gives up on proposing and jumps to `$17C8`. Note the direction: `BCS` skips the
+jump, so it is the *small* side of the comparison that fires.
+
+`$17C8` files the walk's geometry into `$47`-`$4D` and then draws an **isthmus** — a one-cell column,
+extended row by row down the coast, each row stepping left until both the cell and its left neighbour
+are water. It draws `random(radius / 8) + 5` rows and keeps going until ten clear cells stand to the
+left of the last one. Where that ends becomes the partner's centre, `radius` rows further down, and
+the walk restarts from scratch there with `$50` set. **The isthmus writes go straight to the mask at
+`$17FF`, not through `$1728`** — the same blind spot as the flood fill, so they appear in no trace.
+
+`$15ED` watches for the way back: once the partner's walk is in its last quadrant and has climbed
+above `$B5`/`$B6` — the isthmus row plus thirty — `$186C` restores the first continent's centre,
+works out where the walk stands relative to it, picks the quadrant from the two signs, and trims the
+seam. Meanwhile `$1537` refuses anything left of `$B4`, the first continent's centre plus five, so
+the two cannot grow into each other.
+
+Then `$2629` runs `$2655` **twice**, the second time over the geometry `$186C` filed away, so each
+continent of the pair gets a lake.
+
+### `$1A48` is a recovery, not an ending
+
+`$16D1`'s two `PLA / PLA` exits both land at `$1A48`, and the name this port first gave them —
+abandon — was wrong. What happens there is that the walk erases where it stands, casts about three
+cells across and a row down at a time for the nearest land, works out which quadrant that puts it in,
+resets the ring and carries on. A port that treats the exit as the end of the walk stops several
+hundred cells early.
+
+It fires rarely — once in a whole paired continent, never in configurations 0 or 2 — which is exactly
+why it stayed hidden until the pair was ported. The same is true of `$1880 STX $2B`: the switch back
+marks the ring unwrapped, and without that the unwind runs past the slot where the original stopped
+and off into records left over from before the isthmus.
+
 ### Where the land-mass phase stands
 
-Ported end to end for configurations 0 and 2, from a seed to the original's mask, and checked at both
-of the phase's checkpoints — `tableStage` and `phaseEnd` — against `landmass_reference.json`, whose
+**Ported, all three configurations.** From a seed to the original's finished mask, checked at both of
+the phase's checkpoints — `tableStage` and `phaseEnd` — against `landmass_reference.json`, whose
 digests were captured from the original under VICE. Nine seed and configuration pairs, two
 independent captures, one port.
-
-What is left: configuration 1's paired continent, built by the walk's `$50` mode at `$1860`/`$186C`.
-`LandMassStage` refuses that configuration rather than approximating it.
 
 Configuration 1 is refused outright. Its continent is paired, and the partner is not placed by the
 placement loop at all — the walk itself reaches `$160C JMP $186C`, saves its state, sets `$50`, and

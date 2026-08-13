@@ -82,16 +82,6 @@ func stageRunsUnaided(index: Int) throws {
     let c = cases[index]
     let label = "seed $\(String(format: "%04X", c.seed)) config \(c.config)"
 
-    // Configuration 1 pairs its continent, and the partner is walked by a mode of
-    // `$15AD` that is not ported. The fixture shows what is missing: one `$23D3`
-    // for two continents, and two satellites from one pass of `$2629`.
-    guard c.config != 1 else {
-        #expect(throws: LandMassStage.Unsupported.self, "\(label) should refuse") {
-            _ = try LandMassStage.run(config: c.config, seed: UInt16(c.seed))
-        }
-        return
-    }
-
     let run = try LandMassStage.run(config: c.config, seed: UInt16(c.seed))
     #expect(run.stoppedBecause == nil, "\(label): \(run.stoppedBecause ?? "")")
 
@@ -153,7 +143,7 @@ func stageRunsUnaided(index: Int) throws {
 func dumpMasks() throws {
     let dir = ProcessInfo.processInfo.environment["MASK_DUMP_DIR"]!
     for seed: UInt16 in [0x1234, 0xBEEF, 0x0001] {
-        for config in [0, 2] {
+        for config in [0, 1, 2] {
             let run = try LandMassStage.run(config: config, seed: seed)
             let name = String(format: "mask_%04X_%d.bin", seed, config)
             try Data(run.mask.mapBytes).write(to: URL(fileURLWithPath: dir + "/" + name))
@@ -161,3 +151,6 @@ func dumpMasks() throws {
         }
     }
 }
+
+
+

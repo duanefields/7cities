@@ -137,13 +137,6 @@ public enum LandMassStage {
         var mirrored = false
 
         for command in LandMassPhase.configurations[config] {
-            if command.placesPair {
-                throw Unsupported(reason: """
-                    configuration \(config) pairs its continent, and the partner \
-                    is built by the walk's $50 mode ($1860/$186C), which is not \
-                    ported
-                    """)
-            }
             let radius = LandMassPhase.radius(continent: command.isContinent)
 
             for _ in 0..<command.count {
@@ -168,8 +161,10 @@ public enum LandMassStage {
                     biasY = 0x80
                 }
 
-                pairOffset = 0xFF                       // $21B4, unpaired only
-                let bounds = LandMassPhase.bounds(radius: radius, paired: false,
+                // $21B0: the offset only survives for a paired command.
+                if !command.placesPair { pairOffset = 0xFF }
+                let bounds = LandMassPhase.bounds(radius: radius,
+                                                  paired: command.placesPair,
                                                   pairOffset: pairOffset,
                                                   config: config)
 
@@ -182,8 +177,21 @@ public enum LandMassStage {
                     guard LandMassPhase.isClear(x: x, y: y, radius: radius, in: mask)
                     else { continue }
 
+                    // $2231: a paired command tests where the partner would go
+                    // before accepting either, and then puts the first position
+                    // back. Only one landmass is placed here — the second is
+                    // grown by the walk itself, out of the isthmus at `$17C8`.
+                    if command.placesPair {
+                        let mate = LandMassPhase.partner(x: x, y: y, radius: radius,
+                                                         pairOffset: pairOffset)
+                        guard LandMassPhase.isClear(x: mate.x, y: mate.y,
+                                                    radius: radius, in: mask)
+                        else { continue }
+                    }
+
                     try build(x: x, y: y, radius: radius,
                               isContinent: command.isContinent,
+                              paired: command.placesPair, pairOffset: pairOffset,
                               biasX: biasX, biasY: biasY,
                               rng: &rng, mask: &mask, steps: &steps)
                     break
@@ -272,11 +280,13 @@ public enum LandMassStage {
 
     /// One landmass: the walk, then whatever `$1666` decides comes next.
     private static func build(x: UInt8, y: UInt16, radius: UInt8,
-                              isContinent: Bool, biasX: UInt8, biasY: UInt8,
+                              isContinent: Bool, paired: Bool, pairOffset: UInt8,
+                              biasX: UInt8, biasY: UInt8,
                               rng: inout WorldMakerRNG, mask: inout LandMask,
                               steps: inout [Step]) throws {
-        walk(x: x, y: y, radius: radius, biasX: biasX, biasY: biasY,
-             drift: 0x97, rng: &rng, mask: &mask, steps: &steps)
+        let partner = walk(x: x, y: y, radius: radius, biasX: biasX, biasY: biasY,
+                           drift: 0x97, paired: paired, pairOffset: pairOffset,
+                           rng: &rng, mask: &mask, steps: &steps)
 
         // $1666: `$54` is the command's size class. Islands go straight to the
         // flood fill; continents place a satellite first.
@@ -284,6 +294,14 @@ public enum LandMassStage {
             var pool = SeedPool()
             try placeSatellite(centreX: x, centreY: y, rng: &rng, mask: &mask,
                                pool: &pool, steps: &steps)
+            // $263D: a paired command runs `$2655` twice, the second time over
+            // the geometry `$186C` filed away — so the continent grown out of the
+            // isthmus gets a lake of its own.
+            if paired, let partner {
+                try placeSatellite(centreX: partner.centerX,
+                                   centreY: partner.centerY, rng: &rng,
+                                   mask: &mask, pool: &pool, steps: &steps)
+            }
         }
 
         // $168D JMP $194A, from the landmass's own centre — which for a continent
@@ -300,8 +318,9 @@ public enum LandMassStage {
     /// it and `$17A6` returns early below radius `$46`.
     private static func walk(x: UInt8, y: UInt16, radius: UInt8,
                              biasX: UInt8, biasY: UInt8, drift: UInt8,
+                             paired: Bool = false, pairOffset: UInt8 = 0xFF,
                              rng: inout WorldMakerRNG, mask: inout LandMask,
-                             steps: inout [Step]) {
+                             steps: inout [Step]) -> WalkerState.Partner? {
         var s = WalkerState(
             rng: rng, workingRadius: radius, centerX: x, centerY: y, shape: 0,
             offset: .init(dx: 0, dy: 0), candidate: .init(dx: 0, dy: 0),
@@ -309,10 +328,13 @@ public enum LandMassStage {
             threshold: 0, axis: 0, biasX: biasX, biasY: biasY, drift: drift,
             span: 0, inverseSpan: 0, inverseSlack: 0, target: 0, third: 0,
             radius: radius)
+        s.paired = paired
+        s.pairOffset = pairOffset
         CoastlineWalker.recomputeShape(&s)
         steps.append(.outline(x: x, y: y, radius: radius))
         _ = CoastlineWalker.traceOutline(&s, in: &mask)
         rng = s.rng
+        return s.partnerGeometry
     }
 
     // MARK: - The satellite
@@ -399,8 +421,8 @@ public enum LandMassStage {
                                       rng: inout WorldMakerRNG,
                                       mask: inout LandMask, steps: inout [Step]) {
         var satellite = WorldMakerRNG(high: pool.take(&rng), low: spent)
-        walk(x: column, y: row, radius: 3, biasX: 0, biasY: 0, drift: 0x97,
-             rng: &satellite, mask: &mask, steps: &steps)
+        _ = walk(x: column, y: row, radius: 3, biasX: 0, biasY: 0, drift: 0x97,
+                 rng: &satellite, mask: &mask, steps: &steps)
     }
 
     /// Picks a column inside the water span of a row (`$28AB`).

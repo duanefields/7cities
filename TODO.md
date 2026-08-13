@@ -28,12 +28,11 @@ engineering record; this holds the work.
       across separate emulator boots. `tools/wm_deterministic.py`, with
       `--fixtures` to capture `landmass_reference.json` (digests only — the
       mask is map data and is not committed).
-- [x] ~~**Port the land-mass phase to Swift.**~~ **Done for configurations 0 and
-      2.** `LandMassStage.run(config:seed:)` goes from a seed to the original's
-      12,800-byte mask, checked at both of the phase's checkpoints against
-      `landmass_reference.json` — the digests captured from the original under
-      VICE — for all nine seed and configuration pairs.
-      Configuration 1 is refused; see below.
+- [x] ~~**Port the land-mass phase to Swift.**~~ **Done, all three
+      configurations.** `LandMassStage.run(config:seed:)` goes from a seed to the
+      original's 12,800-byte mask, checked at both of the phase's checkpoints
+      against `landmass_reference.json` — the digests captured from the original
+      under VICE — for all nine seed and configuration pairs.
 - [x] ~~**Identify the two position tables at `$038C` and `$03B4`.**~~ **Done, and
       ported.** Below row 219 an island is filed into `$038C` as `(row, column)`;
       at or above, into `$03B4` as `(row - 192, column)`. `$03DC` keeps the last
@@ -64,13 +63,9 @@ engineering record; this holds the work.
 - [ ] **Find out what reads `$77`-`$81`.** `$44EF` files two sites there —
       column, row, a row-past-`$D0` flag and a kind of 9 or 7, one of each. Two
       advanced civilizations is the obvious guess and is only a guess.
-- [ ] **Port the walk's `$50` mode (`$1860`, `$186C`), which builds paired
-      continents.** The last gap in the land-mass phase. Configuration 1's command
-      places one continent and gets two: the walk reaches `$160C JMP $186C`, saves
-      `$21`-`$24` and `$43` into `$5D`-`$61`, sets `$50`, computes a position from
-      `$22 - $0C` and `$08 - $23`, and re-enters `$15AD` for the partner. `$2629`
-      then runs `$2655` twice rather than once, so the pair gets two satellites.
-      `LandMassStage` refuses configuration 1 until this exists.
+- [x] ~~**Port the walk's `$50` mode (`$1860`, `$186C`), which builds paired
+      continents.**~~ **Done**, along with the isthmus at `$17C8` and the recovery
+      at `$1A48` that it turned out to need. See NOTES.md.
 - [ ] **Confirm the band structure.** The finished map is assembled on disk —
       51,200 bytes of nibbles will not fit in a C64 — and `$2C14` bounds its
       row counter at 208, which is very likely the band height. Still unknown:

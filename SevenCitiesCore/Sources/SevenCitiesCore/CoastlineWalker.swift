@@ -369,8 +369,6 @@ extension CoastlineWalker {
     /// becomes reluctant. The other follows with a threshold derived from the
     /// radius error, which is what pulls the walk back onto the circle.
     static func proposeStep(_ s: inout WalkerState) {
-        modulateRadius(&s)
-
         // $2520: the smaller coordinate steps first.
         if s.offset.dx < s.offset.dy {
             s.axis = 0
@@ -478,7 +476,7 @@ extension CoastlineWalker {
         s.step = 0xFF
 
         var guardCount = 0
-        while guardCount < 200_000 {
+        outline: while guardCount < 200_000 {
             guardCount += 1
 
             // $15AD: the edge flag latches once the candidate reaches x == 2.
@@ -500,9 +498,26 @@ extension CoastlineWalker {
             mask.setLand(x: column, y: row)
             plot(column, row)
 
+            // $15ED: the partner's walk climbing back above the switch row is
+            // what ends it. `$15FD` is called for its side effect only — the
+            // comparison at `$1600` is thrown away by the very next `LDA` — but it
+            // modulates the working radius, so it has to happen.
+            // `$186C` finishes with `JMP $24FD`, which is the proposal — not the
+            // top of the loop — so the turn and the closure are both skipped on
+            // the way through.
+            var switched = false
+            if s.mode && s.heading == 3 {
+                if s.offset.dx < s.span { _ = isOnCircle(&s) }
+                if row < Int(s.switchRow) {
+                    switchBack(&s, row: row, column: column, in: &mask, plot: plot)
+                    ringWrapped = false                 // $1880 STX $2B
+                    switched = true
+                }
+            }
+
             // $160F: turn when the heading's axis coordinate reaches zero.
             let axisValue = s.heading & 1 == 1 ? s.offset.dx : s.offset.dy
-            if axisValue == 0 {
+            if !switched && axisValue == 0 {
                 // $1622: a draw whose result is thrown away. `CMP #$00` can only
                 // set the carry, so the `LDX #$FF` at `$162B` is unreachable and
                 // both biases are always cleared. The draw still has to happen —
@@ -527,7 +542,7 @@ extension CoastlineWalker {
             // the last quadrant ends as soon as the walk comes near the vertical
             // axis rather than landing exactly on it. Missing this leaves the
             // walk running past the point the original stopped.
-            if s.heading == 3 && s.offset.dx < 2 {
+            if !switched && s.heading == 3 && s.offset.dx < 2 {
                 // $169C: directions 3, 6 and 0 in turn, with bases (1, 0). The
                 // third is tried for its side effect even when it refuses — the
                 // candidate it leaves behind is plotted regardless.
@@ -570,6 +585,24 @@ extension CoastlineWalker {
                 var direction: UInt8 = 4
                 var stalls = 0
                 while direction == 4 && stalls < 10_000 {
+                    // $24FD proper, and every way back into it comes through
+                    // here: the radius is modulated first, and only then does the
+                    // isthmus test get its look at `dx`.
+                    modulateRadius(&s)
+
+                    // $2509: still on the first continent, the command is paired,
+                    // and the second quadrant has brought `dx` back **below** the
+                    // pair offset — `$2519 BCS` skips the jump, so it is the small
+                    // side of the comparison that fires. `$50` is set inside
+                    // `buildIsthmus`, which is what stops it firing again.
+                    if !s.mode && s.paired && s.heading == 1
+                        && s.offset.dx < s.pairOffset {
+                        buildIsthmus(&s, in: &mask, plot: plot)
+                        ringWrapped = false             // $17D5 STX $2B
+                        edgeFlag = false                // $1854 STA $0E
+                        continue outline                // $1869 JMP $15AD
+                    }
+
                     proposeStep(&s)
                     direction = directionIndex(s, horizontalBase: horizontalBase,
                                                verticalBase: verticalBase)
@@ -619,7 +652,11 @@ extension CoastlineWalker {
                             edgeFlag = false                // $16E0 STA $0E
                             continue proposal               // $16E4 JMP $24FD
                         case .abandon:
-                            return .exhausted               // $16E9 JMP $1A48
+                            // $16E9 JMP $1A48 — a recovery, not an ending.
+                            recover(&s, in: &mask, edgeFlag: &edgeFlag,
+                                    plot: plot, erase: erase)
+                            ringWrapped = false             // $1B27 STX $2B
+                            continue proposal               // $1B38 JMP $24FD
                         }
                     }
 
@@ -690,6 +727,255 @@ extension CoastlineWalker {
         }
     }
 
+    /// Leaves the first continent and starts the partner (`$17C8`).
+    ///
+    /// This is how configuration 1 gets two continents from one placement. When
+    /// the walk has run `$4E` cells along the first continent's second quadrant,
+    /// it stops walking a circle and draws an **isthmus** instead: a one-cell
+    /// column, extended row by row down the coast, each row stepping left until
+    /// both the cell and its left neighbour are water. It draws
+    /// `random(radius / 8) + 5` rows and then keeps going until ten clear cells
+    /// stand to the left of the last one.
+    ///
+    /// Where that ends becomes the partner's centre — the same column, and
+    /// `radius` rows further down — and the walk restarts from scratch there, with
+    /// `$50` set so the walk knows to come back.
+    static func buildIsthmus(_ s: inout WalkerState, in mask: inout LandMask,
+                             plot: (UInt8, Int) -> Void) {
+        // $17C8: the first continent's geometry, to be picked up again later.
+        s.partner = WalkerState.Partner(workingRadius: s.workingRadius,
+                                        centerX: s.centerX, centerY: s.centerY,
+                                        shape: s.shape)
+        s.step = 0xFF                                       // $17D1 STX $46
+        s.pairOffset = 0xFF                                 // $17D3, so this fires once
+
+        // $17D7: how many rows of isthmus before the clearance test starts.
+        var remaining = s.rng.nextModulo(s.workingRadius >> 3) &+ 5
+        var drawn = (x: UInt8(0), y: 0)
+
+        while true {
+            // $17E4: down a row, then left until there is water here and to the
+            // left. Both tests are in the row the resolve just addressed.
+            s.offset.dy &+= 1
+            while true {
+                drawn = cell(offset: s.offset, heading: s.heading,
+                             centerX: s.centerX, centerY: s.centerY)
+                if !mask.isLand(x: drawn.x, y: drawn.y)
+                    && !mask.isLand(x: drawn.x &- 1, y: drawn.y) { break }
+                s.offset.dx &-= 1                           // $17F2
+            }
+            mask.setLand(x: drawn.x, y: drawn.y)            // $17FF
+            plot(drawn.x, drawn.y)
+
+            remaining &-= 1
+            if remaining != 0 { continue }                  // $1809
+
+            // $180D: ten clear cells to the left, or draw another row. The
+            // original sets the counter to one rather than resetting it, so a
+            // failure costs exactly one more row.
+            var probe = drawn.x &- 1
+            var clear = 10
+            while clear > 0 && !mask.isLand(x: probe, y: drawn.y) {
+                probe &-= 1
+                clear -= 1
+            }
+            if clear == 0 { break }
+            remaining = 1                                   // $1816 INC $02
+        }
+
+        // $1825: the partner's centre is where the isthmus ended, a radius
+        // further down, and the first continent's centre becomes a wall the
+        // partner may not cross.
+        s.bridgeLimit = s.centerX &+ 5
+        s.centerX = drawn.x
+        s.switchRow = UInt16(truncatingIfNeeded: drawn.y) &+ 30
+        s.centerY = UInt16(truncatingIfNeeded: drawn.y) &+ UInt16(s.workingRadius)
+
+        // $184E: restart the walk from the top of the new circle.
+        s.candidate = Offset(dx: 0, dy: s.workingRadius)
+        s.heading = 0
+        adjustDrift(&s)                                     // $185A
+        recomputeShape(&s)                                  // $185D
+        s.mode = true                                       // $1860
+    }
+
+    /// Hands control back to the first continent (`$186C`).
+    ///
+    /// The partner's walk has climbed back above the switch row, so the original
+    /// restores the geometry it saved at `$17C8`, works out where the walk
+    /// currently stands *relative to that centre*, picks the quadrant from the two
+    /// signs, and carries on. The working radius stays the partner's — `$187C`
+    /// puts it straight back after `$1B55` has just restored it.
+    static func switchBack(_ s: inout WalkerState, row: Int, column: UInt8,
+                           in mask: inout LandMask, plot: (UInt8, Int) -> Void) {
+        guard let partner = s.partner else { return }
+        // $186E: the partner's own geometry, which `$2629` will want.
+        s.partnerGeometry = WalkerState.Partner(workingRadius: s.workingRadius,
+                                                centerX: s.centerX,
+                                                centerY: s.centerY, shape: s.shape)
+        let partnerRadius = s.workingRadius                 // $186E into $5D
+        s.workingRadius = partner.workingRadius
+        s.centerX = partner.centerX
+        s.centerY = partner.centerY
+        s.shape = partner.shape
+        s.workingRadius = partnerRadius                     // $187C LDA $5D
+        s.mode = false                                      // $1883
+        s.step = 0                                          // $1885
+
+        // $1888: the quadrant comes from the two signs, and equal counts as the
+        // far side.
+        s.heading = s.centerX > column ? 1 : 2
+        s.offset.dx = s.centerX >= column ? s.centerX &- column : column &- s.centerX
+
+        resumeFromRow(&s, row: row, in: &mask, plot: plot)
+    }
+
+    /// `$189A` — turn an absolute row into an offset, then trim the seam.
+    ///
+    /// Shared by the switch back and by `$1A48`'s recovery, which jumps straight
+    /// here once it has found its way back onto land.
+    static func resumeFromRow(_ s: inout WalkerState, row: Int,
+                              in mask: inout LandMask,
+                              plot: (UInt8, Int) -> Void) {
+        // $189A: byte arithmetic on the row's low byte alone.
+        let low = UInt8(truncatingIfNeeded: row)
+        let centreLow = UInt8(truncatingIfNeeded: s.centerY)
+        if low >= centreLow {
+            s.offset.dy = low &- centreLow
+        } else {
+            s.offset.dy = centreLow &- low
+            if s.heading == 2 { s.heading = 3 }
+        }
+        recomputeShape(&s)                                  // $18AF
+
+        // $18B2: trim the seam. Walking up from the join, land is erased and
+        // water is redrawn one cell at a time until the walk is back inside the
+        // shape parameter.
+        while s.offset.dy >= s.shape {
+            let above = Offset(dx: s.offset.dx, dy: s.offset.dy &- 1)
+            let probe = cell(offset: above, heading: s.heading,
+                             centerX: s.centerX, centerY: s.centerY)
+            if mask.isLand(x: probe.x, y: probe.y) {
+                let standing = cell(offset: s.offset, heading: s.heading,
+                                    centerX: s.centerX, centerY: s.centerY)
+                mask.clearLand(x: standing.x, y: standing.y)    // $18CA
+                s.offset.dy &-= 1
+                continue
+            }
+            // $18D7: step up, and pull left if the cell to the right is water.
+            s.offset.dy &-= 1
+            let right = Offset(dx: s.offset.dx &+ 1, dy: s.offset.dy)
+            let beside = cell(offset: right, heading: s.heading,
+                              centerX: s.centerX, centerY: s.centerY)
+            if mask.isLand(x: beside.x, y: beside.y) { s.offset.dx &-= 1 }
+            let here = cell(offset: s.offset, heading: s.heading,
+                            centerX: s.centerX, centerY: s.centerY)
+            mask.setLand(x: here.x, y: here.y)                  // $18E9
+            plot(here.x, here.y)
+        }
+        recomputeShape(&s)                                  // $18F6
+        s.pairOffset = 0xFF
+    }
+
+    /// The walk has run out of both directions and ring, and finds its way back
+    /// (`$1A48`).
+    ///
+    /// This is not the giving-up path it looks like. `$16D1`'s two `PLA / PLA`
+    /// exits both land here, and what happens is a *recovery*: erase where the
+    /// walk stands, cast about below and to the right for the nearest land, work
+    /// out which quadrant that puts it in, and carry on from there with a fresh
+    /// ring. A port that treats the exit as the end of the walk simply stops
+    /// early — for a paired continent, several hundred cells early.
+    static func recover(_ s: inout WalkerState, in mask: inout LandMask,
+                        edgeFlag: inout Bool, plot: (UInt8, Int) -> Void,
+                        erase: (UInt8, Int) -> Void) {
+        // $1A48: erase where it stands, and remember where that was — `$1B3B`
+        // leaves the resolved cell in `$0C`/`$08`, which is what `$1A69` starts
+        // from.
+        let standing = cell(offset: s.offset, heading: s.heading,
+                            centerX: s.centerX, centerY: s.centerY)
+        mask.clearLand(x: standing.x, y: standing.y)
+        erase(standing.x, standing.y)
+
+        // $1A4B: while tracing the partner's last quadrant, the recovery runs as
+        // a subroutine — `$1B38` is patched to `RTS` — and control then goes to
+        // `$189A` rather than to the proposal.
+        let viaSwitch = s.paired && s.mode && s.heading >= 3
+        let row = regainLand(&s, from: standing, in: mask, edgeFlag: &edgeFlag)
+        if viaSwitch { resumeFromRow(&s, row: row, in: &mask, plot: plot) }
+    }
+
+    /// Finds land again and re-enters the walk from it (`$1A69`).
+    ///
+    /// Scans three cells across and then a row down, starting one cell up and to
+    /// the left of where the walk stood, until it lands on something. The quadrant
+    /// falls out of the two comparisons at `$1AAF` and `$1AB8`, in exactly the
+    /// pattern `$13E0` decodes.
+    ///
+    /// - Returns: the row it settled on.
+    @discardableResult
+    static func regainLand(_ s: inout WalkerState, from standing: (x: UInt8, y: Int),
+                           in mask: LandMask, edgeFlag: inout Bool) -> Int {
+        var column = standing.x &- 1                        // $1A69 DEC $0C
+        var row = standing.y - 1                            // $1A6F, 16-bit
+        var probe = column
+
+        // $1A77: three across, then down a row.
+        scan: while true {
+            var tried = 0                                   // $26
+            while true {
+                if mask.isLand(x: probe, y: row) { break scan }
+                tried += 1
+                if tried == 3 { break }
+                probe &+= 1
+                if probe == 0 { break }                     // $1A95 BNE
+            }
+            probe = column
+            row += 1
+            if row > LandMask.addressableRows { break }
+        }
+        column = probe                                      // $1AA3
+
+        // $1AA7: heading 0 with the column already on the centre keeps what it
+        // has; otherwise the quadrant comes from the two signs.
+        if s.heading != 0 || column != s.centerX {
+            reheading(&s, column: column, row: row)
+
+            // $1ACC: still on the partner, back in the first quadrant, and above
+            // the centre by more than the shape — that is far enough north to
+            // hand back to the first continent outright.
+            if s.mode && s.heading == 0
+                && Int(s.centerY) - Int(s.shape) >= row, let partner = s.partner {
+                s.mode = false                              // $1AEB INC $50
+                s.workingRadius = partner.workingRadius     // $1AED JSR $1B55
+                s.centerX = partner.centerX
+                s.centerY = partner.centerY
+                s.shape = partner.shape
+                reheading(&s, column: column, row: row)     // $1AF0 BMI $1AAF
+            }
+        }
+
+        // $1AF2: back to an offset from whichever centre is now current.
+        s.offset.dx = s.heading < 2 ? s.centerX &- column : column &- s.centerX
+        let low = UInt8(truncatingIfNeeded: row)
+        let centreLow = UInt8(truncatingIfNeeded: s.centerY)
+        s.offset.dy = (s.heading == 0 || s.heading == 3) ? centreLow &- low
+                                                         : low &- centreLow
+
+        // $1B22: a fresh ring, and the edge flag cleared unless the candidate is
+        // already clear of the left edge.
+        s.step = 0
+        if s.heading & 1 == 0 && s.candidate.dx < 2 { edgeFlag = false }
+        return row
+    }
+
+    /// `$1AAF` — the quadrant, from where the walk is against where the centre is.
+    private static func reheading(_ s: inout WalkerState, column: UInt8, row: Int) {
+        var heading: UInt8 = column < s.centerX ? 1 : 2
+        if Int(s.centerY) >= row { heading = heading == 1 ? 0 : 3 }
+        s.heading = heading
+    }
+
     /// Closes the outline with a vertical run (`$1648`).
     ///
     /// Steps `dy` from wherever the walk finished toward the radius, drawing at
@@ -744,6 +1030,11 @@ extension CoastlineWalker {
         }
         if s.candidate.dx == 0xFF || s.candidate.dy == 0xFF { return false }
         if column == 0 || column == 0xFF { return false }
+
+        // $1537: while tracing the partner, nothing may be drawn left of the
+        // first continent's centre plus five. Dead code in every configuration
+        // but 1, which is why it went unnoticed until the pair was ported.
+        if s.mode && s.heading == 3 && column < s.bridgeLimit { return false }
 
         // $1547: the row is 16-bit, and the two halves are checked differently.
         let value = UInt16(bitPattern: Int16(truncatingIfNeeded: row))
