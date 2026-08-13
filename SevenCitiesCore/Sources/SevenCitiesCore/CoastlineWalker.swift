@@ -131,3 +131,71 @@ extension CoastlineWalker {
     static let signedStep: [UInt8] = [0x01, 0xFF]
     static let signedStepVertical: [UInt8] = [0xFF, 0x01]
 }
+
+// MARK: - Shape parameters
+
+extension CoastlineWalker {
+
+    /// Recomputes the shape parameters from the radii (`$1731`).
+    ///
+    /// Note which radius each one uses: `span` and `third` come from the
+    /// command's nominal ``WalkerState/radius``, while `target`, `shape` and
+    /// `inverseSlack` come from the *working* radius, which `$178A` modulates as
+    /// the walk proceeds. Mixing them up changes the coastline's character
+    /// without changing anything obviously.
+    ///
+    /// `inverseSlack` divides by `target - workingRadius`, which is **zero** for
+    /// a radius-3 satellite. The original's divide returns `$FF` there rather
+    /// than faulting, and the port inherits that through ``Arithmetic``.
+    static func recomputeShape(_ s: inout WalkerState) {
+        // $1731: $0F = radius * 5 / 7, then $10 = $80 / $0F.
+        let five = Arithmetic.multiply(s.radius, 5)
+        s.span = Arithmetic.divide(high: five.high, low: five.low, by: 7).quotient
+        s.inverseSpan = Arithmetic.divide(high: 0, low: 0x80, by: s.span).quotient
+        // $13 = radius * 3 / 8.
+        let three = Arithmetic.multiply(s.radius, 3)
+        s.third = Arithmetic.divide(high: three.high, low: three.low, by: 8).quotient
+        // $12 = $25 = (working/5 + working)^2 / working.
+        let fifth = Arithmetic.divide(high: 0, low: s.workingRadius, by: 5).quotient
+        let scaled = fifth &+ s.workingRadius
+        let square = Arithmetic.multiply(scaled, scaled)
+        s.target = Arithmetic.divide(high: square.high, low: square.low,
+                                     by: s.workingRadius).quotient
+        s.shape = s.target
+        // $11 = $80 / ($12 - working).
+        s.inverseSlack = Arithmetic.divide(high: 0, low: 0x80,
+                                           by: s.target &- s.workingRadius).quotient
+    }
+
+    /// Modulates the working radius from the walk's vertical position
+    /// (`$178A`), then recomputes the shape.
+    ///
+    /// **Continents only.** `$17A8` returns immediately when the nominal radius
+    /// is below `$46`, so islands and satellites keep a constant working radius
+    /// — which is exactly what the traces show, `$21` fixed at 10 and 3 while a
+    /// continent's climbs 70, 71, 72, 73, 74.
+    static func modulateRadius(_ s: inout WalkerState) {
+        guard s.radius >= 0x46 else { return }
+        let half = s.offset.dy >> 1
+        var value = s.drift &+ half
+        if value & 0x80 != 0 { value = (value ^ 0xFF) &+ 1 }   // absolute value
+        s.workingRadius = value
+        recomputeShape(&s)
+    }
+
+    /// Flips the drift that biases the working radius (`$17A6`).
+    ///
+    /// Continents only again, and only on three draws in four (`AND #$03`,
+    /// returning when the result is zero). The drift alternates between
+    /// `radius / 2` and `-(radius / 2 + radius)` depending on its own sign, so
+    /// the coastline bulges and pinches along its length.
+    static func adjustDrift(_ s: inout WalkerState) {
+        guard s.radius >= 0x46 else { return }
+        guard s.rng.next() & 0x03 != 0 else { return }
+        var value = s.radius >> 1
+        if s.drift & 0x80 == 0 {
+            value = ((value &+ s.radius) ^ 0xFF) &+ 1
+        }
+        s.drift = value
+    }
+}
