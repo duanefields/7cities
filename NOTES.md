@@ -2157,9 +2157,27 @@ radius is perturbed as it is traced, not a blob roughened afterwards.
 iterations, 716 plots, 155 erases and 155 backtracks — **21.6% of plotted cells are erased again**.
 A port treating the unwind as exceptional would build visibly different continents.
 
-**The `$1900` guard never fired** in that fill, so the restart path really is rare, as assumed.
+**`$1900` was never called** during that fill — not "called and passed". It is called heavily for
+smaller features (68 times for a radius-10 island, 530 for a radius-3 fill) and passed every time.
+So the restart path stays unobserved, which is consistent with it being rare but is not the same
+evidence as a guard being exercised and holding.
 
-One loose end: the trace shows extra fills at radius 3 with no matching registration — for seed
-`$1234` configuration 0, at `(201,93)` after the continent at `(166,94)`, and at `(106,267)` after
-`(89,247)`. They occur *within* the command-table stage, before `$280A`, so they are not the second
-wave. Not yet identified.
+**Each continent is followed by a radius-3 fill** that is not registered. For seed `$1234`
+configuration 0 the fill sequence is `(166,94)r70`, `(201,93)r3`, `(89,247)r70`, `(106,267)r3`,
+`(187,14)r10`, `(190,348)r10` — six fills for four registrations. The satellites sit 20-35 cells
+from their continent, well inside its footprint, and islands get none, which fits the `$B0 >= $46`
+size test that gates `$178A` and `$17A6` elsewhere.
+
+They **add** land rather than carving it: 23 plots, zero erases, zero backtracks. So they are small
+satellite blobs, not lakes — worth knowing before assuming a fill can only grow a landmass.
+
+That also gives an incremental order for porting the walker, easiest first:
+
+| Target             | Walk iterations | Plots | Erases | Backtracks |
+| :----------------- | --------------: | ----: | -----: | ---------: |
+| radius-3 satellite |              21 |    23 |      0 |          0 |
+| radius-10 island   |              91 |    93 |     13 |         13 |
+| radius-70 continent|             701 |   716 |    155 |        155 |
+
+The satellite exercises the walk, the plot path and the candidate tests with **no backtracking at
+all**, so it isolates the parts that can be got right before the undo ring matters.
