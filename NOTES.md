@@ -479,9 +479,31 @@ Enough of the pieces are now identified to describe the mechanism:
 | `$1476` | evaluate a candidate step; carry set rejects it                               |
 | `$1648` | span fill between `$15` and `$B0`, with the self-modified `INC`/`DEC`         |
 
-So the walker is a **turtle**: position in `$22`/`$23:$24`, heading in `$1A` (0-3, used by `$13E0`
-to rotate its offsets), step counter `$46` wrapping at 201, and a ring of 201 twelve-byte records
-at `$9100` recording the trail.
+So the walker has a position in `$22`/`$23:$24`, a heading in `$1A` (0-3, used by `$13E0` to rotate
+its offsets), a step counter `$46` wrapping at 201, and a ring of 201 twelve-byte records at
+`$9100`.
+
+**The ring is an undo stack, not a trail, and the walker is a backtracking search.** `$16D1` reads
+records back out: it decrements `$46` (wrapping `$FF` to `$C8` = 200), restores `$2C`-`$34`, `$14`,
+`$15` and `$1A` from the record via the pointer `$16BB` computes, and retries through `$1A00`,
+looping to `$16D1` again if that also fails. It discards its own return address with `PLA / PLA`
+and exits by `JMP`, so it unwinds the caller too.
+
+That matters for the port far more than the plotting does. A turtle can be transcribed routine by
+routine; a backtracking search cannot be checked until enough of it exists to run, because a bug
+anywhere shows up as "the walk went somewhere else". The undo record is the thing to get exactly
+right: 12 bytes, being nine bytes of `$2C`-`$34` followed by `$14`, `$15` and `$1A`.
+
+The steps themselves are a biased random walk. `$1555` and `$1583` each maybe-step one axis by one:
+draw, compare against `$18`, then `$19`, then `$B1` (x) or `$B2` (y), and take a signed delta from
+`$13DA`/`$13DE` indexed by `$1A & 1`. `EOR #$FE` flips the sign, turning `$01` into `$FF` and back,
+which is how one table serves both directions.
+
+`$178A` rewrites `$21` — `$21 = |$B3 + $15 / 2|`, then re-runs `$1731` to recompute the shape
+parameters from it — so the radius genuinely changes during a walk. It runs often (2,158 times in
+one measured phase). This is *not* an explanation for the `$21` drift seen at registration, since
+the walker only runs after `$226A` and `$217B` resets `$21` each iteration, but it does explain why
+`$21` and `$B0` disagree everywhere inside the walker.
 
 `$1476` is where the coastline gets its shape. `$1D` (0-8) encodes one of nine directions, split
 into an x delta from `$1D mod 3` and a y delta from `$1D div 3`, both looked up in the signed table
