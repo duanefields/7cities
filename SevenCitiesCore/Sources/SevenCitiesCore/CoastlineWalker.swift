@@ -199,3 +199,67 @@ extension CoastlineWalker {
         s.drift = value
     }
 }
+
+// MARK: - Candidate validation
+
+extension CoastlineWalker {
+
+    /// How far the current offset is from the centre, over the working radius
+    /// (`$19CC`).
+    ///
+    /// `(dx * dx + dy * dy) / workingRadius` — a distance metric, not a true
+    /// radius, and the division is the original's, warts included. The result
+    /// lands in both the accumulator and `$03`, which is why `$255D` can read
+    /// `$03` immediately afterwards as the metric.
+    static func distanceMetric(_ s: WalkerState) -> UInt8 {
+        let dx = Arithmetic.multiply(s.offset.dx, s.offset.dx)
+        let dy = Arithmetic.multiply(s.offset.dy, s.offset.dy)
+        var low = UInt16(dx.low) &+ UInt16(dy.low)
+        let high = UInt16(dx.high) &+ UInt16(dy.high) &+ (low > 0xFF ? 1 : 0)
+        low &= 0xFF
+        return Arithmetic.divide(high: UInt8(truncatingIfNeeded: high),
+                                 low: UInt8(low), by: s.workingRadius).quotient
+    }
+
+    /// Whether the offset sits on the coastline circle, within a tolerance of
+    /// three (`$19EE`).
+    ///
+    /// Modulates the radius first, so the circle it is tested against is the one
+    /// this step is aiming at rather than the one the last step used.
+    static func isOnCircle(_ s: inout WalkerState) -> Bool {
+        modulateRadius(&s)
+        let metric = distanceMetric(s)
+        var difference = metric &- s.workingRadius
+        if metric < s.workingRadius { difference = (difference ^ 0xFF) &+ 1 }
+        return difference < 3
+    }
+
+    /// The full candidate test (`$1A00`): on the circle, and with clear water
+    /// either side.
+    ///
+    /// The horizontal scans are asymmetric and easy to get wrong. To the left it
+    /// runs from `max(column - 10, 1)` up to but not including the column; to the
+    /// right from `column + 1` through `column + 10`. The left scan is skipped
+    /// entirely when the column is 1 (`CPX #$01 / BEQ`), and its start clamps to
+    /// 1 rather than 0.
+    static func isCandidateClear(_ s: inout WalkerState, in mask: LandMask) -> Bool {
+        guard isOnCircle(&s) else { return false }
+
+        let (column, row) = cell(offset: s.offset, heading: s.heading,
+                                 centerX: s.centerX, centerY: s.centerY)
+        if column != 1 {
+            var probe = column >= 10 ? column &- 10 : 1
+            while probe < column {
+                if mask.isLand(x: probe, y: row) { return false }
+                probe &+= 1
+            }
+        }
+        var probe = column &+ 1
+        let limit = column &+ 11
+        while probe < limit {
+            if mask.isLand(x: probe, y: row) { return false }
+            probe &+= 1
+        }
+        return true
+    }
+}
