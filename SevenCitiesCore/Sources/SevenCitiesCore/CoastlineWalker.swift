@@ -427,3 +427,199 @@ extension CoastlineWalker {
         return index
     }
 }
+
+// MARK: - The outline trace
+
+extension CoastlineWalker {
+
+    /// What ended a fill's outline trace.
+    public enum Outcome: Sendable, Equatable {
+        /// The heading reached 4 — the circle closed normally.
+        case closed
+        /// The walk exhausted the undo ring without finding a way forward.
+        case exhausted
+    }
+
+    /// Traces one landmass outline (`$23D3` into `$15AD`).
+    ///
+    /// The shape of the loop, which is not obvious from any single routine:
+    ///
+    /// 1. `$24FD` proposes — both axes step, and the movement maps to one of
+    ///    nine directions.
+    /// 2. `$2603` evaluates that direction with `$1476`; on refusal it tries
+    ///    random untried ones, and after nine failures backtracks.
+    /// 3. `$15AD` commits — write the undo record, adopt the candidate, plot.
+    /// 4. When the axis coordinate for the current heading reaches zero, turn.
+    ///    Four turns close the circle.
+    ///
+    /// `plot` is called for every cell the walk commits, in order, which is what
+    /// the reference traces record.
+    public static func traceOutline(
+        _ s: inout WalkerState, in mask: inout LandMask,
+        plot: (UInt8, Int) -> Void = { _, _ in }
+    ) -> Outcome {
+        var ring = [UndoRecord?](repeating: nil, count: ringCapacity)
+        var tried = [UInt8](repeating: 0, count: 9)
+        var edgeFlag = false
+
+        // $23D3: the candidate starts directly "above" the centre.
+        s.candidate = Offset(dx: 0, dy: s.radius)
+        s.heading = 0
+        s.step = 0xFF
+
+        var guardCount = 0
+        while guardCount < 200_000 {
+            guardCount += 1
+
+            // $15AD: the edge flag latches once the candidate reaches x == 2.
+            if !edgeFlag && s.candidate.dx == 2 { edgeFlag = true }
+
+            // $15B9: advance the ring slot, wrapping at 201.
+            s.step = s.step &+ 1
+            if s.step >= UInt8(ringCapacity) { s.step = 0 }
+            ring[Int(s.step)] = UndoRecord(tried: tried, offset: s.offset,
+                                           heading: s.heading)
+
+            // $15E2: adopt the candidate and draw it.
+            s.offset = s.candidate
+            let (column, row) = cell(offset: s.offset, heading: s.heading,
+                                     centerX: s.centerX, centerY: s.centerY)
+            mask.setLand(x: column, y: row)
+            plot(column, row)
+
+            // $160F: turn when the heading's axis coordinate reaches zero.
+            let axisValue = s.heading & 1 == 1 ? s.offset.dx : s.offset.dy
+            if axisValue == 0 {
+                if s.radius >= 0x46 {
+                    let flip: UInt8 = s.rng.next() < 0x40 ? 0xFF : 0x40
+                    s.biasX = flip
+                    s.biasY = flip
+                }
+                s.heading &+= 1
+                adjustDrift(&s)
+                if s.heading == 2 { edgeFlag = false }
+                if s.heading == 4 {
+                    s.heading = 3
+                    spanFill(&s, in: &mask, plot: plot)
+                    return .closed
+                }
+            }
+
+            // $1690: the closure. Reached whether or not a turn just happened,
+            // and it fires on **`dx` below 2**, not on `dx` reaching zero — so
+            // the last quadrant ends as soon as the walk comes near the vertical
+            // axis rather than landing exactly on it. Missing this leaves the
+            // walk running past the point the original stopped.
+            if s.heading == 3 && s.offset.dx < 2 {
+                // $169C: directions 3, 6 and 0 in turn, with bases (1, 0). The
+                // third is tried for its side effect even when it refuses — the
+                // candidate it leaves behind is plotted regardless.
+                for closing: UInt8 in [3, 6, 0] {
+                    let usable = propose(&s, direction: closing, horizontalBase: 1,
+                                         verticalBase: 0, edgeGuard: edgeFlag)
+                        && accepts(&s, in: mask)
+                    if usable { break }
+                }
+                let (column, row) = cell(offset: s.candidate, heading: s.heading,
+                                         centerX: s.centerX, centerY: s.centerY)
+                mask.setLand(x: column, y: row)
+                plot(column, row)
+                s.offset = s.candidate
+                spanFill(&s, in: &mask, plot: plot)
+                return .closed
+            }
+
+            // $24FD: propose, then search the nine directions for one that works.
+            proposeStep(&s)
+            let horizontalBase = s.heading >> 1
+            let verticalBase: UInt8 = (s.heading == 0 || s.heading == 3) ? 0 : 1
+            var direction = directionIndex(s, horizontalBase: horizontalBase,
+                                           verticalBase: verticalBase)
+            if direction == 4 { continue }          // $25E6: nowhere to go
+
+            tried = [UInt8](repeating: 0, count: 9)
+            tried[Int(direction) % 9] = 0xFF
+            var attempts = 2
+            var committed = false
+
+            while !committed {
+                if propose(&s, direction: direction,
+                           horizontalBase: horizontalBase,
+                           verticalBase: verticalBase, edgeGuard: edgeFlag),
+                   accepts(&s, in: mask) {
+                    committed = true
+                    break
+                }
+                attempts += 1
+                if attempts >= 10 {
+                    // $2613: out of directions — unwind.
+                    guard let record = ring[Int(s.step)] else { return .exhausted }
+                    tried = record.tried
+                    s.offset = record.offset
+                    s.heading = record.heading
+                    s.step = s.step == 0 ? UInt8(ringCapacity - 1) : s.step &- 1
+                    let erased = cell(offset: s.offset, heading: s.heading,
+                                      centerX: s.centerX, centerY: s.centerY)
+                    mask.clearLand(x: erased.x, y: erased.y)
+                    attempts = 2
+                    continue
+                }
+                // $2619: pick a direction not yet tried.
+                var pick = s.rng.nextModulo(9)
+                var spins = 0
+                while tried[Int(pick) % 9] != 0 && spins < 64 {
+                    pick = s.rng.nextModulo(9)
+                    spins += 1
+                }
+                direction = pick
+                tried[Int(pick) % 9] &+= 1
+            }
+        }
+        return .exhausted
+    }
+
+    /// Closes the outline with a vertical run (`$1648`).
+    ///
+    /// Steps `dy` from wherever the walk finished toward the radius, drawing at
+    /// `dx = 0` each time, and stops on reaching it. This is the seam where the
+    /// four quadrants meet, and without it a coastline is left open.
+    ///
+    /// The original picks the direction by **patching its own loop**: `$1654`
+    /// writes either `$E6` (`INC`) or `$C6` (`DEC`) into `$1657` depending on
+    /// whether `dy` is below or above the radius. Transcribed as a signed step
+    /// rather than reproduced literally, since the effect is a direction and
+    /// nothing else reads those bytes.
+    ///
+    /// It plots with `dx = 0` taken from the accumulator (`LDA #$00`), not from
+    /// `$14`, which still holds the walk's last value — the distinction that
+    /// mislabelled four events when the reference fixture was first captured.
+    static func spanFill(_ s: inout WalkerState, in mask: inout LandMask,
+                         plot: (UInt8, Int) -> Void) {
+        guard s.offset.dy != s.radius else { return }
+        let rising = s.offset.dy < s.radius
+        while true {
+            s.offset.dy = rising ? s.offset.dy &+ 1 : s.offset.dy &- 1
+            if s.offset.dy == s.radius { return }
+            let (column, row) = cell(offset: Offset(dx: 0, dy: s.offset.dy),
+                                     heading: s.heading,
+                                     centerX: s.centerX, centerY: s.centerY)
+            mask.setLand(x: column, y: row)
+            plot(column, row)
+        }
+    }
+
+    /// Whether the evaluator accepts the current candidate (`$1516`).
+    ///
+    /// Two neighbors or more is a refusal — the walk keeps to thin coastline
+    /// rather than filling area, which the span and flood passes do later.
+    static func accepts(_ s: inout WalkerState, in mask: LandMask) -> Bool {
+        let (column, row) = cell(offset: s.candidate, heading: s.heading,
+                                 centerX: s.centerX, centerY: s.centerY)
+        let origin = scanOrigin(column: column, row: row)
+        let neighbors = neighborCount(fromColumn: origin.column, row: origin.row,
+                                      in: mask)
+        if neighbors >= 2 { return false }
+        if s.candidate.dx == 0xFF || s.candidate.dy == 0xFF { return false }
+        return true
+    }
+}
