@@ -18,8 +18,8 @@ engineering record; this holds the work.
       `tools/wm_config.py` builds exactly the predicted 2+2, 1+2 and 1+6
       landmasses. Placement is rejection sampling, and the land mask is 1 bit
       per cell at `$5700`, 32 B/row, confirmed visually by
-      `tools/wm_landmask.py`. The coastline walker at `$15AD` now traces
-      outlines exactly; the interior flood fill at `$194A` is what remains.
+      `tools/wm_landmask.py`. **The land-mass phase itself is now ported** —
+      see below; what remains of the World Maker is the five phases after it.
       See NOTES.md.
 - [x] ~~**Make the land-mass phase reproducible.**~~ **Done.** Patching the
       seeding site at `$20CB`, the raster IRQ's entropy stir at `$2406` and the
@@ -28,25 +28,17 @@ engineering record; this holds the work.
       across separate emulator boots. `tools/wm_deterministic.py`, with
       `--fixtures` to capture `landmass_reference.json` (digests only — the
       mask is map data and is not committed).
-- [ ] **Port the land-mass phase to Swift.** The oracle now exists, so this is
-      testable end to end: same seed and config, same 12,800 bytes. Measured
-      coverage says the phase executes **64 of the program's 207 routines**
-      (`tools/wm_coverage.py`), which is the real size of the job.
-      Done so far: the bounded draws `$22B4`/`$247B` and the placement test
-      `$22F7`, both ported and verified against the original; the `LandMask`
-      buffer and the command table as `LandMassPhase.configurations`.
-      Still needed: the placement loop itself (including the paired-placement
-      retest at `$2231`), the **second wave** at `$280A`-`$2894` that adds
-      2-7 radius-3 islands (8-12 for configuration 2) and files their positions
-      into two tables split at row 219, and the flood fill `$194A`.
-- [ ] **Re-measure coverage to the true phase end.** The 64-of-207 figure was
-      taken between `$212A` and `$280A`, which is the command-table stage only
-      and excludes the second wave. `tools/wm_coverage.py` now runs to
-      `PHASE_DONE`; re-run it.
-- [ ] **Identify the two position tables at `$038C` and `$03B4`.** The second
-      wave files each radius-3 island into one or the other depending on whether
-      its row is below 219, and also writes `$03DC`. Something downstream reads
-      these — possibly the village or gold placement.
+- [x] ~~**Port the land-mass phase to Swift.**~~ **Done for configurations 0 and
+      2.** `LandMassStage.run(config:seed:)` goes from a seed to the original's
+      12,800-byte mask, checked at both of the phase's checkpoints against
+      `landmass_reference.json` — the digests captured from the original under
+      VICE — for all nine seed and configuration pairs.
+      Configuration 1 is refused; see below.
+- [x] ~~**Identify the two position tables at `$038C` and `$03B4`.**~~ **Done, and
+      ported.** Below row 219 an island is filed into `$038C` as `(row, column)`;
+      at or above, into `$03B4` as `(row - 192, column)`. `$03DC` keeps the last
+      column filed, and `$2894` halves both indices to turn a byte offset into a
+      count. What *reads* them is still unknown.
 - [x] ~~**Trace the coastline outline.**~~ **Done, exactly.** All three fills —
       satellite, island and continent — reproduce every mask write the original
       made, in order, to the end of the fill: 23, 106 and 871 writes, the last
@@ -73,9 +65,11 @@ engineering record; this holds the work.
       column, row, a row-past-`$D0` flag and a kind of 9 or 7, one of each. Two
       advanced civilizations is the obvious guess and is only a guess.
 - [ ] **Port the walk's `$50` mode (`$1860`, `$186C`), which builds paired
-      continents.** Configuration 1's command places one continent and gets two:
-      the walk reaches `$160C JMP $186C`, saves state, and re-enters `$15AD` for
-      the partner. `$2629` then places two satellites instead of one.
+      continents.** The last gap in the land-mass phase. Configuration 1's command
+      places one continent and gets two: the walk reaches `$160C JMP $186C`, saves
+      `$21`-`$24` and `$43` into `$5D`-`$61`, sets `$50`, computes a position from
+      `$22 - $0C` and `$08 - $23`, and re-enters `$15AD` for the partner. `$2629`
+      then runs `$2655` twice rather than once, so the pair gets two satellites.
       `LandMassStage` refuses configuration 1 until this exists.
 - [ ] **Confirm the band structure.** The finished map is assembled on disk —
       51,200 bytes of nibbles will not fit in a C64 — and `$2C14` bounds its

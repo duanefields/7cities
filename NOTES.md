@@ -2450,8 +2450,39 @@ is graded against `interior_reference.json`, captured in the interpreter, and th
 mask digests agree with `landmass_reference.json`'s — captured months earlier from the real thing
 under VICE — on all nine seed and configuration pairs. Two independent captures, one port.
 
-What is left of the land-mass phase: configuration 1's paired continent, and the second wave at
-`$280A`-`$2894`.
+### The second wave
+
+`$215F JMP $280A`, once the command table runs out: two to seven more radius-3 islands, eight to
+twelve in configuration 2, scattered anywhere clear rather than placed against anything. Each is
+drawn as a radius-10 candidate, retested at radius 5 and only then built at radius 3 — three radii
+for one island, which is what keeps them well apart. Rows 195 to 218 are refused outright.
+
+`$281F` patches `$222F` — the `BCS` at the end of the placement loop's clearance test — to `RTS`, so
+`JSR $21B8` computes the bounds, draws a position, tests it and returns the carry instead of looping
+by itself. The window it computes is the ordinary one for a radius-10 landmass, so the port reuses
+`LandMassPhase.bounds` unchanged.
+
+The survivors go into the two position tables, and this settles what they are. Below row 219 an
+island is filed into **`$038C`** as `(row, column)`; at or above it goes into **`$03B4`** as
+`(row - 192, column)`, keeping the row in a byte. `$03DC` keeps the last column filed either way, and
+`$2894` halves `$67` and `$68` to turn each byte offset into a count. Rows 195 to 218 cannot appear
+in either, which is why the split boundary and the refusal band do not have to agree. What reads the
+tables is still unknown.
+
+The walk itself is the satellite path at `$2794` again, so these islands draw from the second
+generator and from the same seed pool — which by this point is pristine, `$167B` having restored it
+after the last continent, and which is **not** rebuilt between islands the way `$1666` rebuilds it
+between continents.
+
+### Where the land-mass phase stands
+
+Ported end to end for configurations 0 and 2, from a seed to the original's mask, and checked at both
+of the phase's checkpoints — `tableStage` and `phaseEnd` — against `landmass_reference.json`, whose
+digests were captured from the original under VICE. Nine seed and configuration pairs, two
+independent captures, one port.
+
+What is left: configuration 1's paired continent, built by the walk's `$50` mode at `$1860`/`$186C`.
+`LandMassStage` refuses that configuration rather than approximating it.
 
 Configuration 1 is refused outright. Its continent is paired, and the partner is not placed by the
 placement loop at all — the walk itself reaches `$160C JMP $186C`, saves its state, sets `$50`, and

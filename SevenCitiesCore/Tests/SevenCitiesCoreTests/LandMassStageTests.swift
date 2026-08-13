@@ -33,6 +33,13 @@ private struct Stage: Decodable {
         let landCells: Int
         let sites: [Site]
         let parameter: Int
+        let islands: [Island]
+        let lastColumn: Int
+    }
+    struct Island: Decodable {
+        let column: Int
+        let row: Int
+        let southern: Bool
     }
     let unaided: [Case]
 }
@@ -106,6 +113,19 @@ func stageRunsUnaided(index: Int) throws {
     let sites = try #require(run.sites)
     let expectedSites = c.sites
     #expect(Int(sites.parameter) == c.parameter, "\(label): $EBCE parameter")
+    // The second wave's islands, in the order the two tables hold them.
+    let placed = run.islands.filter { !$0.southern } + run.islands.filter { $0.southern }
+    #expect(placed.count == c.islands.count,
+            "\(label): expected \(c.islands.count) islands, got \(placed.count)")
+    for (i, want) in c.islands.enumerated() where i < placed.count {
+        let got = placed[i]
+        #expect(Int(got.column) == want.column && Int(got.row) == want.row
+                    && got.southern == want.southern,
+                """
+                \(label) island \(i): expected (\(want.column),\(want.row))                 southern \(want.southern), got (\(got.column),\(got.row))                 southern \(got.southern)
+                """)
+    }
+
     let chosen = [sites.primary, sites.secondary].compactMap { $0 }
     #expect(chosen.count == expectedSites.count,
             "\(label): expected \(expectedSites.count) site(s), got \(chosen.count)")

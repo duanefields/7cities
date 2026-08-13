@@ -22,6 +22,17 @@
 /// seed and configuration pairs.
 public enum LandMassStage {
 
+    /// One of the second wave's radius-3 islands (`$2867` and `$2874`).
+    ///
+    /// `southern` is which of the two tables it went into: `$03B4` for rows at or
+    /// above 219, where the original stores `row - 192` to keep it in a byte, and
+    /// `$038C` for the rest. What reads them has not been established.
+    public struct Island: Sendable, Equatable {
+        public let column: UInt8
+        public let row: UInt16
+        public let southern: Bool
+    }
+
     /// Something that touched the mask, in the order it happened.
     ///
     /// Emitted so a port can be graded against the original's own sequence rather
@@ -72,9 +83,12 @@ public enum LandMassStage {
     struct SeedPool {
         var entries: [UInt8]
 
-        init() {
+        /// `$1666` spends entries 0, 1 and 20 before copying the table to
+        /// `$0200` and restores them after, so a continent's search sees 18 and
+        /// the second wave sees all 21.
+        init(pristine: Bool = false) {
             entries = satelliteSeeds
-            for index in [0, 1, 20] { entries[index] = spent }
+            if !pristine { for index in [0, 1, 20] { entries[index] = spent } }
         }
 
         /// `$27BE`: draw an index, redraw while it lands on a spent entry, then
@@ -97,6 +111,9 @@ public enum LandMassStage {
         public let steps: [Step]
         /// The sites `$4500` chose partway through.
         public let sites: SiteSelection.Result?
+        /// The second wave's islands, in the order they were placed. The original
+        /// files them into two tables at `$038C` and `$03B4`, split by row.
+        public let islands: [Island]
         /// Why the stage stopped before the command table ran out. `nil` means it
         /// finished, which it now does for every configuration it accepts.
         public let stoppedBecause: String?
@@ -112,6 +129,10 @@ public enum LandMassStage {
         var mask = LandMask()
         var steps: [Step] = []
         var sites: SiteSelection.Result?
+        // `$0200`, the satellite seed pool. `$1666` rebuilds it for each
+        // continent, but the second wave inherits whatever the last rebuild left
+        // and spends from it across every island.
+        var pool = SeedPool(pristine: true)
         // `$AB`, the guard that makes `$44EF` fire once and once only.
         var mirrored = false
 
@@ -185,7 +206,68 @@ public enum LandMassStage {
                 sites = try SiteSelection.choose(in: mask, rng: &rng)
             }
         }
-        return Run(mask: mask, steps: steps, sites: sites, stoppedBecause: nil)
+        // $215F JMP $280A: the command table is exhausted, and the second wave
+        // scatters small islands over whatever is left.
+        let scattered = try secondWave(config: config, rng: &rng, mask: &mask,
+                                       pool: &pool, steps: &steps)
+        return Run(mask: mask, steps: steps, sites: sites, islands: scattered,
+                   stoppedBecause: nil)
+    }
+
+    /// The second wave (`$280A`-`$2894`).
+    ///
+    /// A run of radius-3 islands, two to seven of them and eight to twelve in
+    /// configuration 2, placed anywhere on the map that is clear rather than
+    /// against any particular landmass. Each is drawn as a radius-10 candidate,
+    /// retested at radius 5 and only then built at radius 3 — three radii for one
+    /// island, which is how they end up well separated from everything.
+    ///
+    /// Rows 195 to 218 are refused outright, and the survivors are filed into one
+    /// of two tables by the same boundary shifted up: below 219 into `$038C` as
+    /// `(row, column)`, at or above into `$03B4` as `(row - 192, column)`. Both
+    /// indices are halved at `$2894`, turning a byte offset into a count.
+    ///
+    /// It reuses the satellite path at `$2794`, so these islands draw from the
+    /// second generator and from the same seed pool — which by now is pristine,
+    /// `$167B` having restored it after the last continent, and which is **not**
+    /// rebuilt between islands the way `$1666` rebuilds it between continents.
+    private static func secondWave(config: Int, rng: inout WorldMakerRNG,
+                                   mask: inout LandMask, pool: inout SeedPool,
+                                   steps: inout [Step]) throws -> [Island] {
+        // $280A: configuration 2 gets a lot more of them.
+        let count = config == 2 ? rng.nextByte(from: 8, below: 13)
+                                : rng.nextByte(from: 2, below: 8)
+        // $2824: the placement window is the ordinary one for a radius-10
+        // landmass — `$281F` patches `$222F` to `RTS` so `$21B8` computes the
+        // bounds, draws, tests and returns rather than looping itself.
+        let bounds = LandMassPhase.bounds(radius: 0x0A, paired: false,
+                                          pairOffset: 0xFF, config: config)
+        var islands: [Island] = []
+
+        for _ in 0..<count {
+            var attempts = 0
+            while attempts < 256 {
+                attempts += 1
+                let x = rng.nextByte(from: bounds.xLower, below: bounds.xUpper)
+                let y = rng.nextWord(from: bounds.yLower, below: bounds.yUpper)
+                guard LandMassPhase.isClear(x: x, y: y, radius: 0x0A, in: mask)
+                else { continue }
+                // $2837: the excluded band, and only rows below 256 are tested.
+                if y < 0x100 && y >= 0xC3 && y < 0xDB { continue }
+                // $2845: a second, tighter clearance test.
+                guard LandMassPhase.isClear(x: x, y: y, radius: 5, in: mask)
+                else { continue }
+
+                islands.append(Island(column: x, row: y, southern: y >= 0xDB))
+                satelliteWalk(column: x, row: y, pool: &pool, rng: &rng,
+                              mask: &mask, steps: &steps)
+                steps.append(.interior(x: x, y: y))
+                guard InteriorFill.fill(column: x, row: Int(y), in: &mask) == .filled
+                else { throw Restart() }
+                break
+            }
+        }
+        return islands
     }
 
     /// One landmass: the walk, then whatever `$1666` decides comes next.
@@ -294,11 +376,26 @@ public enum LandMassStage {
             // $2794: the satellite walks on the *second* generator, seeded from
             // the pool, with `$1666` patched to `RTS` so it neither recurses nor
             // floods. Its own interior is left to the continent's flood fill.
-            var satellite = WorldMakerRNG(high: pool.take(&rng), low: spent)
-            walk(x: column, y: row, radius: 3, biasX: 0, biasY: 0, drift: 0x97,
-                 rng: &satellite, mask: &mask, steps: &steps)
+            satelliteWalk(column: column, row: row, pool: &pool, rng: &rng,
+                          mask: &mask, steps: &steps)
             return
         }
+    }
+
+    /// Walks a radius-3 island (`$2794`).
+    ///
+    /// Both callers reach it the same way: `$1666` is patched to `RTS` first, so
+    /// the walk traces an outline and stops — no recursion, and no flood fill of
+    /// its own. Its randomness comes from `$1F`/`$20`, seeded with a byte taken
+    /// from the pool and a low byte of `$0C`, which is why a satellite's shape is
+    /// independent of everything the main generator has done.
+    private static func satelliteWalk(column: UInt8, row: UInt16,
+                                      pool: inout SeedPool,
+                                      rng: inout WorldMakerRNG,
+                                      mask: inout LandMask, steps: inout [Step]) {
+        var satellite = WorldMakerRNG(high: pool.take(&rng), low: spent)
+        walk(x: column, y: row, radius: 3, biasX: 0, biasY: 0, drift: 0x97,
+             rng: &satellite, mask: &mask, steps: &steps)
     }
 
     /// Picks a column inside the water span of a row (`$28AB`).

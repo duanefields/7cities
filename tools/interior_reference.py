@@ -50,7 +50,8 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from sim_landmass import machine, TABLE_STAGE_DONE, BASE, MASK_BYTES  # noqa: E402
+from sim_landmass import (machine, TABLE_STAGE_DONE, PHASE_DONE, BASE,  # noqa: E402
+                          MASK_BYTES)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FIX = f"{ROOT}/SevenCitiesCore/Tests/SevenCitiesCoreTests/Fixtures"
@@ -157,7 +158,20 @@ def capture(seed, config):
 
     cpu.trace = hook
     cpu.run_until({TABLE_STAGE_DONE})
-    final = {"maskSha256": mask_digest(),
+    cpu.step()
+    cpu.run_until({PHASE_DONE})
+    # `$2894` halves both indices to turn a byte offset into a count; this reads
+    # them just before it does, so the entries can be paired off directly.
+    north = [[cpu.rd(0x038C + i + 1), cpu.rd(0x038C + i)]
+             for i in range(0, cpu.rd(0x67), 2)]
+    south = [[cpu.rd(0x03B4 + i + 1), cpu.rd(0x03B4 + i) + 192]
+             for i in range(0, cpu.rd(0x68), 2)]
+    final = {"islands": [{"column": c, "row": r, "southern": False}
+                         for c, r in north]
+                        + [{"column": c, "row": r, "southern": True}
+                           for c, r in south],
+             "lastColumn": cpu.rd(0x03DC),
+             "maskSha256": mask_digest(),
              "landCells": sum(b.bit_count()
                               for b in cpu.mem[BASE:BASE + MASK_BYTES])}
     return steps, final, sites, parameter[0]
