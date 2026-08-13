@@ -367,8 +367,20 @@ nominal radius is meant.
 
 `$22F7` reads `$21`, not `$B0`, so the placement test runs at whatever `$21` holds.
 
-**Why `$21` sometimes reads 71 at registration is unresolved**, and the search is recorded here so
-it is not repeated from scratch:
+**Resolved: there is no drift. It was a measurement artifact.** Traced in the interpreter, `$21`
+equals `$B0` at *every* registration across seeds `$1234`, `$BEEF` and `$0001` — never 71. The
+emulator capture that produced the 71 had overshot `$1B5F`, because VICE's checkpoints halt late,
+into code that had already modified `$21`. The program was never doing what the fixture said.
+
+Two consequences. The `radius` field in `placement_reference.json` is **unreliable** — it records
+`$21` at an imprecise moment; use `b0`, which the Swift tests already do, so they are unaffected.
+And any measurement that reads memory at a mid-phase address is suspect in the same way: stage
+boundaries are safe because writing has stopped, arbitrary addresses are not.
+
+The search below is kept because the reasoning stands even though the premise was false, and
+because the technique — scan for writers, cross-check against the disassembly, then falsify the
+obvious hypothesis — is what should be repeated. What should *not* be repeated is trusting a
+mid-phase emulator read in the first place:
 
 - Scanning the binary for direct zero-page writes (`STA`/`STX`/`STY`/`INC`/`DEC` with operand `$21`)
   finds 12, all confirmed against the disassembly. **None lies between `$2183` and `$226A`.**
@@ -381,10 +393,8 @@ it is not repeated from scratch:
 - Bisecting with exec checkpoints proved unreliable twice — see the harness notes — so the paired
   samples cannot be trusted to come from one iteration.
 
-Parked rather than solved. The practical question is whether it changes placement *outcomes*, and
-that is answerable without resolving the mechanism: port the loop using `$B0`, which is
-unambiguously the nominal radius, and check it against the 45 recorded positions. If they
-reproduce, the drift never affected placement.
+And `$21` genuinely does differ from `$B0` *inside* the walker, which is what made the false
+reading plausible: see below, where it turns out to be the shape mechanism rather than corruption.
 
 ### Two call sites register landmasses, and the second is inside the walker
 
@@ -2126,3 +2136,30 @@ tidied into a flag.
 
 `$1A69` steps left and up looking for the edge of existing land, then rewrites the heading `$1A`
 from comparisons against `$22` and `$23`/`$24`. It is the wall-following half of the walk.
+
+#### What the walker actually does (traced, `tools/trace_walker.py`)
+
+Reading the routines gave the parts; tracing one fill in the interpreter gives the shape, and it is
+not what the routine-by-routine reading suggested.
+
+**The position never moves.** `$22`/`$23:$24` hold the landmass *center*, fixed at the coordinate
+the placement loop chose, for the whole fill. `$14`/`$15` are **offsets from it**, and those are
+what the walk advances; `$13E0` resolves offset-plus-center at each plot. A port that walks an
+absolute position is structurally wrong however faithfully its routines are transcribed.
+
+**The walk traces a circle and modulates its radius.** Starting from `(dx, dy) = (0, radius)`, `dx`
+climbs steadily while `dy` drifts noisily downward — `(1,71) (2,70) (3,69) (4,68) ... (22,66)`,
+which stays within a cell or two of radius 70 throughout. Meanwhile `$21` climbs 70, 71, 72, 73, 74
+as `$178A` recomputes it from the current `dy`. **That is the shape mechanism**: a circle whose
+radius is perturbed as it is traced, not a blob roughened afterwards.
+
+**Backtracking is the main loop, not an error path.** One radius-70 fill measured 701 walk
+iterations, 716 plots, 155 erases and 155 backtracks — **21.6% of plotted cells are erased again**.
+A port treating the unwind as exceptional would build visibly different continents.
+
+**The `$1900` guard never fired** in that fill, so the restart path really is rare, as assumed.
+
+One loose end: the trace shows extra fills at radius 3 with no matching registration — for seed
+`$1234` configuration 0, at `(201,93)` after the continent at `(166,94)`, and at `(106,267)` after
+`(89,247)`. They occur *within* the command-table stage, before `$280A`, so they are not the second
+wave. Not yet identified.
