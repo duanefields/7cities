@@ -365,11 +365,26 @@ They are not. Captured at every registration across 9 seed/config pairs, `$B0` i
 `$46` or `$0A`, while `$21` drifts — 71, 82, 75, 62 all appear. Use `$B0` wherever the command's
 nominal radius is meant.
 
-`$22F7` reads `$21`, not `$B0`, so the placement test is run at the drifted value. Why `$21` is
-already 71 at the *first* registration for some seeds is **not yet explained** — nothing between
-`$217B` and `$226A` appears to write it, and `$1731` only writes `$0F`-`$13`, `$25` and `$02`/`$03`.
-Worth settling before trusting a placement port, because a one-unit difference in radius shifts
-every bound the test computes.
+`$22F7` reads `$21`, not `$B0`, so the placement test runs at whatever `$21` holds.
+
+**Why `$21` sometimes reads 71 at registration is unresolved**, and the search is recorded here so
+it is not repeated from scratch:
+
+- Scanning the binary for direct zero-page writes (`STA`/`STX`/`STY`/`INC`/`DEC` with operand `$21`)
+  finds 12, all confirmed against the disassembly. **None lies between `$2183` and `$226A`.**
+- That scan is **incomplete by construction**: indexed stores are invisible to it, because their
+  operand byte is the base, not the address. `$1B59 STA $1F,X` reaches `$21` at index 2, and
+  `$264A`, `$278A`, `$2EFC` and `$4A1E` are all `STA $21,X`. None of those is in the span either.
+- The walker was the obvious suspect, since `$17A1` and `$187E` write `$21` and `$1866` also
+  registers landmasses. **Falsified:** `$1866` fires zero times in configuration 0 for seeds
+  `$1234`, `$BEEF` and `$0001`, yet two of those show a 71.
+- Bisecting with exec checkpoints proved unreliable twice — see the harness notes — so the paired
+  samples cannot be trusted to come from one iteration.
+
+Parked rather than solved. The practical question is whether it changes placement *outcomes*, and
+that is answerable without resolving the mechanism: port the loop using `$B0`, which is
+unambiguously the nominal radius, and check it against the 45 recorded positions. If they
+reproduce, the drift never affected placement.
 
 ### Two call sites register landmasses, and the second is inside the walker
 
@@ -788,6 +803,28 @@ which bytes land in which sector, and in what order rows are produced.
     so waiting for a match spins until the timeout.
 
   `hit_count` is unambiguous: zero until the checkpoint fires, nonzero after.
+- **Use execution checkpoints, not store checkpoints.** Every `exec=True` experiment in this
+  project has worked first time. The one `store=True` watchpoint — on `$21`, to find what writes it
+  — recorded a single write, stalled for four minutes, and left the emulator **unrecoverable**.
+  It halted inside `game3`, which runs with ROM banked out (`$01 = $35`). RAM was then
+  reinitialized under a CPU parked at `$206B` with no ROM visible, so the reset vector at `$FFFC`
+  read RAM as well and there was nothing to reset into. `vice_machine_reset` cheerfully answered
+  "Machine power cycled" while the PC never moved; soft reset, hard reset, pausing first and
+  restoring `$01` by hand all did nothing. VICE had to be restarted by hand.
+
+  To find what writes a location, bisect with exec checkpoints at successive points and read the
+  value at each. It takes more round trips and it cannot wedge the machine.
+
+  **Arm every point at once; do not clear and re-arm between them.** Deleting the checkpoint the
+  CPU is currently halted on *resumes* execution, so a clear-then-arm loop lets the machine run
+  free until the next checkpoint exists — and it has usually gone past. A first attempt at this
+  bisect sampled six points that looked like one iteration and were not: `$54` read 0, then 2, then
+  5, and 5 only occurs in the second wave, so the last sample was thousands of instructions past
+  the first. Sampling a second, unrelated variable is what exposed it; with only the value under
+  investigation the drift would have looked real.
+
+  If a store checkpoint is genuinely unavoidable, restore `$01` to `$37` **before** the halt, not
+  after — once the CPU is parked with ROM banked out there is no way back.
 - **Prefer patching code over setting registers at a checkpoint.** Forcing a value by stopping at
   an instruction and writing a register assumes the stop happened where you think it did, and
   when it did not the run still completes and returns plausible numbers. Patching the

@@ -95,6 +95,101 @@ public enum LandMassPhase {
                       yLower: yLower, yUpper: yUpper)
     }
 
+    // MARK: - The placement loop
+
+    /// One accepted landmass.
+    public struct Placement: Sendable, Equatable {
+        public let x: UInt8
+        public let y: UInt16
+        /// The command's nominal radius — `$B0`, not `$21`. See NOTES.md: `$21`
+        /// is a scratch copy that sometimes drifts by one, for reasons not yet
+        /// established.
+        public let radius: UInt8
+        /// The partner, when the command placed a pair.
+        public let partner: (x: UInt8, y: UInt16)?
+
+        public static func == (a: Placement, b: Placement) -> Bool {
+            a.x == b.x && a.y == b.y && a.radius == b.radius
+                && a.partner?.x == b.partner?.x && a.partner?.y == b.partner?.y
+        }
+    }
+
+    /// Runs the command-table stage: `$2173` through `$227F`.
+    ///
+    /// `fill` is called for each accepted landmass and is where the coastline
+    /// walker goes. It matters for more than appearance — later placements are
+    /// tested against what earlier ones drew, so with an empty `fill` every
+    /// candidate is accepted on its first try and only the *first* placement of
+    /// a run can be compared against the original.
+    ///
+    /// ### Draws that look skippable and are not
+    ///
+    /// `pairOffset` and the `$B1`/`$B2` coin flip are both drawn **before** the
+    /// code knows whether it needs them, and both are then overwritten in the
+    /// common path — `pairOffset` with `$FF` for unpaired commands (`$21B4`) and
+    /// the coin flip with `$FF`/`$80` for islands (`$21A8`). They still advance
+    /// the generator, so omitting them desynchronizes every later draw.
+    public static func runCommandStage(
+        config: Int,
+        rng: inout WorldMakerRNG,
+        mask: inout LandMask,
+        fill: (UInt8, UInt16, UInt8, inout LandMask) -> Void = { _, _, _, _ in }
+    ) -> [Placement] {
+        var placed: [Placement] = []
+
+        for command in configurations[config] {
+            let radius = self.radius(continent: command.isContinent)
+
+            for _ in 0..<command.count {
+                // $2183: shape parameters. Only $0F is needed here, and none of
+                // this consumes randomness.
+                let motionLimit = UInt8((UInt16(radius) &* 5) / 7)
+
+                // $2186: drawn unconditionally, redrawn while it lands on 1.
+                var pairOffset: UInt8
+                repeat {
+                    pairOffset = rng.nextModulo(motionLimit) &+ 1
+                } while pairOffset == 1
+
+                // $2193: drawn unconditionally; the result is discarded for
+                // islands at $21A8 and unused here either way.
+                _ = rng.next()
+
+                // $21B0: the offset only survives for a paired command.
+                if !command.placesPair { pairOffset = 0xFF }
+
+                let b = bounds(radius: radius, paired: command.placesPair,
+                               pairOffset: pairOffset, config: config)
+
+                // $221C: up to 256 attempts, the counter wrapping at $2281.
+                var attempts = 0
+                while attempts < 256 {
+                    attempts += 1
+                    let x = rng.nextByte(from: b.xLower, below: b.xUpper)
+                    let y = rng.nextWord(from: b.yLower, below: b.yUpper)
+                    guard isClear(x: x, y: y, radius: radius, in: mask) else { continue }
+
+                    var mate: (x: UInt8, y: UInt16)?
+                    if command.placesPair {
+                        // $2231: both positions must be clear before either is
+                        // accepted, and the first is restored afterwards.
+                        let p = partner(x: x, y: y, radius: radius,
+                                        pairOffset: pairOffset)
+                        guard isClear(x: p.x, y: p.y, radius: radius, in: mask)
+                        else { continue }
+                        mate = p
+                    }
+
+                    placed.append(Placement(x: x, y: y, radius: radius,
+                                            partner: mate))
+                    fill(x, y, radius, &mask)
+                    break
+                }
+            }
+        }
+        return placed
+    }
+
     /// Where a paired landmass's partner goes, relative to the first (`$223E`).
     ///
     /// The vertical offset is fixed at `2 * radius + radius / 8`; the horizontal

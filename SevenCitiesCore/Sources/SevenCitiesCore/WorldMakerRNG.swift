@@ -112,6 +112,27 @@ extension WorldMakerRNG {
         }
     }
 
+    /// A byte reduced modulo `limit` (`$0ACB`).
+    ///
+    /// **Not** the same sampler as ``nextByte(from:below:)``, and the difference
+    /// shows up in the LFSR sequence rather than in any one value: this takes
+    /// exactly **one** draw and reduces it by repeated subtraction, where
+    /// `$22B4` rejects and redraws until a candidate lands in range.
+    ///
+    /// A limit below 2 returns 0 **without drawing at all** (`$0ACE`), so it
+    /// does not advance the register. Like `$22B4`, the original self-modifies —
+    /// the limit is written into the operand byte at `$0AD9` shared by its own
+    /// `CMP` and `SBC`.
+    public mutating func nextModulo(_ limit: UInt8) -> UInt8 {
+        guard limit >= 2 else { return 0 }
+        var value = next()
+        while value >= limit {
+            value &-= limit
+            if value == 0 { break }
+        }
+        return value
+    }
+
     /// A 16-bit value in `from ..< below`, by rejection (`$247B`).
     ///
     /// Two register advances per candidate, not one. The first supplies the low
