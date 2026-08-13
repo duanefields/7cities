@@ -64,13 +64,20 @@ engineering record; this holds the work.
       paired satellite search at `$2655` and the mirror from a seed alone, and
       matches the original on all nine seed/configuration pairs. It stops after
       the first command; see below.
-- [ ] **Port `$4500`.** It is where the stage stops. Called from `$44EF` at the
-      end of the first command, it mirrors the mask and then scans its land
-      extents and places something with them — roughly 300 instructions over
-      `$41E6`-`$47C5` with a tail through `$1C2A`-`$1E98`. It makes seven draws
-      on the shared generator with mask-derived bounds, so nothing after it can
-      run until it does. Probably the landing site or the first city; find out
-      what it writes.
+- [ ] **Finish `$44EF`.** It is where the stage stops, and it is now mapped.
+      Done: the land-band scans at `$4503`, the band choice at `$45F3`, the
+      position draw at `$4373`, the distance test at `$4479`, and the
+      second-site search at `$4676` — all in `SiteSelection`, verified against
+      the original for every seed and configuration.
+      Left: **`$46BC`**, the search the original uses whenever the ported one does
+      not apply, which walks outward from the first site's row through a single
+      band, reusing `$43E7` with `$4414` patched to `RTS` and calling `$44B5`,
+      `$44C3` and `$44D9`; and **`$47B2`**, whose `$47BC JSR $0B16` sums twelve
+      draws rather than taking one. Both share the land-mass generator, so the
+      command table cannot continue past the first command until they exist.
+- [ ] **Find out what reads `$77`-`$81`.** `$44EF` files two sites there —
+      column, row, a row-past-`$D0` flag and a kind of 9 or 7, one of each. Two
+      advanced civilizations is the obvious guess and is only a guess.
 - [ ] **Port the walk's `$50` mode (`$1860`, `$186C`), which builds paired
       continents.** Configuration 1's command places one continent and gets two:
       the walk reaches `$160C JMP $186C`, saves state, and re-enters `$15AD` for

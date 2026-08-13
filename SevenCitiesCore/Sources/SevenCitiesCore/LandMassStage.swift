@@ -91,24 +91,35 @@ public enum LandMassStage {
     public struct Run: Sendable {
         public let mask: LandMask
         public let steps: [Step]
+        /// The sites `$4500` chose partway through, if it got that far.
+        public let sites: SiteSelection.Result?
         /// Why the stage stopped before the command table ran out, when it did.
         /// `nil` means it finished.
         public let stoppedBecause: String?
     }
 
+    /// Why the stage stops where it does.
+    static let stopReason = """
+        $44EF is ported only as far as $46B9. The mirror and the site selection \
+        are exact, but the routine keeps going — a loop at $4730 that drew 3,187 \
+        bounded values in one measured run, and a twelve-draw average at $47BC — \
+        and all of it shares this generator. That is 573 distinct addresses \
+        across $41E6-$47DE, a whole phase of its own, and until it is ported \
+        every landmass after the first command would be placed from a generator \
+        in the wrong place
+        """
+
     /// Runs the command-table stage for one seed and configuration.
     ///
-    /// **It stops after the first command.** `$2277 JSR $44EF` does more than
-    /// mirror the mask: past `$4500` it scans the mask's land extents and places
-    /// something with them, across roughly 300 instructions spread over `$41E6`
-    /// to `$47C5`. That is another phase's work and is not ported — but it makes
-    /// seven draws on the shared generator, and their bounds come from the mask,
-    /// so they cannot be faked. Everything the command loop does after it would be
-    /// drawing from a generator in the wrong place.
+    /// **It stops after the first command**, at the seam described by
+    /// ``stopReason``. What it covers is the whole of that command: the
+    /// continents, the satellites placed inside them, the flood fills, the mirror
+    /// and the two sites `$4500` picks.
     public static func run(config: Int, seed: UInt16) throws -> Run {
         var rng = WorldMakerRNG(seed: seed)
         var mask = LandMask()
         var steps: [Step] = []
+        var sites: SiteSelection.Result?
         // `$AB`, the guard that makes `$44EF` fire once and once only.
         var mirrored = false
 
@@ -175,14 +186,16 @@ public enum LandMassStage {
                 let vertical = Int8(bitPattern: rng.next()) < 0
                 if vertical { mask.flipVertically() }
                 steps.append(.mirror(horizontal: horizontal, vertical: vertical))
-                return Run(mask: mask, steps: steps, stoppedBecause: """
-                    $4500 is not ported: it scans the mask's land extents and \
-                    makes seven bounded draws whose limits come from what it \
-                    finds, so the generator cannot be advanced past it blind
-                    """)
+
+                // $4500's second half, which is not land-mass work at all — but
+                // it draws seven times from this generator with bounds taken from
+                // the mask, so the rest of the command table depends on it.
+                sites = try SiteSelection.choose(in: mask, rng: &rng)
+                return Run(mask: mask, steps: steps, sites: sites,
+                           stoppedBecause: stopReason)
             }
         }
-        return Run(mask: mask, steps: steps, stoppedBecause: nil)
+        return Run(mask: mask, steps: steps, sites: sites, stoppedBecause: nil)
     }
 
     /// One landmass: the walk, then whatever `$1666` decides comes next.

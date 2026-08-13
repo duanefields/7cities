@@ -19,11 +19,18 @@ private struct Stage: Decodable {
         let horizontal: Bool?
         let vertical: Bool?
     }
+    struct Site: Decodable {
+        let column: Int
+        let row: Int
+        let southern: Bool
+        let kind: Int
+    }
     struct Case: Decodable {
         let seed: Int
         let config: Int
         let steps: [Step]
         let maskSha256: String
+        let sites: [Site]
     }
     let unaided: [Case]
 }
@@ -56,11 +63,10 @@ private func loadCases() throws -> [Stage.Case] {
     return try JSONDecoder().decode(Stage.self, from: Data(contentsOf: url)).unaided
 }
 
-/// As far as the port can drive itself: the first command in full — the
-/// continents, their satellites and the flood fills — and the mirror that ends
-/// it. Every step generated from the seed alone, and the mask checked against the
-/// original's where the port stops.
-@Test("The stage drives itself as far as it goes", arguments: 0..<9)
+/// The whole stage from a seed: every landmass placed, walked and filled, the
+/// mirror, and the site selection that runs in the middle of it. Nothing read
+/// from the fixture but the seed and the configuration.
+@Test("The stage drives itself to the original's mask", arguments: 0..<9)
 func stageRunsUnaided(index: Int) throws {
     let cases = try loadCases()
     try #require(index < cases.count)
@@ -90,6 +96,27 @@ func stageRunsUnaided(index: Int) throws {
             "\(label): expected \(expected.count) steps, got \(actual.count)")
     #expect(sha256(run.mask.mapBytes) == c.maskSha256,
             "\(label): the mask at the stopping point differs from the original's")
+
+    // $4500's sites. They touch no map data, but they draw from the same
+    // generator, so getting them wrong is what puts the next command's landmasses
+    // somewhere else.
+    // The original always ends with two sites; the port finds the second only
+    // when it came from the ported search. Where it did not, the fixture still
+    // records what the original chose, so the gap stays visible.
+    let sites = try #require(run.sites)
+    let expectedSites = sites.secondaryUnported ? Array(c.sites.prefix(1)) : c.sites
+    let chosen = [sites.primary, sites.secondary].compactMap { $0 }
+    #expect(chosen.count == expectedSites.count,
+            "\(label): expected \(expectedSites.count) site(s), got \(chosen.count)")
+    for (i, want) in expectedSites.enumerated() where i < chosen.count {
+        let got = chosen[i]
+        #expect(Int(got.column) == want.column && Int(got.row) == want.row
+                    && got.southern == want.southern && Int(got.kind) == want.kind,
+                """
+                \(label) site \(i): expected (\(want.column),\(want.row))                 kind \(want.kind) southern \(want.southern), got                 (\(got.column),\(got.row)) kind \(got.kind) southern \(got.southern)
+                """)
+    }
 }
+
 
 

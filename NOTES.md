@@ -2395,12 +2395,47 @@ larger one passed. The seed for its walk comes from a pool of 21 constants at `$
 copies to `$0200` with three entries pre-spent, and it walks on the *second* generator with `$1666`
 patched to `RTS` so it neither recurses nor floods.
 
-**Where it stops, and why it has to.** `$2277 JSR $44EF` does more than mirror. Past `$4500` it scans
-the mask's land extents and places something with them — about 300 instructions spread over `$41E6`
-to `$47C5`, plus a long tail through `$1C2A`-`$1E98` — and it makes seven draws on the shared
-generator whose bounds come from what it finds. They cannot be faked, so the port stops there and
-says so. That covers the first command in full: both continents, both satellites, both fills and the
-mirror.
+**Where it stops, and why it has to.** `$2277 JSR $44EF` does more than mirror, and what follows is
+not land-mass work at all — 573 distinct addresses across `$41E6`-`$47DE` with a tail through
+`$1C2A`-`$1E98`. It shares this generator, so it cannot be skipped and it cannot be faked.
+
+### What `$44EF` does after the mirror
+
+It picks **two sites**, filing five zero-page bytes for each — `$77`-`$7B` and `$7C`-`$80`: column,
+row, a flag set for rows at or past `$D0`, and a kind that is either 9 or 7, the second always taking
+the other (`$46B5 EOR #$0E`). What reads them has not been established. Two positions, far apart, one
+of each of two kinds, on land at least 30 cells wide: the shape fits the game's two advanced
+civilizations, but that is a guess.
+
+`$4503` measures the mask first: one scan runs down from row 110 for the first row with land and then
+on for the first row without, another runs up from row 300 and does the same. Both bands are clamped
+into rows 125 to 280, but only where they already straddle those bounds. `$5D` records whether the
+two are disjoint — which is to say whether there are two landmasses — and `$45F3` picks the band to
+draw from: the first, unless it is under 40 rows and the second is both usable and no worse.
+
+`$4373` draws inside a band and is worth reading carefully. The row comes from two draws in the
+*opposite* order to `$247B`: the first supplies the high byte through its sign, the second the low
+byte, and the second is redrawn until it comes up **even**. A row outside the band, or one whose
+first land run is under 30 cells wide, throws the whole thing away and starts over from the row —
+which is why one call can burn dozens of draws. The column then comes from `$22B4` over
+`left+9 ..< right-9`; the `+9` is a `+8` plus the carry the width test left set.
+
+`$4479` decides whether two sites are far enough apart: squared distance against 11,968, with each
+difference reduced to a **byte** before squaring and the sign taken from the full 16-bit subtraction.
+A pair 260 rows apart therefore measures as 4.
+
+Ported: everything above, plus the second-site search at `$4676`-`$46B9` — draw in the other band,
+then keep trying columns inside the land run that row crosses until one is far enough away. Verified
+against the original for every seed and configuration.
+
+Not ported: `$46BC`, which is where the original goes whenever that search does not apply — a
+systematic walk outward from the first site's row through the one band there is, reusing `$43E7` with
+`$4414` patched to `RTS` and leaning on `$44B5`, `$44C3` and `$44D9`. In one measured run it drew
+3,187 bounded values. Nor is `$47B2`, whose `$47BC JSR $0B16` sums **twelve** draws — an averaging
+generator, not a flat one, and the only place one has turned up so far.
+
+So the port covers the first command in full — the continents, the satellites, the fills, the mirror
+and the sites — and stops at `$46BC`.
 
 Configuration 1 is refused outright. Its continent is paired, and the partner is not placed by the
 placement loop at all — the walk itself reaches `$160C JMP $186C`, saves its state, sets `$50`, and
