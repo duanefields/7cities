@@ -2789,6 +2789,48 @@ then calls `$32CC` and `$4006` — the river engine, which `$3EAD` also uses. It
 accounts for 5,007 of the 6,601 writes the first landmass takes. So it lands with
 the rivers rather than here.
 
+### The other two water entries, read
+
+**`$3961` is the lakes' outflow.** For each satellite in the tables at
+`$0378`/`$0382` it takes a radius-10 box and hunts outward for the `$0F` mark
+`$2D23` laid around that lake — west along the row first, then east, then a row
+up, until it finds one. That position becomes `$22`/`$23`, and `$4014` measures
+how far the land runs in each of the four directions from it, writing the four
+distances into `$0200`-`$0203` (`$0201` west, `$0202` east, `$0203` north,
+`$0200` south) with `$FF` where the direction runs into nibble `$3` first.
+`$39F2` then picks the **smallest distance of at least seventeen**, and that is
+the direction the river leaves the lake by.
+
+Then `$32CC` with the carry **clear**, which is what selects the `$399E`/`$3A83`
+exits rather than `$380D`'s, the walk steps out of the lake's marked water in
+the chosen direction, `$4006` takes one step and `$363B` takes five more, and
+`$3A83` is the walk proper.
+
+`$3A83` is `$38CD` again with different rules. A `$0F` or a `$4` ahead unwinds.
+A cell already carrying river — nibble `$5` to `$A` — goes through `$348D`, and
+if that allows it the walk writes **`$4`** there and carries on: that is how one
+river crossing another becomes navigable water rather than a knot. Land ahead
+goes to the same three-direction, seven-deep fan `$380D` uses, but scored:
+`$37DD` and `$37E8` keep the best direction found in `$47`/`$48`/`$49` rather
+than taking the first, and `$37FF` then commits to it through `$3B5E` or
+`$3B66`. `$3B2F` also refuses a step that would land within ten cells of where
+the river started, which is what stops a lake's outflow curling back into it.
+
+**`$3EAD` is the same engine with two of its routines rewritten.** It copies
+five bytes from `$3FE4` over `$3AA5` and five from `$3FE9` over `$36A2`:
+
+- `$3AA5` becomes `JSR $36CC / JMP $3FB1`, replacing `JSR $364C / LDA $5E ...`
+- `$36A2` becomes `JSR $3FF9 / NOP / NOP`, replacing the `LDX $28 / LDA $32BC,X
+  / LSR A / STA $5D` that picks the direction inside `$369F`
+
+and it NOPs `$34DB`/`$34DC`, which removes the `BCC $34F1` at the end of `$348D`
+so that routine always returns carry clear. So the phase is not a third river
+routine; it is the second one with its direction-pick and its finish swapped.
+
+Its own body scans the band in sixteen-row strips, looking for a strip of open
+sea with no land and no lake mark in it, and starts a river from there — which
+is why `$3EAD` draws 21 rivers in the first band against `$3961`'s 8.
+
 ### A whole continent was missing from the position tables
 
 `$1B5F` has **two** call sites, and the port had one. `$226A` files a landmass
