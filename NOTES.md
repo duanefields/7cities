@@ -2596,6 +2596,33 @@ without complaint.
 So every phase after the land mass is now traceable the same way the land-mass phase was: capture
 from the interpreter, port, diff. That was the whole point of building the drive.
 
+### What each phase does
+
+The map is built **a band at a time** — 208 rows, 26,624 bytes of nibbles at `$5700`, which is why
+`$2C14` bounds its row counter there and why 51,200 bytes of map can live on a machine that has
+nothing like room for it. `$0E20` is the pipeline, and it runs once per band. Reading the nibble
+histogram at each phase entry says what the phase before it did:
+
+| Phase   | What changes                                        | Reading                          |
+| :------ | :-------------------------------------------------- | :------------------------------- |
+| —       | `0` and `B` only                                    | the band as the land mask        |
+| `$2AE9` | `1`, `2`, `3` appear; a little `C`, `D`, `E`        | water depth off the coast        |
+| `$2D23` | `F` appears, ~26 of them                            | a spread pass; see below         |
+| `$2E32` | `B` 15,422 → 10,194, `C` → 3,989, `D` → 1,159       | **the terrain generator**        |
+| `$3961` | small movement in `4`-`A`                           | river seeds?                     |
+| `$3EAD` | `5` 79 → 233, `8` 50 → 245, `E` 42 → 443            | **rivers**, and swamp with them  |
+| `$2D23` | every `F` gone                                      | the same pass, undoing its marks |
+| `$47DF` | `F` 0 → 127                                         | **villages**                     |
+| `$4CF2` | nothing in the histogram                            | unknown                          |
+| `$2C14` | —                                                   | writes the band out              |
+
+`$2D23` is the interesting one: it runs **twice**, and `$0E32`-`$0E4A` and `$0E58`-`$0E66` patch three
+bytes inside it before each call — `$2D70`, `$2D74` and `$2DA6` go from `$00`/`$0F`/`$A2` to
+`$0F`/`$00`/`$60`. So it is one routine parameterized to lay a marker down and then take it away
+again, with `$A2`/`$60` almost certainly `LDX #` against `RTS`. The pipeline also patches the bit-mask
+table at `$13D3` to `$80`/`$40` on the way in, so the phases reuse the mask machinery two bits at a
+time rather than one.
+
 ### Where the land-mass phase stands
 
 **Ported, all three configurations.** From a seed to the original's finished mask, checked at both of

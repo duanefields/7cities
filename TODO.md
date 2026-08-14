@@ -76,9 +76,12 @@ engineering record; this holds the work.
       whole World Maker in 320 seconds — 414 sector writes, terrain, rivers and
       villages. `tools/wm_disk.py --seed --config --out`.
 - [ ] **Port the terrain phases.** Now unblocked, and the same loop applies as
-      for the land mass: capture from the interpreter, port, diff. `$2CD3` and
-      `$0FAE`/`$0FC3`/`$0FEA` dominate the profile; `$3688` and `$48DA` appear
-      later. Start by identifying which phase writes which nibbles.
+      for the land mass: capture from the interpreter, port, diff. The pipeline
+      at `$0E20` runs once per 208-row band and is mapped in NOTES.md — `$2AE9`
+      water depth, `$2E32` terrain, `$3EAD` rivers, `$47DF` villages, `$2D23` a
+      parameterized spread run twice, `$2C14` the band writer. Start with
+      `$2AE9`: it is the smallest, and its input is the land mask the port
+      already reproduces.
 - [ ] **Confirm the band structure.** The finished map is assembled on disk —
       51,200 bytes of nibbles will not fit in a C64 — and `$2C14` bounds its
       row counter at 208, which is very likely the band height. Still unknown:
