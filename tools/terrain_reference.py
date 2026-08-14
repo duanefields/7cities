@@ -46,6 +46,9 @@ BOX_CASES = 200
 # cells rather than the band isolates the marking from `$28F1`, which has already
 # been over the same band and changed it.
 MARK = 0x2B8A
+# `$2ED2` is where `$2E32` starts reading the landmass position tables, so it is
+# the moment to record them: `$1B5F` has filed them and `$1D42` has fixed them up.
+TABLES = 0x2ED2
 # `$28F1` is the first thing `$2AE9` does and the first that touches the band, so
 # it gets its own boundary.
 PHASES = [(0x2AE9, "islands"), (0x2B42, "afterScatter"), (0x2D23, "spread"), (0x2E32, "terrain"),
@@ -68,6 +71,7 @@ def capture(seed, config, budget):
     live = {"steps": []}
     boxes, box_seen, box_pending = [], set(), []
     marks = [[]]
+    tables = []
 
     def snapshot():
         band = bytes(cpu.mem[BASE:BASE + BAND_BYTES])
@@ -93,6 +97,10 @@ def capture(seed, config, budget):
                 boxes.append({"radius": radius, "x": x, "y": y,
                               "left": cpu.rd(0x03), "right": cpu.rd(0x04),
                               "top": cpu.rd(0x05), "bottom": cpu.rd(0x06)})
+        if pc == TABLES and not tables:
+            for base, count in ((0x0300, cpu.rd(0x63)), (0x033C, cpu.rd(0x64))):
+                tables.append([[cpu.rd(base + i * 3 + 1), cpu.rd(base + i * 3),
+                                cpu.rd(base + i * 3 + 2)] for i in range(count)])
         if pc == MARK:
             marks[-1].append((cpu.rd(0x27), cpu.rd(0x05)))
         if pc == PIPELINE:
@@ -119,7 +127,7 @@ def capture(seed, config, budget):
                "sha256": hashlib.sha256(
                    "\n".join(f"{x},{y}" for x, y in cells).encode()).hexdigest()}
               for cells in marks if cells]
-    return bands, boxes, marked, finished
+    return bands, boxes, marked, tables, finished
 
 
 def main():
@@ -130,11 +138,12 @@ def main():
     args = parser.parse_args()
 
     seed = int(args.seed, 0)
-    bands, boxes, marked, finished = capture(seed, args.config, args.budget)
+    bands, boxes, marked, tables, finished = capture(seed, args.config, args.budget)
     print(f"seed ${seed:04X} config {args.config}: {len(bands)} bands, "
           f"{'finished' if finished else 'BUDGET EXHAUSTED'}", flush=True)
     print(f"  {len(boxes)} distinct bounding boxes")
     print(f"  island marks per band: {[m['cells'] for m in marked]}")
+    print(f"  landmass tables: {tables}")
     for i, steps in enumerate(bands):
         print(f"  band {i}: " + ", ".join(
             f"{s['phase']} {s['sha256'][:8]}" for s in steps))
@@ -144,7 +153,9 @@ def main():
                           "26,624-byte band at $5700. No map data.",
            "seed": seed, "config": args.config,
            "bandRows": BAND_ROWS, "bands": bands, "boundingBoxes": boxes,
-           "islandMarks": marked}
+           "islandMarks": marked,
+           "landmassTables": {"northern": tables[0] if tables else [],
+                              "southern": tables[1] if len(tables) > 1 else []}}
     path = f"{FIX}/terrain_reference.json"
     with open(path, "w") as handle:
         json.dump(out, handle, indent=1)

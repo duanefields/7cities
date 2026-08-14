@@ -30,6 +30,11 @@ private struct Reference: Decodable {
     let config: Int
     let bandRows: Int
     let bands: [[Step]]
+    let landmassTables: Tables
+    struct Tables: Decodable {
+        let northern: [[Int]]
+        let southern: [[Int]]
+    }
 }
 
 private func sha256(_ bytes: [UInt8]) -> String {
@@ -188,3 +193,35 @@ func spreadMatchesOriginal() throws {
             "the band after the spread differs from the original's")
 }
 
+
+
+
+/// The landmass position tables at `$0300` and `$033C`, which `$2E32` reads.
+///
+/// Three things have to be right at once for these to come out: `$1B5F`'s filing,
+/// including a continent that reaches into both bands being filed twice and the
+/// second entry landing at the band boundary rather than at `row - radius`;
+/// `$1D42`'s fixup, which mirrors a column to `256 - column` and a row to
+/// `207 - row` and swaps the two tables on a vertical flip; and the fact that only
+/// what is filed *before* the mirror gets fixed up, so the command table's islands
+/// stay as they were placed.
+@Test("The landmass tables match the original's")
+func landmassTablesMatchOriginal() throws {
+    let url = try #require(
+        Bundle.module.url(forResource: "terrain_reference", withExtension: "json",
+                          subdirectory: "Fixtures")
+            ?? Bundle.module.url(forResource: "terrain_reference", withExtension: "json"))
+    let reference = try JSONDecoder().decode(Reference.self, from: Data(contentsOf: url))
+    let run = try LandMassStage.run(config: reference.config,
+                                    seed: UInt16(reference.seed))
+
+    // The fixture stores each entry as the original does: column, row, radius.
+    func rendered(_ southern: Bool) -> [[Int]] {
+        run.landmasses.filter { $0.southern == southern }
+            .map { [Int($0.column), Int($0.row), Int($0.radius)] }
+    }
+    #expect(rendered(false) == reference.landmassTables.northern,
+            "northern table: \(rendered(false)) against \(reference.landmassTables.northern)")
+    #expect(rendered(true) == reference.landmassTables.southern,
+            "southern table: \(rendered(true)) against \(reference.landmassTables.southern)")
+}

@@ -132,9 +132,8 @@ public enum LandMassStage {
         /// `$1BF9` files them into `$0378` and `$0382`, split at row 215 rather
         /// than 219, and `$2D23` is what reads them back.
         public let satellites: [Island]
-        /// Every landmass the command table placed, as `$1B5F` files them —
-        /// **before** the mirror. `$1D42`'s fixup is not implemented, so these are
-        /// in pre-mirror coordinates and `$2E32` cannot use them yet.
+        /// Every landmass the command table placed, as `$1B5F` files them and
+        /// `$1D42` fixes them up. `$2E32`'s mountain ranges read these back.
         public let landmasses: [Landmass]
         /// Why the stage stopped before the command table ran out. `nil` means it
         /// finished, which it now does for every configuration it accepts.
@@ -174,7 +173,11 @@ public enum LandMassStage {
                 return reach >= 0xCF ? [north(row), south(0)] : [north(row)]
             }
             var out = [south(row &- 0xC0)]
-            if row >= 0x46 && row &- 0x46 < 0xC0 { out.append(north(row &- 0x46)) }
+            // $1BAF: the northern entry for a continent reaching up out of the
+            // southern band is filed at row `$C0` — the band boundary — not at
+            // `row - radius`. `$23` is set to `$C0` for the call and put back
+            // after.
+            if row >= 0x46 && row &- 0x46 < 0xC0 { out.append(north(0xC0)) }
             return out
         }
         // `$0200`, the satellite seed pool. `$1666` rebuilds it for each
@@ -261,14 +264,29 @@ public enum LandMassStage {
                 // coordinates. The second wave's islands are filed afterwards and
                 // need no such thing, which is why they were right before this
                 // was — and why a satellite marked a box of open sea.
-                // The landmass tables are **not** fixed up here, and that is a
-                // known gap. `$1D42` transforms them through `$1C2A` and `$1C3D`
-                // — column to `256 - column`, row to `207 - row`, both verified
-                // against captured tables — but it also re-sorts the entries
-                // between the two tables and rewrites `$63`/`$64` from byte
-                // offsets into counts, and that part is not read yet. Measured
-                // against the original, two of five entries come out right
-                // without it. See NOTES.md.
+                // $1D42: the position tables hold coordinates from before the
+                // flip, so they are transformed too — column through `$1C2A` to
+                // `256 - column`, row through `$1C3D` to `207 - row`. A vertical
+                // flip also *swaps the two tables*, because a row mirrored inside
+                // 208 rows belongs to the other band.
+                //
+                // Only what is already filed gets fixed up, which is why the
+                // command table's islands come out untransformed: they are placed
+                // by the second command, after this has run.
+                func flip(_ column: UInt8, _ row: UInt8, _ southern: Bool)
+                    -> (UInt8, UInt8, Bool) {
+                    (horizontal ? UInt8(truncatingIfNeeded: 256 - Int(column)) : column,
+                     vertical ? 0xCF &- row : row,
+                     vertical ? !southern : southern)
+                }
+                if horizontal || vertical {
+                    landmasses = landmasses.map { mass in
+                        let (column, row, southern) = flip(mass.column, mass.row,
+                                                           mass.southern)
+                        return Landmass(column: column, row: row,
+                                        radius: mass.radius, southern: southern)
+                    }
+                }
                 satellites = satellites.map { satellite in
                     let column = horizontal ? 255 &- satellite.column : satellite.column
                     let row = vertical ? UInt16(LandMask.height - 1) &- satellite.row

@@ -2700,12 +2700,25 @@ a row into `($C8 - row) + 7`, which is **207 - row**: the tables hold rows
 relative to a band, so flipping the map flips an entry between the two tables and
 mirrors it within 208 rows rather than 400.
 
-Both are verified against captured tables — `(166,94)` northern comes back as
-`(90,113)` southern, `(89,55)` southern as `(167,152)` northern. What is *not*
-worked out is the rest of `$1D42`: it stages entries through a scratch buffer at
-`$9100`, re-sorts them between the tables, and rewrites `$63`/`$64` from byte
-offsets into entry counts. Without that part two of five entries come out right.
-`LandMassStage` records the tables as `$1B5F` files them, pre-mirror, and says so.
+The rest of `$1D42` is the bookkeeping: every byte goes through both routines into
+a scratch buffer at `$9100`, and then a **vertical** flip swaps which buffer goes
+back into which table, because a row mirrored inside 208 rows belongs to the other
+band. `$63` and `$64` are byte counts throughout and are swapped with the tables;
+`$0D84` divides both by three on the way into the pipeline, which is why they read
+as entry counts by the time `$2E32` sees them.
+
+Three things have to be right together for the tables to come out, and all three
+are now checked against a capture:
+
+- `$1B5F`'s filing, including a continent tall enough to reach into both bands
+  being filed **twice** — and its northern entry landing at the band boundary,
+  row `$C0`, rather than at `row - radius`. `$1BAF` sets `$23` to `$C0` for the
+  call and puts it back after.
+- `$1D42`'s fixup, as above.
+- The fact that only what is filed *before* the mirror gets fixed up. The command
+  table's islands are placed by the second command, after it has run, so they stay
+  exactly as they were filed — which is what made two of five entries look
+  untransformed and briefly looked like a bug in the arithmetic.
 
 **`$2E32`, the terrain generator, is read but not ported.** It is a series of full
 band sweeps, and the first three are: every plain cell through `$2C3A`; every
@@ -2715,8 +2728,10 @@ starts at is `0` for band 0 and `$10` or `$0E` for band 1, which is the sixteen-
 overlap being skipped rather than done twice. More sweeps follow `$2EBC`, and from `$2ED2` it walks the **landmass** tables at
 `$0300`/`$033C` — three-byte `(row, column, radius)` entries — drawing mountain
 ranges of `random(2 * radius) + 15` cells for anything smaller than a continent.
-So it needs those tables, which needs `$1D42`'s fixup, which is the piece above.
-At 1,750 addresses it is the biggest phase in the pipeline.
+Those tables are now ported and exact, so what remains is `$2E32` itself. Its
+first sweep opens a chain that is not read yet: `$2C3A` walks the neighbours of
+every plain cell through `$2D96` and `$2D9E`, which test for water and go on to
+`$2CAF` and `$2CC0`. At 1,750 addresses it is the biggest phase in the pipeline.
 
 ### `$2AE9` reads the island tables
 
