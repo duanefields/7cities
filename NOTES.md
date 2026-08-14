@@ -2685,6 +2685,20 @@ satellite marks a box of open sea: 441 cells, the whole box, against the 26 the
 original marks. The second wave's islands never showed the fault because they are
 filed *after* the mirror.
 
+**`$4CF2` does not touch the map.** It walks eight three-byte entries at `$E2F1` —
+the table `$0E7A` clears on the way into the pipeline — and calls `$4C87` for each
+non-empty one, 18 times over the two bands. The band digest before and after is
+identical, so whatever it writes is elsewhere. Eight entries in a game called
+Seven Cities of Gold is suggestive and nothing more.
+
+**`$2E32`, the terrain generator, is read but not ported.** It is a series of full
+band sweeps, and the first three are: every plain cell through `$2C3A`; every
+cell holding `4` or `5` through `$2CDB`; and then plain to forest on a draw
+against a threshold — `$96` for band 0, `$36` for band 1. The row each sweep
+starts at is `0` for band 0 and `$10` or `$0E` for band 1, which is the sixteen-row
+overlap being skipped rather than done twice. More sweeps follow `$2EBC`. At 1,750
+addresses it is the biggest phase in the pipeline and the next real piece of work.
+
 ### `$2AE9` reads the island tables
 
 `$2B4E` and `$2B60` patch the operand of `$2B6B` to `$038C` or `$03B4` — the two position tables the
