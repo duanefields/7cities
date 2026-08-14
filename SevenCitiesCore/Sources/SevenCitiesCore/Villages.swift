@@ -159,6 +159,12 @@ extension TerrainPhases {
                                   into villages: inout [Village],
                                   rng: inout WorldMakerRNG, secondBand: Bool) {
         var strip = secondBand ? 0x10 : 0xCF                  // $4865
+        // $0E71 writes `$1A` into `$4B83`, the operand of the `CMP` that gates
+        // `$4AAB`'s hunt, once per band — and `$4BED` adds **five** to it every
+        // time the hunt finds somewhere. So the survey starts willing and gets
+        // steadily harder to satisfy as it fills the map in. Reading `CMP #$1A`
+        // as a constant is what kept the port from ever running the hunt at all.
+        var surveyThreshold: UInt8 = 0x1A
 
         func remaining() -> UInt8 {
             secondBand ? budget.villages.south : budget.villages.north
@@ -268,11 +274,7 @@ extension TerrainPhases {
             }
             if surveyed {                                     // $4B77
                 let spread = secondBand ? budget.spread.south : budget.spread.north
-                // $4B82: measured, this fires more often than `CMP #$1A / BCS`
-                // reads — strip `$98` of the first band runs the hunt on a draw
-                // of 27. Something about that test is not what the bytes say and
-                // it is the last thing between this phase and being exact.
-                if rng.next() < 0x1A && spread != 0 {         // $4B82
+                if rng.next() < surveyThreshold && spread != 0 {  // $4B82
                     var tries: UInt8 = 0
                     while true {
                         let dy = rng.nextByte(from: 1, below: 0x0F)
@@ -281,6 +283,7 @@ extension TerrainPhases {
                         if nibble != 0x0F && nibble >= 3 {    // $4BAD
                             if secondBand { budget.spread.south &-= 1 }
                             else { budget.spread.north &-= 1 } // $4BE7
+                            surveyThreshold &+= 5              // $4BED
                             break
                         }
                         tries &+= 1
