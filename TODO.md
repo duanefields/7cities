@@ -162,6 +162,12 @@ engineering record; this holds the work.
       `$6E`/`$6F` (the draw a quadrant must beat) and `$82`/`$83`. None of that
       is in `$47DF`, and a port that starts at `$47DF` will not find it.
 
+      **The numbers to hit are measured and in NOTES.md** — seed `$1234`
+      configuration 0 gives 240 northern eligible quadrants and 246 southern,
+      and `$40FA` turns those into budgets of 121 and 125 with thresholds of
+      127 and 127. Port the counter first and check it against 240/246 before
+      touching `$47DF` itself; it needs nothing but the mask.
+
       Still unread: `$0BEE` and `$0C0C`, the divide and whatever `$40FA` does
       with it; `$4AAB`'s region bookkeeping, which does not touch the band; and
       `$49F2`'s tail.

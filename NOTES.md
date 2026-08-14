@@ -2926,13 +2926,37 @@ the first two villages on the map.
 portable.** It is not computed in the phase; it is computed during the *mask
 unpack*, two phases earlier, and carried in zero page.
 
-`$0C9B` walks the mask in 8x8 windows, buffering each into `$0200`. `$1047`
-splits a window into four 4x4 quadrants and `$1060` counts the cells of a
-quadrant that are `$0B` or above. A quadrant with **twenty or more** land cells
-increments a sixteen-bit counter — `$70`/`$71` for the northern half of the map,
-`$72`/`$73` for the southern, chosen on `$0C` against `$D0`. So the two counters
-are the number of village-eligible quadrants in each band, and twenty is the
-same threshold `$48EC` applies when it comes to place one.
+`$0C9B` unpacks the mask into a **16 row by 16 column** buffer at `$0200` — 8
+bytes a row, two nibbles a byte — and a second at `$0280`. `$1047` splits a
+buffer into four 8x8 quadrants (starts 0, 4, `$40`, `$44` against limits `$40`,
+`$44`, `$80`, `$84`) and `$1060` counts, per quadrant, the **byte pairs** that
+hold at least one land nibble: `$1069 CMP #$0B / BCC` passes `$0B`, `$B0` and
+`$BB` and rejects `$00`. So the count is out of 32, not 64, and "twenty or more
+land cells" is really twenty or more of the thirty-two column pairs.
+
+A quadrant that passes increments a sixteen-bit counter — `$70`/`$71` for the
+northern half of the map and `$72`/`$73` for the southern, chosen on `$0C`
+against `$D0`. Twenty is the same threshold `$48EC` applies later when it comes
+to place a village.
+
+**Measured, seed `$1234` configuration 0**, which is what a port has to
+reproduce:
+
+| Where | Value |
+| :---- | ----: |
+| `$1060` calls in a whole unpack | 1,600 |
+| `$0C` values seen | 0, 2, 4 ... 398 — 200 of them, eight quadrants each |
+| `$70`/`$71`, northern eligible quadrants | 240 |
+| `$72`/`$73`, southern | 246 |
+| `$6C`/`$6D` after `$40FA`, villages allowed | 121 and 125 |
+| `$6E`/`$6F`, the draw a quadrant must beat | 127 and 127 |
+| `$82`/`$83` | 10 and 10 |
+
+Two rows of mask per iteration and two buffers per iteration, 200 iterations, so
+the windows overlap heavily rather than tiling — 400 window-evaluations for a
+400-row map. Work out the exact walk from those numbers rather than from the
+listing; the buffer is rolling and the self-modified `ASL abs,X` in the unpack
+makes it hard to read directly.
 
 `$0D5D` then calls `$40FA` once the unpack is done, and that turns the two
 counts into what the phase actually reads: `$6C`/`$6D`, how many villages each
