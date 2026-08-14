@@ -1,0 +1,672 @@
+{
+ "description": "Every band write the World Maker's pipeline makes, per band and per phase: how many, the SHA-256 of the sequence, and the band digest and generator state each phase started from. No map data.",
+ "runs": [
+  {
+   "seed": 4660,
+   "config": 0,
+   "bands": [
+    {
+     "phases": [
+      {
+       "phase": "islands",
+       "rng": 62780,
+       "sha256": "6a88ffede10e1a3c016f86a52084edabec7eba5520f0c520b5e6fdf0d48df473",
+       "writes": 1194,
+       "nibbles": {
+        "1": 644,
+        "2": 212,
+        "3": 216,
+        "C": 61,
+        "D": 51,
+        "E": 10
+       },
+       "marks": [
+        {
+         "mark": "islands",
+         "writes": 1194,
+         "sha256": "a1294cee0ba51accea94a8328c50492d595a4e879a82c2aa837a8f790cc97246"
+        }
+       ]
+      },
+      {
+       "phase": "spread",
+       "rng": 59348,
+       "sha256": "dc4d4f62629df08edbcb97c2de9d7fca47e11b244a712b46bfed429fd9b56213",
+       "writes": 26,
+       "nibbles": {
+        "F": 26
+       },
+       "marks": [
+        {
+         "mark": "spread",
+         "writes": 26,
+         "sha256": "81026c483194cc200f532648a44299ed2a3f2c238a3bd9c2203338f01ca4b935"
+        }
+       ]
+      },
+      {
+       "phase": "terrain",
+       "rng": 59348,
+       "sha256": "8712064ba692acd4a81c4dc0189f33a1a6c67c0a5bfae5dc1070a564433f572b",
+       "writes": 15486,
+       "nibbles": {
+        "1": 3126,
+        "2": 70,
+        "4": 1188,
+        "5": 1262,
+        "6": 328,
+        "7": 344,
+        "8": 189,
+        "9": 257,
+        "A": 232,
+        "B": 1706,
+        "C": 5591,
+        "D": 1161,
+        "E": 32
+       },
+       "marks": [
+        {
+         "mark": "terrain",
+         "writes": 10422,
+         "sha256": "157375fa26b123c01f4a43d8bbb1fbdd0a145f1a00f152ea6734d4b83d038f51"
+        },
+        {
+         "mark": "river1",
+         "writes": 16,
+         "sha256": "1f8a2a830e1884c02dc26140db09aa3fa1f7a910db382a47dfd6b956f4ccb036"
+        },
+        {
+         "mark": "river2",
+         "writes": 36,
+         "sha256": "e4018955f9f87617650c1cc8f2a9d8239057eac634ad8c56b09da0a81256a5a1"
+        },
+        {
+         "mark": "river3",
+         "writes": 339,
+         "sha256": "b2cddb07c0ce3ed803594c888ed08c3c10593bab4b890f4103e95a6ed0fb295f"
+        },
+        {
+         "mark": "river4",
+         "writes": 259,
+         "sha256": "6c161f3b900a9ae3a1f3ab97533a6d8afb2c75717a5ce5952e73a8b42822aa31"
+        },
+        {
+         "mark": "river5",
+         "writes": 10,
+         "sha256": "f1b42f02f96d579b2fa039e85a2a17be20cf8b6cd1787ca019c3ad47bdbb15d9"
+        },
+        {
+         "mark": "river6",
+         "writes": 20,
+         "sha256": "6e2665ffd8a854ac1c05ea9a120f978a70c98b67f7985cb81df89293119eaa72"
+        },
+        {
+         "mark": "river7",
+         "writes": 1941,
+         "sha256": "1b12cbf04f6fae94058195f750c2f1a01c27912ca55c744d3a02cb6cfbc0810c"
+        },
+        {
+         "mark": "river8",
+         "writes": 50,
+         "sha256": "04c5686a26505a10339768cd33496526f1ddc20741e2515402393237b62b8a2b"
+        },
+        {
+         "mark": "river9",
+         "writes": 1715,
+         "sha256": "ffce8196632e1fe4302533fa7fc94a3ee1bc20203d2b859d2a8ab2c60a4734a2"
+        },
+        {
+         "mark": "river10",
+         "writes": 678,
+         "sha256": "28661ae21e26cf4f0602d34c4f1ce6a6c5a9a4dd83614da13883885752ca876d"
+        }
+       ]
+      },
+      {
+       "phase": "lakes",
+       "rng": 21482,
+       "sha256": "b5897dc26af391ff19ba48d74c6026b921b6e3f189fc30529574671d2d24fba1",
+       "writes": 259,
+       "nibbles": {
+        "4": 1,
+        "5": 5,
+        "6": 10,
+        "7": 16,
+        "8": 87,
+        "9": 14,
+        "A": 18,
+        "B": 54,
+        "C": 54
+       },
+       "marks": [
+        {
+         "mark": "river11",
+         "writes": 211,
+         "sha256": "0796674624371a386561ba4d8ca263b2c644c8dffe28dc9af6dcb7d10b06d98b"
+        },
+        {
+         "mark": "river12",
+         "writes": 6,
+         "sha256": "526f052d414f57678517182e89e7f2c0cf2d5a5e3638cbf4de055d1bc51f876d"
+        },
+        {
+         "mark": "river13",
+         "writes": 10,
+         "sha256": "8188c60a02d927fa09172eec54cda02b49f3d602a053f44d0f91a52290bd2a20"
+        },
+        {
+         "mark": "river14",
+         "writes": 6,
+         "sha256": "60c88f0a479d5036802d75f93995d07b21fa53a51ecbf4279a1f0d96599a4546"
+        },
+        {
+         "mark": "river15",
+         "writes": 6,
+         "sha256": "e2d49134f55e5311b81722744c3608e12955dd99a651b11b1e7bac202af2ca1a"
+        },
+        {
+         "mark": "river16",
+         "writes": 6,
+         "sha256": "e36c9154861cc17dd7029fd887c8aa3f79c577407fca4789e4f461f19dd40aa7"
+        },
+        {
+         "mark": "river17",
+         "writes": 6,
+         "sha256": "8a0685d34dd792da42e94486182c140ad91c815869694856621b9f3f72fd4588"
+        },
+        {
+         "mark": "river18",
+         "writes": 8,
+         "sha256": "b7ccd94ceb80a9caad890981486a30f724d567af8714b077536b8cc6bacd0dab"
+        }
+       ]
+      },
+      {
+       "phase": "rivers",
+       "rng": 2610,
+       "sha256": "0ded6f986169aaf6389db740befa344c78f143d7c82ae41d2e3a51a47c562d4e",
+       "writes": 1311,
+       "nibbles": {
+        "4": 16,
+        "5": 170,
+        "6": 59,
+        "7": 36,
+        "8": 302,
+        "9": 42,
+        "A": 70,
+        "B": 116,
+        "C": 99,
+        "E": 401
+       },
+       "marks": [
+        {
+         "mark": "river19",
+         "writes": 36,
+         "sha256": "5bc232d8420411ed46bd4261a079514e6de4cbf1263c119b8c0fe26070d25c2d"
+        },
+        {
+         "mark": "river20",
+         "writes": 36,
+         "sha256": "2be25bf3d90e3305f5b5ce568d12ea176916d635d9b18fc6ad070220ea873853"
+        },
+        {
+         "mark": "river21",
+         "writes": 20,
+         "sha256": "6187cb8b1641db00a3dd9c5fbc2bea08a60f66eba3b5d49e67f03c0e88547c14"
+        },
+        {
+         "mark": "river22",
+         "writes": 44,
+         "sha256": "4d7f8ec327d68ab016f4c18071576fa5ca8302026124981321dbc641413d979c"
+        },
+        {
+         "mark": "river23",
+         "writes": 24,
+         "sha256": "1b90e8c6dff248942f81e8c81ef5a9ab85784b8398bc69e62f2277b6816ff21d"
+        },
+        {
+         "mark": "river24",
+         "writes": 27,
+         "sha256": "8fa2fe40b08ffb77be3a5eef4c31ee5999eb581e6bd7fe37dfb600a8ec566212"
+        },
+        {
+         "mark": "river25",
+         "writes": 85,
+         "sha256": "ce76b81287587c1f9fbcd79d45d27926569329cbb3dabca3cc9726f25d2cb293"
+        },
+        {
+         "mark": "river26",
+         "writes": 175,
+         "sha256": "bfec91c2c166e961fc9f97bebef33d6bcf081a3b40571b74d58b449206efc822"
+        },
+        {
+         "mark": "river27",
+         "writes": 110,
+         "sha256": "f0fce27e0b362deb61ad8b24a2027de47d886fa6b616fede3741ef97d1fc6ffa"
+        },
+        {
+         "mark": "river28",
+         "writes": 38,
+         "sha256": "e402acc16aeb0fa9054776822647dacb4ffac8d574aa6412b33381ab074b74ce"
+        },
+        {
+         "mark": "river29",
+         "writes": 161,
+         "sha256": "660cac42ec974ebcdc3b6169a43518adb0e3d861ab7c7944120d57b8a90177fd"
+        },
+        {
+         "mark": "river30",
+         "writes": 64,
+         "sha256": "cc72c7b12750cf58c91fbda5d2ebe1589f5574ab79f2e0c7b62011a2fe854c59"
+        },
+        {
+         "mark": "river31",
+         "writes": 18,
+         "sha256": "aa26783fb734ece2483451cc5d2b59ea3e7fc5aa7641b66607a29a0410b088b8"
+        },
+        {
+         "mark": "river32",
+         "writes": 32,
+         "sha256": "4919372d31eaea9307df5469d4dc0f1d28517d26537eedb2362526c24ee49730"
+        },
+        {
+         "mark": "river33",
+         "writes": 10,
+         "sha256": "dccb95c882a0a67e7461e4350c93c976bfdfd37d5903d1a2990c7d8e527fc1b1"
+        },
+        {
+         "mark": "river34",
+         "writes": 75,
+         "sha256": "3721885a7f70bf323305310fd5d67150edd5a3e8cd29cdaee36979046f98bb9c"
+        },
+        {
+         "mark": "river35",
+         "writes": 81,
+         "sha256": "48f5ea8d2412b121a9b9acfa67b3513d10078ff5380ac4d42744052e0ca31c15"
+        },
+        {
+         "mark": "river36",
+         "writes": 20,
+         "sha256": "f1a4bee1fb8df91d3dab468d89e242f23a26121839487b68d05f525645ade8b3"
+        },
+        {
+         "mark": "river37",
+         "writes": 51,
+         "sha256": "614b115c828ed5fc5017b205100c5e9f361615dd6d38079ba801061c87577993"
+        },
+        {
+         "mark": "river38",
+         "writes": 152,
+         "sha256": "6eee12398169b118813434efc706549296a6cac1c92de3c7c1904b11b774c242"
+        },
+        {
+         "mark": "river39",
+         "writes": 52,
+         "sha256": "076cd8611a8d46d20a241ed5d187b9123c4f6bd33aad97a795de7c9481a6ae76"
+        }
+       ]
+      },
+      {
+       "phase": "unspread",
+       "rng": 46289,
+       "sha256": "8f1584ddd6a6bb47026b7af036335c64830392764c13c501b121d2fe6deff084",
+       "writes": 26,
+       "nibbles": {
+        "0": 26
+       },
+       "marks": [
+        {
+         "mark": "unspread",
+         "writes": 26,
+         "sha256": "6c2375314526f81f8901b227849233c1379610e699b93199866d35e7082ab001"
+        }
+       ]
+      },
+      {
+       "phase": "villages",
+       "rng": 46289,
+       "sha256": "38c8c7bd4a758d837198bfd2300e89049181b49e18efa402a1ce0e7bced71598",
+       "writes": 127,
+       "nibbles": {
+        "F": 127
+       },
+       "marks": [
+        {
+         "mark": "villages",
+         "writes": 127,
+         "sha256": "60dc60b2d7bc1279ac9f00f416491f578f20be4c7ac4ee0338a18349a5c7f4bb"
+        }
+       ]
+      },
+      {
+       "phase": "4CF2",
+       "rng": 16072,
+       "sha256": "d2be31a1574293b2a474266573e92e17d67916ba790073529644f09b3b041e04",
+       "writes": 0,
+       "nibbles": {},
+       "marks": []
+      },
+      {
+       "phase": "write",
+       "rng": 16072,
+       "sha256": "d2be31a1574293b2a474266573e92e17d67916ba790073529644f09b3b041e04",
+       "writes": 213,
+       "nibbles": {
+        "B": 213
+       },
+       "marks": [
+        {
+         "mark": "write",
+         "writes": 213,
+         "sha256": "551a34646cbc2283f7d29e9ed51500c6dd6c85c894f32db094dfb547cd4cf547"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "phases": [
+      {
+       "phase": "islands",
+       "rng": 16072,
+       "sha256": "7131e621249f78082679c86619692be6156ba68003508dc898aaa4930c6642d2",
+       "writes": 296,
+       "nibbles": {
+        "1": 140,
+        "2": 56,
+        "3": 67,
+        "C": 16,
+        "D": 17
+       },
+       "marks": [
+        {
+         "mark": "islands",
+         "writes": 296,
+         "sha256": "5171eb9859737523e769e3218bc9711de03404615f285a94f506af400ca1265e"
+        }
+       ]
+      },
+      {
+       "phase": "spread",
+       "rng": 63769,
+       "sha256": "5cb3f4223dfb544a2576aa14e40d0a43249d83c3319fcd783e1b63a3ecc9420b",
+       "writes": 21,
+       "nibbles": {
+        "F": 21
+       },
+       "marks": [
+        {
+         "mark": "spread",
+         "writes": 21,
+         "sha256": "6f5cdf2bcf03327783c55ae956773f118418df0597eea4e3a13cc795e7d14783"
+        }
+       ]
+      },
+      {
+       "phase": "terrain",
+       "rng": 63769,
+       "sha256": "80635909014c0bc5c2d907ee858b09db7b4cfeacdb12850f2e5e1555a3f65438",
+       "writes": 14584,
+       "nibbles": {
+        "1": 4264,
+        "2": 95,
+        "4": 1660,
+        "5": 398,
+        "6": 65,
+        "7": 63,
+        "8": 27,
+        "9": 46,
+        "A": 51,
+        "B": 848,
+        "C": 6319,
+        "D": 748
+       },
+       "marks": [
+        {
+         "mark": "terrain",
+         "writes": 13485,
+         "sha256": "6c302e477aead5edb930b384b3ba6a1b61ca62570d90a78806f83736c3fc1c70"
+        },
+        {
+         "mark": "river1",
+         "writes": 1049,
+         "sha256": "372415549bb76029dcc787e90e52c94d70afe78682f209a8cd20a3951daf53ae"
+        },
+        {
+         "mark": "sources",
+         "writes": 50,
+         "sha256": "af2c40b3dda480b897766bce417922806370d0a9cef6fb70287af2a39b80a55f"
+        }
+       ]
+      },
+      {
+       "phase": "lakes",
+       "rng": 20416,
+       "sha256": "88e6872fa7dd5ef7816388821e1a1ac56d4bb02ce21e48c64b00e6e84a63c0ac",
+       "writes": 128,
+       "nibbles": {
+        "4": 1,
+        "5": 8,
+        "6": 9,
+        "7": 3,
+        "8": 55,
+        "9": 2,
+        "A": 9,
+        "B": 17,
+        "C": 24
+       },
+       "marks": [
+        {
+         "mark": "river2",
+         "writes": 82,
+         "sha256": "d971c5ca69bca85644acab10067fd32a6f63388cfa693437ce0a6b542bd633a4"
+        },
+        {
+         "mark": "river3",
+         "writes": 6,
+         "sha256": "6c7b28000a225002176fd4c057329ccf2b8bcda3f4c2e073d092dde10c3609d3"
+        },
+        {
+         "mark": "river4",
+         "writes": 8,
+         "sha256": "bb0411838349b8fb99b5a7f72b146a3537bb53aa8bd8254d671c85358666a70d"
+        },
+        {
+         "mark": "river5",
+         "writes": 6,
+         "sha256": "baec053857c23aceaa1cf130f604e112349ee03bc014df37ef73e6ab26a7d726"
+        },
+        {
+         "mark": "river6",
+         "writes": 12,
+         "sha256": "2db74ec049cd7125e32bce233e1e46d47b4e2545ee5c4064d14fbd10a76dd4be"
+        },
+        {
+         "mark": "river7",
+         "writes": 8,
+         "sha256": "3fd21406c6b7c1d3ec3c20ee355a9575551b24673da76057e398eb27471a296f"
+        },
+        {
+         "mark": "river8",
+         "writes": 6,
+         "sha256": "2130cda0ff6312cdaaca8d285271a79a5a441f247a0891f319afda2199d0df61"
+        }
+       ]
+      },
+      {
+       "phase": "rivers",
+       "rng": 48190,
+       "sha256": "c180b13b3bb09e9f925049ca0efb4b6ee2f1e7d3b0a546a4964f3785fc65ee8a",
+       "writes": 1063,
+       "nibbles": {
+        "4": 13,
+        "5": 118,
+        "6": 49,
+        "7": 41,
+        "8": 247,
+        "9": 47,
+        "A": 56,
+        "B": 92,
+        "C": 98,
+        "E": 302
+       },
+       "marks": [
+        {
+         "mark": "river9",
+         "writes": 79,
+         "sha256": "c992d162c59d831b6843b879957033825d6f3898d7a02406fd3c477b7abc9310"
+        },
+        {
+         "mark": "river10",
+         "writes": 51,
+         "sha256": "7811bccbe85ea9ae7de1d285d65fa817fa2ddd070d82a3369f99060af51c5653"
+        },
+        {
+         "mark": "river11",
+         "writes": 132,
+         "sha256": "a4786cbfd4a3f9c9ec1198706af07e8f774679823ecd2b09a9cb23663e07a8ed"
+        },
+        {
+         "mark": "river12",
+         "writes": 28,
+         "sha256": "7377f60a5bf90d251b70338dd4b267031c8f6e07d3b7c9b87ab95e180a0e990f"
+        },
+        {
+         "mark": "river13",
+         "writes": 237,
+         "sha256": "88fa48f6354f148bc98d87141feaeace748872d612c1ce518415a715407142ad"
+        },
+        {
+         "mark": "river14",
+         "writes": 10,
+         "sha256": "9c6a0e7469c1f520e6eb6fdb3d3a7bf286157dce5a22414afeb4a60c926bf7de"
+        },
+        {
+         "mark": "river15",
+         "writes": 84,
+         "sha256": "6cbc6a69629c5fb21a56cd3907766399f959f5c9374e0c3d6b2d7e9da64d98a7"
+        },
+        {
+         "mark": "river16",
+         "writes": 49,
+         "sha256": "c810dcac829bca95af468570949b8c7dfd6de17d15d5ea7501ebb6c51e7f8015"
+        },
+        {
+         "mark": "river17",
+         "writes": 21,
+         "sha256": "c1161b40ddb6d0a1045a05b63e18391eb4965f9c76c90dfb022f6914ff5ada9f"
+        },
+        {
+         "mark": "river18",
+         "writes": 54,
+         "sha256": "ece96d5a79b74fefd8745dbdecea150cda41d5f7ae322cdc3f6c32d3f77e4a1c"
+        },
+        {
+         "mark": "river19",
+         "writes": 31,
+         "sha256": "0f2bde60bee1718e3a59086a0b6abd05ccbd69c5b30d55cf6015ff5634d72f1e"
+        },
+        {
+         "mark": "river20",
+         "writes": 55,
+         "sha256": "660f71c57471d711ea2f5d422c4dcdbe618e882386b95933dba1dbdc701aa301"
+        },
+        {
+         "mark": "river21",
+         "writes": 10,
+         "sha256": "9e8815a7bf84d789a9070c3fd06878936a0b059ae5413581ca10f34787fde909"
+        },
+        {
+         "mark": "river22",
+         "writes": 19,
+         "sha256": "9f25bd27b93382d57a4b15c21aecb2e278a0a5ce2dedddae6ee248bac65bfe83"
+        },
+        {
+         "mark": "river23",
+         "writes": 25,
+         "sha256": "897d10907578a4fc0e924af7eda0183064195457bee59ea0db041efb6f833142"
+        },
+        {
+         "mark": "river24",
+         "writes": 111,
+         "sha256": "8357e59c4cfe63d4f3ef57264b59fb1545d163f9932e90e921623007ad28e3d3"
+        },
+        {
+         "mark": "river25",
+         "writes": 67,
+         "sha256": "f050fa10b060bce9b932bca15b2e81155f2a8b638bdc69f860807246aae39054"
+        }
+       ]
+      },
+      {
+       "phase": "unspread",
+       "rng": 37892,
+       "sha256": "7610182bfc2c79c098fc9422606ade2ae1f9ca18426041e5b94fefc93db9b3e2",
+       "writes": 21,
+       "nibbles": {
+        "0": 21
+       },
+       "marks": [
+        {
+         "mark": "unspread",
+         "writes": 21,
+         "sha256": "b855bcf31c146e7b687860f7628fe65ad927b316944ce1e49681d8e50ff632eb"
+        }
+       ]
+      },
+      {
+       "phase": "villages",
+       "rng": 37892,
+       "sha256": "c15610e80d9f845ff5cff5271c2bde9d5c643c267c264f80224759e65056c59c",
+       "writes": 127,
+       "nibbles": {
+        "F": 127
+       },
+       "marks": [
+        {
+         "mark": "villages",
+         "writes": 127,
+         "sha256": "18a23f71b602b0086b02c751b971325be163453f5314eb74bfd0d44a327018e5"
+        }
+       ]
+      },
+      {
+       "phase": "4CF2",
+       "rng": 64270,
+       "sha256": "8220c3ff425eed50013a13286f92cea28a51e3feb5bcf03b205f8a3766615f1c",
+       "writes": 0,
+       "nibbles": {},
+       "marks": []
+      },
+      {
+       "phase": "write",
+       "rng": 64270,
+       "sha256": "8220c3ff425eed50013a13286f92cea28a51e3feb5bcf03b205f8a3766615f1c",
+       "writes": 65,
+       "nibbles": {
+        "B": 65
+       },
+       "marks": [
+        {
+         "mark": "write",
+         "writes": 65,
+         "sha256": "ee94ae1de1d6810d0e9ba67c37d8520caafa2adf7b3ddeae5a4d7e5a419ff35b"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "tables": {
+    "steps": {
+     "bytes": 753,
+     "sha256": "91f9050c7763ad3547dffa125f16e5a53bf7e09981153634d5e1388abbc04a50"
+    },
+    "mouths": {
+     "bytes": 753,
+     "sha256": "abfd73e361958e20497bc90ea139f16e4a54ffbcf223feaf1f0997663d67a942"
+    }
+   }
+  }
+ ]
+}

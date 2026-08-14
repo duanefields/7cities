@@ -2881,11 +2881,13 @@ bytes and they are not map data; they are routing:
 
 So the river nibbles `5`-`A` are settled: they are shapes, not depths.
 
-**A carry that is not cleared.** `$33CC` adds `$32AC,Y` to the column with
-whatever carry the last comparison in `$333C` left, and only the row addition at
-`$33D2` clears it first. So a step is sometimes one column further east than the
-table says, and which times depends on a draw made in a different routine. Worth
-having written down before a port "fixes" it.
+**`$33CC` adds without a `CLC` and it does not matter.** The column addition
+takes whatever carry is lying around, where the row addition at `$33D2` clears
+it first — which looks like a bug worth reproducing. It is not: `$33B7` and
+`$33C8` both `ASL` a value that is 0 to 3, so the carry is clear by the time the
+addition happens, every time. Checked rather than assumed, because the same
+shape *is* live elsewhere in this engine — `$333C` and `$328A` both read `$03`
+straight off the zero page to recover a signed value the return has clamped.
 
 **Two tables in high RAM.** `$3300` records each step as three bytes — row,
 column, direction — at `$E000` plus three times a step index that wraps at
