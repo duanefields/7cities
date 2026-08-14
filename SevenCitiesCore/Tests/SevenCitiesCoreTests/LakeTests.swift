@@ -4,7 +4,7 @@ import Testing
 
 @testable import SevenCitiesCore
 
-/// `$3961`, the rivers that run out of the lakes.
+/// `$3961` and `$3EAD`, the two water phases that follow the terrain.
 ///
 /// Graded on writes for the same reason the ranges are: the phase is not
 /// finished, and a band with part of it missing diverges from the original's
@@ -54,14 +54,14 @@ func lakeOutflowMatchesOriginal() throws {
     let stage = try LandMassStage.run(config: run.config, seed: UInt16(run.seed))
     var band = TerrainBand(landMask: stage.mask, fromRow: 0)
     var rng = WorldMakerRNG(seed: UInt16(band0.phases[0].rng))
-    var rivers = RiverEngine()
-    rivers.beginBand()
+    var engine = RiverEngine()
+    engine.beginBand()
     TerrainPhases.islands(stage.islands, northern: true, in: &band, rng: &rng)
     TerrainPhases.spread(stage.satellites, northern: true, marking: true, in: &band)
     try #require(Int(rng.state) == terrain.rng, "the phases before $2E32 disagree")
 
     TerrainPhases.terrain(stage.landmasses, in: &band, rng: &rng,
-                          rivers: &rivers, secondBand: false)
+                          rivers: &engine, secondBand: false)
     // $2E32 is exact in both what it wrote and where it left the generator, and
     // the second of those is what makes anything after it gradeable at all.
     try #require(Int(rng.state) == lakes.rng,
@@ -69,7 +69,7 @@ func lakeOutflowMatchesOriginal() throws {
 
     band.journal = []
     TerrainPhases.lakeOutflows(stage.satellites, in: &band, rng: &rng,
-                               engine: &rivers, secondBand: false)
+                               engine: &engine, secondBand: false)
     let journal = try #require(band.journal)
 
     #expect(journal.count == lakes.writes,
@@ -84,7 +84,29 @@ func lakeOutflowMatchesOriginal() throws {
                 "\(mark.mark): the cells differ from the original's")
         if digest(slice) != mark.sha256 { break }
     }
-    let next = try #require(band0.phases.first { $0.phase == "rivers" })
-    #expect(Int(rng.state) == next.rng,
-            "the phase left the generator somewhere the original did not")
+    let rivers = try #require(band0.phases.first { $0.phase == "rivers" })
+    #expect(Int(rng.state) == rivers.rng,
+            "$3961 left the generator somewhere the original did not")
+
+    // $3EAD is the same walker again with three things patched into it, so it
+    // is graded here rather than in a file of its own.
+    band.journal = []
+    TerrainPhases.inlandRivers(in: &band, rng: &rng, engine: &engine,
+                               secondBand: false)
+    let inland = try #require(band.journal)
+    #expect(inland.count == rivers.writes,
+            "$3EAD wrote \(inland.count) cells, not \(rivers.writes)")
+    start = 0
+    for mark in rivers.marks {
+        let slice = inland[start..<min(start + mark.writes, inland.count)]
+        start += mark.writes
+        #expect(slice.count == mark.writes,
+                "\(mark.mark): \(slice.count) writes, not \(mark.writes)")
+        #expect(digest(slice) == mark.sha256,
+                "\(mark.mark): the cells differ from the original's")
+        if digest(slice) != mark.sha256 { break }
+    }
+    let after = try #require(band0.phases.first { $0.phase == "unspread" })
+    #expect(Int(rng.state) == after.rng,
+            "$3EAD left the generator somewhere the original did not")
 }

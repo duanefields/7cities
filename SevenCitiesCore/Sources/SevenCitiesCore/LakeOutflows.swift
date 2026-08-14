@@ -43,7 +43,7 @@ extension TerrainPhases {
     /// and it has to be at least twenty-five cells. Then a river runs that way
     /// until it has come far enough — ten cells at least, forty-five at most,
     /// and never further than the mouth's own river was long.
-    private static func upstream(in band: inout TerrainBand,
+    static func upstream(in band: inout TerrainBand,
                                  rng: inout WorldMakerRNG,
                                  engine: inout RiverEngine, secondBand: Bool) {
         // $3B75: `$56` counts bytes, three to a mouth.
@@ -269,7 +269,7 @@ extension TerrainPhases {
     /// Indexed the way the original's `$0200` page is — south, west, east,
     /// north — and `$FF` where the run reaches nibble `$3`, the island mark,
     /// before it reaches water.
-    private static func landRuns(from mark: (column: UInt8, row: Int),
+    static func landRuns(from mark: (column: UInt8, row: Int),
                                  in band: TerrainBand,
                                  secondBand: Bool) -> [UInt8] {
         func run(_ dx: Int, _ dy: Int, limit: (UInt8) -> Bool) -> UInt8 {
@@ -295,11 +295,26 @@ extension TerrainPhases {
         return [south, west, east, north]
     }
 
-    /// `$3A83`: the lake river's walk.
-    private static func walk(_ engine: inout RiverEngine,
+    /// What `$3EAD` changes about the walk by patching it.
+    ///
+    /// Three bytes' worth, and all three matter. `$3AA5` becomes `JSR $36CC /
+    /// JMP $3FB1`, so a finished river is followed by `$3B75`'s upstream pass
+    /// and a cleared mouth table instead of by `$3E53`'s distant swamp.
+    /// `$36A2` becomes `JSR $3FF9`, which refuses to run a river shorter than
+    /// ten cells out to sea and unwinds it instead. And `$34DB` is NOPed, which
+    /// makes `$348D` allow every cell it is asked about.
+    public struct Rules {
+        var refuseShortRuns = false     // $3FF9
+        var allowSparse = false         // $34DB NOPed
+        var finishWithUpstream = false  // $3FB1
+    }
+
+    /// `$3A83`: the lake river's walk, and `$3EAD`'s too.
+    static func walk(_ engine: inout RiverEngine,
                              anchor: (row: Int, column: UInt8),
                              in band: inout TerrainBand,
-                             rng: inout WorldMakerRNG, secondBand: Bool) {
+                             rng: inout WorldMakerRNG, secondBand: Bool,
+                             rules: Rules = Rules()) {
         while true {
             let stop = engine.index &+ 1                      // $3A83
             engine.stopIndex = stop
@@ -312,15 +327,18 @@ extension TerrainPhases {
 
             if !give {
                 let nibble = band[engine.nextColumn, engine.nextRow]
-                if nibble < 3 { finish(&engine, in: &band, rng: &rng,
-                                       secondBand: secondBand); return }
+                if nibble < 3 {
+                    finish(&engine, in: &band, rng: &rng,
+                           secondBand: secondBand, rules: rules)
+                    return
+                }
                 if nibble == 0x0F || nibble == 0x04 {
                     give = true                               // $3AB4
                 } else if nibble < 0x0B {
                     // $3AC0: a river already here. Joining it is allowed unless
                     // the record says the walk has been here before.
                     if inRecord(engine, at: engine.nextColumn, engine.nextRow,
-                                in: band) {
+                                in: band, rules: rules) {
                         give = true
                     } else {
                         join = true
@@ -329,14 +347,26 @@ extension TerrainPhases {
             }
 
             if !give && !join {
-                switch fan(&engine, in: band, secondBand: secondBand) {
+                switch fan(&engine, in: band, secondBand: secondBand,
+                           rules: rules) {
                 case .none: give = true
                 case .unwind: give = true
                 case .sea:
+                    // $3FF9: under $3EAD a river this short is not run out to
+                    // sea, it is taken back.
+                    if rules.refuseShortRuns && engine.length < 0x0A {
+                        give = true
+                        break
+                    }
                     carry(&engine, until: 0x03, in: &band, rng: &rng)
-                    finish(&engine, in: &band, rng: &rng, secondBand: secondBand)
+                    finish(&engine, in: &band, rng: &rng,
+                           secondBand: secondBand, rules: rules)
                     return                                    // $3B5E
                 case .river:
+                    if rules.refuseShortRuns && engine.length < 0x0A {
+                        give = true
+                        break
+                    }
                     carry(&engine, until: 0x0B, in: &band, rng: &rng)
                     join = true                               // $3B66
                 case .step: break
@@ -346,7 +376,8 @@ extension TerrainPhases {
             if join {
                 engine.tile = 0x04                            // $3AC5
                 engine.take(in: &band)
-                finish(&engine, in: &band, rng: &rng, secondBand: secondBand)
+                finish(&engine, in: &band, rng: &rng,
+                       secondBand: secondBand, rules: rules)
                 return
             }
 
@@ -380,7 +411,7 @@ extension TerrainPhases {
     /// **scored** — `$37DD` and `$37E8` keep the shortest reach found rather
     /// than committing to the first, and `$37FF` takes that one at the end.
     private static func fan(_ engine: inout RiverEngine, in band: TerrainBand,
-                            secondBand: Bool) -> Fan {
+                            secondBand: Bool, rules: Rules) -> Fan {
         var bestReach: UInt8 = 0xFF
         var bestDirection: UInt8 = 0
         var bestIsRiver = false
@@ -407,7 +438,9 @@ extension TerrainPhases {
                     break
                 }
                 if nibble < 0x0B {                            // $3B10
-                    if inRecord(engine, at: x, y, in: band) { return .unwind }
+                    if inRecord(engine, at: x, y, in: band, rules: rules) {
+                        return .unwind
+                    }
                     if reach < bestReach {
                         bestReach = reach; bestDirection = direction
                         bestIsRiver = true
@@ -445,7 +478,8 @@ extension TerrainPhases {
     /// second, and only where the river did not end on a shallow.
     private static func finish(_ engine: inout RiverEngine,
                                in band: inout TerrainBand,
-                               rng: inout WorldMakerRNG, secondBand: Bool) {
+                               rng: inout WorldMakerRNG, secondBand: Bool,
+                               rules: Rules = Rules()) {
         engine.fileSource(from: engine.sourceColumn, engine.sourceRow,
                           secondBand: secondBand)             // $3755
         if engine.tile == 0x04 {
@@ -455,16 +489,32 @@ extension TerrainPhases {
         } else {
             shiftAndSwamp(&engine, source: engine.sourceColumn, in: &band,
                           rng: &rng, secondBand: secondBand)  // $3E8B
-            distantSwamp(&engine, in: &band, rng: &rng, secondBand: secondBand)
+            if !rules.finishWithUpstream {
+                distantSwamp(&engine, in: &band, rng: &rng,
+                             secondBand: secondBand)          // $3AAE
+            }
+        }
+        if rules.finishWithUpstream {
+            // $3FB1: the upstream pass runs after *every* river here, not once
+            // at the end of the phase, and the mouth table is cleared with it.
+            upstream(in: &band, rng: &rng, engine: &engine, secondBand: secondBand)
+            engine.beginBand()
         }
     }
 
     /// `$348D`: has the walk already been through this cell, or is it hemmed in?
     ///
     /// Carry set — refuse — when the position is in the record, when a neighbour
-    /// is a `$4`, or when fewer than two neighbours are river.
+    /// is a `$4`, or when **fewer than two** neighbours are river. That last
+    /// reading is the one to be careful with: `$34D9 CMP #$02 / BCC $34F1`
+    /// refuses the sparse case, not the crowded one, so a river may only join
+    /// another where there is enough of it to join.
+    ///
+    /// `$3EAD` NOPs `$34DB`, which removes exactly that test and nothing else —
+    /// the record check and the `$4` neighbour still refuse.
     private static func inRecord(_ engine: RiverEngine, at column: UInt8,
-                                 _ row: Int, in band: TerrainBand) -> Bool {
+                                 _ row: Int, in band: TerrainBand,
+                                 rules: Rules = Rules()) -> Bool {
         var probe = engine.index
         while true {
             let step = engine.step(at: probe)
@@ -485,6 +535,6 @@ extension TerrainPhases {
             if nibble == 0x04 { return true }                 // $37D9
             if nibble > 0x04 && nibble < 0x0B { rivers += 1 }
         }
-        return rivers >= 2                                    // $34D9
+        return rules.allowSparse ? false : rivers < 2          // $34D9
     }
 }

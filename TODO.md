@@ -137,14 +137,10 @@ engineering record; this holds the work.
       verifies most of the water engine with it: `$32CC`, `$333C`, `$33B7`,
       `$3300`, `$33EF`, `$3531`, `$369F`, `$3755`, `$3D97` and `$3E53`.
 
-      **`$3961` is complete** — all 259 writes of the first band and the
-      generator left exactly where the original leaves it, which is what makes
-      `$3EAD` gradeable in turn.
-
-      What is left of the water engine is `$3EAD`. It patches five bytes into
-      `$3AA5` and five into `$36A2` before it begins, so it is the same engine
-      again with its direction-pick and its finish swapped; read those patches
-      before anything else. `$42C6` is not read yet.
+      **The water engine is done.** `$380D`, `$3961` and `$3EAD` all reproduce
+      the original's writes exactly in the first band — 5,007, 259 and 1,311 of
+      them — and each leaves the generator where the original leaves it, which
+      is what let the next one be graded at all.
 
       **Grade it with `tools/pipeline_trace.py`**, which records every write of
       every phase tagged with the river that made it. Band 0 of seed `$1234`
@@ -152,7 +148,9 @@ engineering record; this holds the work.
       20, 1941, 50, 1715, 678 writes), `$3961` draws 8, `$3EAD` draws 21. A port
       can be checked one river at a time.
 - [ ] **Port `$47DF`, the villages.** 127 writes a band, and it may share the
-      water engine — measure the address overlap before sizing it.
+      water engine — measure the address overlap before sizing it. Everything
+      before it in the pipeline is now exact, so it can be graded straight away
+      from `pipeline_reference.json`.
 - [ ] **Port `$2C14`, the band writer.** 419 addresses, and it is not only a
       writer: it puts 213 cells down in the first band and 65 in the second.
 - [ ] **Assemble the second band.** Everything above is graded on band 0 only,

@@ -12,7 +12,9 @@
 extension TerrainPhases {
 
     /// What `$380D` needs to know about the spine that came before it.
-    struct Range {
+    /// Named for the thing rather than for the shape, because
+    /// `Range` is Swift's and shadowing it breaks every other file.
+    struct Ridge {
         let column: UInt8          // $22
         let top: UInt8             // $35
         let bottom: UInt8          // $36
@@ -21,7 +23,7 @@ extension TerrainPhases {
     /// `$380D`: source a river from the range, and walk it.
     ///
     /// Returns when the river finishes, is abandoned, or the placement gives up.
-    static func sourceRiver(from range: Range, in band: inout TerrainBand,
+    static func sourceRiver(from range: Ridge, in band: inout TerrainBand,
                             rng: inout WorldMakerRNG,
                             engine: inout RiverEngine,
                             secondBand: Bool) {
@@ -298,10 +300,14 @@ extension TerrainPhases {
 
         let area = box(around: column, UInt8(truncatingIfNeeded: row),
                        radius: radius)
-        // $3DE7: ten of either and this ground is spoken for.
+        // $3DE7: ten of either and this ground is spoken for. The box is half
+        // open on *both* axes here — `$3E1B` and `$3E23` are both `BCC` — so
+        // neither the right column nor the bottom row is counted. Counting the
+        // bottom row is worth ten mountains on a range's flank, and a swamp
+        // that should have been placed is not.
         var mountains = 0, swamps = 0
         var y = area.top
-        rows: while y <= area.bottom {
+        while y < area.bottom {
             var x = area.left
             while true {
                 switch band[x, Int(y)] {
@@ -317,7 +323,6 @@ extension TerrainPhases {
                 if x == 0 { break }                           // $3E19
                 if x >= area.right { break }                  // $3E1B
             }
-            if y == area.bottom { break rows }
             y &+= 1
         }
 

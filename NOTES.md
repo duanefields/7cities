@@ -2858,9 +2858,22 @@ and it NOPs `$34DB`/`$34DC`, which removes the `BCC $34F1` at the end of `$348D`
 so that routine always returns carry clear. So the phase is not a third river
 routine; it is the second one with its direction-pick and its finish swapped.
 
-Its own body scans the band in sixteen-row strips, looking for a strip of open
-sea with no land and no lake mark in it, and starts a river from there — which
-is why `$3EAD` draws 21 rivers in the first band against `$3961`'s 8.
+Its own body scans the band in **sixteen-by-sixteen strips**, 208 of them, and a
+strip qualifies only if every cell in it is plain land — no water, no river, no
+lake mark. It then shrinks the strip by two on each side, picks a point inside
+it, checks a radius-10 box around that point is land as well, and sources a
+river there. Not open sea, as an earlier reading of it here said: dry interior.
+That is why `$3EAD` draws 21 rivers in the first band against `$3961`'s 8.
+
+**Half-open boxes, a third time.** `$3DE7`'s ten-mountain check scans its box
+half open on *both* axes — `$3E1B` and `$3E23` are both `BCC` — so neither the
+right column nor the bottom row is counted. Counting the bottom row is worth ten
+mountains on the flank of a range, and then a swamp that should have been placed
+is not, and the river after it is out of step. Three of these now: `$3897`,
+`$3506` and `$3DE7`. Every box in the *terrain* phases is closed on all four
+sides and every box in the *water* phases is half open, which is too consistent
+to be a slip after all — they are different hands, or the same hand on a
+different day.
 
 ### A whole continent was missing from the position tables
 

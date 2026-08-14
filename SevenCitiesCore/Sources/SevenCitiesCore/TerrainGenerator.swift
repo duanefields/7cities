@@ -426,7 +426,7 @@ extension TerrainPhases {
         mark(.spur)
         clearing(&walk, of: mass, in: &band, rng: &rng)       // $31E6
         mark(.clearing)
-        sourceRiver(from: Range(column: mass.column, top: walk.top,
+        sourceRiver(from: Ridge(column: mass.column, top: walk.top,
                                 bottom: walk.bottom),
                     in: &band, rng: &rng, engine: &rivers,
                     secondBand: secondBand)                   // $380D
