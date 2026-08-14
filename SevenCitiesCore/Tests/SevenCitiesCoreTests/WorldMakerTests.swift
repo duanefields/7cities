@@ -73,7 +73,14 @@ func bothBandsMatchTheOriginal() throws {
         let run = try LandMassStage.run(config: entry.config,
                                         seed: UInt16(entry.seed))
         let label = "seed \(String(format: "%04X", entry.seed)) config \(entry.config)"
-        var rng = WorldMakerRNG(seed: UInt16(entry.bands[0].phases[0].rng))
+        // The land-mass phase's own final state, not the fixture's — nothing
+        // between `$2894` and `$2AE9` draws, so the two are the same register.
+        try #require(Int(run.generator.state) == entry.bands[0].phases[0].rng,
+                     """
+                     \(label): the pipeline does not start where the \
+                     land-mass phase ended
+                     """)
+        var rng = run.generator
         let world = WorldMaker.world(of: run, rng: &rng)
 
         // The generator at the end of everything, which is the strictest single
@@ -138,4 +145,35 @@ func bandBeforeTheLastPhaseMatches() throws {
                 "\(label): the band before $2C14 differs from the original's")
         #expect(Int(rng.state) == writer.rng, "\(label): and so does the generator")
     }
+}
+
+
+/// The whole thing from a seed, with nothing borrowed from a fixture.
+///
+/// Two worlds rather than six: `bothBandsMatchTheOriginal` already pins every
+/// configuration against the original, and a world costs about fifty
+/// milliseconds in a release build but eight seconds in a debug one — the
+/// pipeline is a great many small mutations through `inout` and gains about
+/// a hundred and sixty times from optimisation.
+@Test("A world can be made from a seed alone")
+func worldFromASeed() throws {
+    let world = try WorldMaker.world(config: 0, seed: 0x1234)
+    #expect(world.rows.count == LandMask.height)
+    #expect(world.rows.allSatisfy { $0.count == 256 })
+
+    let counts = world.rows.flatMap { $0 }.reduce(into: [UInt8: Int]()) {
+        $0[$1, default: 0] += 1
+    }
+    #expect(counts.keys.allSatisfy { $0 < 16 }, "something is not a nibble")
+    #expect(counts[0x03, default: 0] == 0, "`$3` survived into the map")
+    // A map with no sea, or none of the commonest land, would mean something
+    // has gone badly wrong in a way the digests could not have missed — but
+    // these cost nothing and say what "right" looks like.
+    #expect(counts[0x00, default: 0] > 10_000, "no ocean")
+    #expect(counts[0x0B, default: 0] > 1_000, "no plain")
+    #expect(counts[0x0F, default: 0] > 0, "no villages")
+
+    let other = try WorldMaker.world(config: 0, seed: 0xBEEF)
+    #expect(world.first.terrain != other.first.terrain,
+            "two seeds gave the same world")
 }

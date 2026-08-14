@@ -216,7 +216,18 @@ engineering record; this holds the work.
       second band is read, the sixteen rows it shares with the first have been
       overwritten by the first band's *finished* terrain.
 - [ ] **Replace `WorldGenerator` in the viewer** with the real pipeline. This is
-      the point of all of it.
+      the point of all of it, and everything it needs is now in place:
+      `WorldMaker.world(config:seed:)` goes from a seed to 400 rows of nibbles
+      in about fifty milliseconds, so the viewer can regenerate on a keypress
+      and needs no caching, no progress bar and no background thread.
+
+      Two things to watch when wiring it. Several routines are rejection
+      samplers with no iteration bound — `$0FF8` redraws until it lands on land,
+      `$3D97` tries up to 256 times a cell — and while they terminate on every
+      seed and configuration measured, "in principle" is doing real work in that
+      sentence; a watchdog is worth having before the viewer regenerates on
+      input. And a debug build is about a hundred and sixty times slower than a
+      release one, so a world takes eight seconds under the debugger.
 - [ ] **Re-check `wm_trace.py`'s phase snapshots.** It waits for checkpoints by
       polling `vice_ping` for "paused", which fires for unrelated reasons — the
       same bug that misread three runs of `wm_config.py`. Its snapshots may have

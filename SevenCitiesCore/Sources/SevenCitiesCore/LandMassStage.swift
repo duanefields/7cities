@@ -138,6 +138,14 @@ public enum LandMassStage {
         /// Why the stage stopped before the command table ran out. `nil` means it
         /// finished, which it now does for every configuration it accepts.
         public let stoppedBecause: String?
+        /// Where the generator stands when the phase ends.
+        ///
+        /// This is also where `$0E20` starts. Measured across all three
+        /// configurations: **nothing between `$2894` and `$2AE9` draws** — not
+        /// the mask unpack at `$0C9B`, not `$40FA`'s arithmetic, not the setup at
+        /// `$0DA0` — so the pipeline picks the register up exactly as the
+        /// land-mass phase put it down.
+        public let generator: WorldMakerRNG
     }
 
     /// Runs the command-table stage for one seed and configuration.
@@ -324,7 +332,7 @@ public enum LandMassStage {
                                        pool: &pool, steps: &steps)
         return Run(mask: mask, steps: steps, sites: sites, islands: scattered,
                    satellites: satellites, landmasses: landmasses,
-                   stoppedBecause: nil)
+                   stoppedBecause: nil, generator: rng)
     }
 
     /// The second wave (`$280A`-`$2894`).

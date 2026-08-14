@@ -47,11 +47,21 @@ public enum WorldMaker {
         }
     }
 
+    /// A whole world, from a seed and a configuration.
+    ///
+    /// The land-mass phase and then the pipeline, which is everything the World
+    /// Maker does. Measured at about forty milliseconds in a release build, so
+    /// there is no reason for a caller to cache one.
+    public static func world(config: Int, seed: UInt16) throws -> World {
+        let run = try LandMassStage.run(config: config, seed: seed)
+        var rng = run.generator
+        return world(of: run, rng: &rng)
+    }
+
     /// `$0DB5` and `$0DC3`: the whole pipeline, both bands.
     ///
-    /// `rng` must start where the land-mass phase left it. The port cannot yet
-    /// derive that — the boot path between `$2894` and `$0E20` is not ported —
-    /// so it comes from the fixture for now.
+    /// `rng` starts where the land-mass phase left it — literally, since nothing
+    /// between `$2894` and `$2AE9` draws.
     public static func world(of run: LandMassStage.Run,
                              rng: inout WorldMakerRNG) -> World {
         let first = firstBand(of: run, rng: &rng)
