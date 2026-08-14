@@ -6,19 +6,17 @@ import Testing
 
 /// `$2ED2`'s mountain ranges, graded on what they wrote rather than on the band.
 ///
-/// The band cannot be the test here. `$2E32` draws each landmass in four stages
-/// and the last of them, `$380D`, is not ported — so from the first landmass
-/// that reaches it onward the port's band and the original's are legitimately
-/// different, and a digest of either says nothing useful. What *is* comparable
-/// is the sequence of writes each stage makes, which `tools/range_trace.py`
-/// records off the interpreter and ``TerrainBand/journal`` records off the port.
+/// The writes are the test rather than the band, and that was not a choice — it
+/// was the only way to grade `$2E32` while parts of it were still missing, since
+/// a band with one stage absent diverges from the original's legitimately and a
+/// digest of either says nothing. `tools/range_trace.py` records the original's
+/// sequence off the interpreter and ``TerrainBand/journal`` records the port's.
 ///
-/// Which stages are reachable depends on the configuration, which is why the
-/// fixture holds more than one. Configuration 0's first band reaches `$380D` on
-/// its first landmass, so everything after that — including the small-landmass
-/// drawer at `$2F0B` — is out of reach. Configuration 1's continent sits on the
-/// last row of the band, which is too low for `$3134` and too short a spine for
-/// `$380D`, so nothing in that band is unreachable and it grades end to end.
+/// Both configurations now grade end to end: every stage of every landmass, in
+/// order, cell for cell. Configuration 1 is kept because it is the one whose
+/// first band never reaches `$380D` — its continent sits on the last row, too
+/// low for `$3134` and with too short a spine to source a river — so it is the
+/// only case that exercises `$2F0B`, the small-landmass drawer, first.
 private struct RangeReference: Decodable {
     struct Stage: Decodable { let stage: String; let writes: Int; let sha256: String }
     struct Entry: Decodable {
@@ -90,17 +88,7 @@ func rangesMatchOriginal() throws {
                                             secondBand: false, rivers: &rivers)
         let journal = try #require(band.journal)
 
-        // Everything up to the first stage the port does not have. After that
-        // the original is working on a band the port has never seen.
-        var expected: [RangeReference.Stage] = []
-        var complete = true
-        entries: for entry in reference.ranges {
-            for stage in entry.stages where stage.stage == "sources" {
-                complete = false
-                break entries
-            }
-            expected += entry.stages
-        }
+        let expected = reference.ranges.flatMap(\.stages)
         // A stage that wrote nothing does not appear in the fixture — the trace
         // tool only records stages that put a cell down — and the port marks
         // every stage it runs whether it drew or not. `$3134` skips a landmass
@@ -113,10 +101,8 @@ func rangesMatchOriginal() throws {
             start = segment.end
             if !slice.isEmpty { drawn.append((segment.stage, slice)) }
         }
-        if complete {
-            #expect(drawn.count == expected.count,
-                    "\(label): the port drew \(drawn.count) stages, not \(expected.count)")
-        }
+        #expect(drawn.count == expected.count,
+                "\(label): the port drew \(drawn.count) stages, not \(expected.count)")
 
         for (segment, want) in zip(drawn, expected) {
             let slice = segment.slice

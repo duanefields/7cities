@@ -81,9 +81,30 @@ public struct RiverEngine: Sendable {
     public internal(set) var nextColumn: UInt8 = 0
     public internal(set) var nextRow: Int = 0
 
+    /// A river as `$3755` files it: two entries, one for each end.
+    ///
+    /// `$E681` holds the column, `$E6D1`/`$E721` the row as sixteen bits with
+    /// the second band offset by `$C0`, and `$E771` the length — positive at the
+    /// source and negated at the mouth, which is how the pair is recognised as a
+    /// pair. `$EBCA` accumulates the total.
+    public struct Source: Sendable, Equatable {
+        public var column: UInt8
+        public var row: UInt16
+        public var length: Int8
+    }
+    public var sources: [Source] = []
+    /// `$EBCA`, the total river length on the map.
+    public var totalLength: UInt16 = 0
+
     /// `$E000` and `$E2F1`. Both are ring buffers of `recordLimit` entries.
     public var record: [Step] = []
     public var mouths: [Mouth] = []
+    /// `$76` and `$37`, where the river started, and `$22`, the landmass it
+    /// belongs to — all three outlive the walk and the swamp placement reads
+    /// them.
+    public internal(set) var sourceColumn: UInt8 = 0
+    public internal(set) var sourceRow: Int = 0
+    public internal(set) var landmassColumn: UInt8 = 0
     /// `$56`, which is a *byte* offset into `$E2F1` rather than an entry count.
     var mouthBytes: UInt8 = 0
 
@@ -113,6 +134,27 @@ public struct RiverEngine: Sendable {
     public mutating func beginBand() {
         mouths.removeAll()
         mouthBytes = 0
+    }
+
+    /// `$3755`: file a finished river, both ends of it.
+    ///
+    /// Two entries — the source at `$76`/`$37` and the mouth where the walk
+    /// stopped — with the length written positive on the first and negated on
+    /// the second. `$3772` caps it at `$7F` first, so a river longer than 127
+    /// steps is recorded as 127.
+    mutating func fileSource(from column: UInt8, _ row: Int,
+                             secondBand: Bool) {
+        let offset: UInt16 = secondBand ? 0xC0 : 0
+        var capped = length
+        if capped >= 0x80 { capped = 0x7F }                   // $3774
+        length = capped
+        sources.append(Source(column: column,
+                              row: UInt16(row) &+ offset,
+                              length: Int8(bitPattern: capped)))
+        totalLength &+= UInt16(capped)                        // $3780
+        sources.append(Source(column: self.column,
+                              row: UInt16(self.row) &+ offset,
+                              length: Int8(bitPattern: 0 &- capped)))
     }
 
     /// `$34F3`: is there a lake mark within eight cells of where the walk is
