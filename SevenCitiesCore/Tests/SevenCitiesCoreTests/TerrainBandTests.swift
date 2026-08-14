@@ -76,3 +76,69 @@ func nibbleAddressing() {
     band[0, TerrainBand.rows] = 0xF
     #expect(band[0, TerrainBand.rows] == 0)
 }
+
+/// `$2A45`, against every distinct box the original computed in a whole run.
+@Test("Bounding boxes clamp the way the original clamps them")
+func boundingBoxesMatchOriginal() throws {
+    struct Case: Decodable {
+        let radius: Int, x: Int, y: Int
+        let left: Int, right: Int, top: Int, bottom: Int
+    }
+    struct Reference: Decodable { let boundingBoxes: [Case] }
+    let url = try #require(
+        Bundle.module.url(forResource: "terrain_reference", withExtension: "json",
+                          subdirectory: "Fixtures")
+            ?? Bundle.module.url(forResource: "terrain_reference", withExtension: "json"))
+    let cases = try JSONDecoder().decode(Reference.self,
+                                         from: Data(contentsOf: url)).boundingBoxes
+    try #require(!cases.isEmpty)
+
+    for c in cases {
+        let box = TerrainPhases.box(around: UInt8(c.x), UInt8(c.y),
+                                    radius: UInt8(c.radius))
+        #expect(Int(box.left) == c.left && Int(box.right) == c.right
+                    && Int(box.top) == c.top && Int(box.bottom) == c.bottom,
+                """
+                radius \(c.radius) at (\(c.x),\(c.y)): expected \
+                \(c.left)...\(c.right) x \(c.top)...\(c.bottom), got \
+                \(box.left)...\(box.right) x \(box.top)...\(box.bottom)
+                """)
+    }
+}
+
+/// `$2AE9`'s effect on the band.
+///
+/// It is **not** just the marking, which is what this was written to find out.
+/// `$28F1` runs first, over the same boxes, and on a coin flip per cell sends
+/// land through `$2BEA` — so by the time `$2B67` starts marking, many of the
+/// cells that were plain are not any more. Measured: the original marks 165 cells
+/// in band 0 and 47 in band 1, against 308 and 97 marked from the raw band.
+///
+/// So the marking cannot be graded on its own, and this stays disabled until
+/// `$28F1` and `$2BEA` are ported. The digests it needs are already in the
+/// fixture, and `markIslands` itself is transcribed and believed right.
+@Test("Marking the islands is all $2AE9 does to the band",
+      .disabled("""
+          $2AE9 changes the band before the marking runs: $28F1 goes over the \
+          same boxes first and rewrites land through $2BEA on a coin flip. The \
+          original marks 165 cells where the raw band would give 308, so this \
+          needs $28F1 ported before it can pass. See NOTES.md.
+          """))
+func islandMarkingMatchesOriginal() throws {
+    let url = try #require(
+        Bundle.module.url(forResource: "terrain_reference", withExtension: "json",
+                          subdirectory: "Fixtures")
+            ?? Bundle.module.url(forResource: "terrain_reference", withExtension: "json"))
+    let reference = try JSONDecoder().decode(Reference.self, from: Data(contentsOf: url))
+
+    let run = try LandMassStage.run(config: reference.config,
+                                    seed: UInt16(reference.seed))
+    var band = TerrainBand(landMask: run.mask, fromRow: 0)
+    TerrainPhases.markIslands(run.islands, northern: true, in: &band, bandRow: 0)
+
+    let after = try #require(reference.bands.first?[1])
+    #expect(after.phase == "spread")
+    #expect(sha256(band.storage) == after.sha256,
+            "the band after marking differs from the original's")
+}
+

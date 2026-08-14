@@ -2616,6 +2616,23 @@ histogram at each phase entry says what the phase before it did:
 | `$4CF2` | nothing in the histogram                            | unknown                          |
 | `$2C14` | —                                                   | writes the band out              |
 
+### Porting the terrain phases: where it stands
+
+`TerrainBand` is the band the phases work on, and it is built straight out of the
+land mask — band 0 of seed `$1234` config 0 hashes to exactly what the original
+had at `$2AE9`'s entry. `$2A45`'s bounding box is ported and graded against every
+distinct box a whole run computes, 200 of them. `tools/terrain_reference.py`
+captures the pipeline phase by phase per band.
+
+What is not ported is any phase. The first one, `$2AE9`, turned out to be three
+things rather than one, which is worth writing down because the same shape will
+recur: `$28F1` walks the island boxes and rewrites land through `$2BEA` on a coin
+flip per cell; a coin flip at `$2AEC` can send it through a placement search at
+`$2977`; and only then does `$2B67` mark. The marking is transcribed
+(`TerrainPhases.markIslands`) and cannot yet be graded, because its input is
+whatever `$28F1` left — measured, the original marks 165 cells in band 0 where
+the raw band would give 308.
+
 ### `$2AE9` reads the island tables
 
 `$2B4E` and `$2B60` patch the operand of `$2B6B` to `$038C` or `$03B4` — the two position tables the

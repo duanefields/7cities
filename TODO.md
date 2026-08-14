@@ -81,8 +81,11 @@ engineering record; this holds the work.
       at `$0E20` runs once per 208-row band and is mapped in NOTES.md — `$2AE9`
       water depth, `$2E32` terrain, `$3EAD` rivers, `$47DF` villages, `$2D23` a
       parameterized spread run twice, `$2C14` the band writer. Start with
-      `$2AE9`: it is the smallest, and its input is the land mask the port
-      already reproduces.
+      `$2AE9`. Started: `TerrainBand` reproduces band 0 exactly, `$2A45`'s
+      bounding box is graded against 200 captured cases, and `markIslands` is
+      transcribed. Blocked on `$28F1` and `$2BEA`, which go over the same boxes
+      first and rewrite land on a coin flip per cell — so the marking's input is
+      not the raw band and cannot be graded until they exist.
 - [ ] **Confirm the band structure.** The finished map is assembled on disk —
       51,200 bytes of nibbles will not fit in a C64 — and `$2C14` bounds its
       row counter at 208, which is very likely the band height. Still unknown:
