@@ -2614,7 +2614,7 @@ histogram at each phase entry says what the phase before it did:
 | `$2D23` | every `F` gone                                      | the same pass, undoing its marks |
 | `$47DF` | `F` 0 → 127                                         | **villages**                     |
 | `$4CF2` | nothing in the histogram                            | unknown                          |
-| `$2C14` | —                                                   | writes the band out              |
+| `$2C14` | `3` → `B`, 213 cells                                | puts the scaffolding back        |
 
 ### Porting the terrain phases: where it stands
 
@@ -3100,12 +3100,16 @@ second wave filled — choosing between them on the sign of `$10`, and `$67`/`$6
 walks the chosen table two bytes at a time into `$22`/`$23`, and at each position `$2B86` tests the
 nibble already there: where it finds `$0B`, plain, it writes **`$03`**.
 
-So that answers what reads `$038C` and `$03B4`. What it does *not* yet answer is what `$03` means,
-because it does not survive: the finished map has none of it at all, while the band still holds 213
-cells of it as late as `$2C14`. Something between there and the disk takes it away — most likely the
-second `$2D23`, which is parameterized to undo what the first one laid down. `$03` looks like
-scaffolding the terrain generator stands on rather than terrain, which would also explain the
-fourteen stray cells of it in the top-right corner of the historical map disk.
+So that answers what reads `$038C` and `$03B4`. And `$2C14` answers what `$03`
+*means*: it is scaffolding, and the pipeline's last phase puts it back.
+
+`$2C14` is four instructions of work — sweep the band, rewrite every `$3` as
+`$0B` — and it is not the band writer this file used to call it. Nothing in it
+goes near the disk. 213 cells in the first band and 65 in the second, which is
+exactly the count that was sitting there unexplained. The guess here was the
+second `$2D23`, on the grounds that it is the routine that undoes things; that
+was wrong, and it was wrong for a plausible reason, which is the kind worth
+recording.
 
 `$2D23` is the interesting one: it runs **twice**, and `$0E32`-`$0E4A` and `$0E58`-`$0E66` patch three
 bytes inside it before each call — `$2D70`, `$2D74` and `$2DA6` go from `$00`/`$0F`/`$A2` to

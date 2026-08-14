@@ -416,4 +416,27 @@ public enum TerrainPhases {
             }
         }
     }
+
+    /// `$2C14`: turn the scaffolding back into plain.
+    ///
+    /// The pipeline's last phase, and it is four instructions of work: sweep the
+    /// whole band and rewrite every `$3` as `$0B`.
+    ///
+    /// **This is what takes `$3` off the map**, which was an open question for a
+    /// long time here — the guess in these notes was the second `$2D23`, on the
+    /// grounds that it is the routine that undoes things. It is not. `$2AE9`
+    /// marks the plain around the second wave's islands as `$3` so that the
+    /// phases in between can tell that ground apart from ordinary plain, and the
+    /// very last thing the pipeline does is put it back. Two hundred and
+    /// thirteen cells in the first band, sixty-five in the second.
+    ///
+    /// It is also not the band writer, whatever the phase table used to say.
+    /// Nothing here goes near the disk.
+    public static func clearMarks(in band: inout TerrainBand) {
+        for row in 0..<TerrainBand.rows {
+            for column in 0...255 where band[UInt8(column), row] == 0x03 {
+                band[UInt8(column), row] = 0x0B               // $2C26
+            }
+        }
+    }
 }

@@ -200,8 +200,11 @@ engineering record; this holds the work.
 
       `$42CD`, which picks a village's *kind*, takes no draws at all and does
       not touch the band, so the map does not depend on it.
-- [ ] **Port `$2C14`, the band writer.** 419 addresses, and it is not only a
-      writer: it puts 213 cells down in the first band and 65 in the second.
+- [x] ~~**Port `$2C14`, the band writer.**~~ **Done, and it is not a writer.**
+      Four instructions: sweep the band and turn every `$3` back into `$0B`.
+      That is the 213 cells, and it answers what `$03` was for — scaffolding the
+      middle phases stand on, put back at the end. Nothing in it touches the
+      disk, so the phase table's old description was wrong.
 - [ ] **Assemble the second band.** Everything above is graded on band 0 only,
       because band 1 starts at row 192 with sixteen rows of terrain band 0
       generated and cannot be built until `$2C14` is. That is the last thing
