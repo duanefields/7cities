@@ -328,6 +328,42 @@ public enum TerrainPhases {
         }
     }
 
+    /// Marks the water around every satellite, or unmarks it (`$2D23`).
+    ///
+    /// One routine, run **twice**, with three bytes inside it rewritten between —
+    /// `$0E32` sets them one way and `$0E58` the other. `$2D70` is the operand of
+    /// the `CMP` that decides which nibble it is looking for, `$2D74` the operand
+    /// of the `LDA` that says what to write, and `$2DA6` is an `LDX` that becomes
+    /// an `RTS`. So the first pass turns deep water into `$0F` in a radius-10 box
+    /// around each satellite, and the second turns `$0F` back into deep water.
+    ///
+    /// It marks the sea around the lakes, in other words, so that whatever runs in
+    /// between can tell that water apart. Which phase cares is still open — the
+    /// terrain generator and the rivers both run inside the marks.
+    ///
+    /// The positions come from `$0378` and `$0382`, which `$1BF9` fills as the
+    /// satellites are placed, split at row **215** — four rows off the 219 the
+    /// second wave's islands use, for no reason yet apparent.
+    public static func spread(_ satellites: [LandMassStage.Island],
+                              northern: Bool, marking: Bool,
+                              in band: inout TerrainBand) {
+        let looking: UInt8 = marking ? 0x00 : 0x0F
+        let writing: UInt8 = marking ? 0x0F : 0x00
+        for satellite in satellites where satellite.southern == !northern {
+            let row = northern ? Int(satellite.row) : Int(satellite.row) - 192
+            guard row >= 0 && row < TerrainBand.rows else { continue }
+            let area = box(around: satellite.column, UInt8(row), radius: 10)
+            for y in Int(area.top)...Int(area.bottom) {
+                var x = area.left
+                while true {
+                    if band[x, y] == looking { band[x, y] = writing }
+                    if x == area.right { break }
+                    x &+= 1
+                }
+            }
+        }
+    }
+
     /// The whole of `$2AE9`, the pipeline's first phase.
     ///
     /// Three things, in order, and the middle one is easy to miss:

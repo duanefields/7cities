@@ -2669,6 +2669,22 @@ jobs. And `$2A02` patches the coin flip at `$2A9E` into a `BNE` for the second
 pass, so shallow water shades its neighbours flatly to medium — which is what
 gives a coast two rings rather than one.
 
+**`$2D23` is ported too.** It marks the deep water in a radius-10 box around each
+*satellite* — the lake-makers — as `$0F`, and the second call turns `$0F` back into
+water. One routine run twice, with three bytes rewritten between: `$2D70` is the
+operand of the `CMP` that says what to look for, `$2D74` the operand of the `LDA`
+that says what to write, and `$2DA6` an `LDX` that becomes an `RTS`. It marks the
+sea around the lakes so whatever runs in between can tell that water apart; the
+terrain generator and the rivers both run inside the marks, and which of them
+cares is still open.
+
+Getting it right needed one thing the port had quietly wrong. `$1BF9` files each
+satellite's position as it is placed — **before** the mirror at `$1C89` moves the
+map — and `$1D42` rewrites the tables when the mirror fires. Without that fixup a
+satellite marks a box of open sea: 441 cells, the whole box, against the 26 the
+original marks. The second wave's islands never showed the fault because they are
+filed *after* the mirror.
+
 ### `$2AE9` reads the island tables
 
 `$2B4E` and `$2B60` patch the operand of `$2B6B` to `$038C` or `$03B4` — the two position tables the

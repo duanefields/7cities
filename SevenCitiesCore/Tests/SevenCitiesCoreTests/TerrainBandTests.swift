@@ -163,3 +163,28 @@ func islandPhaseMatchesOriginal() throws {
 }
 
 
+
+
+/// `$2D23`, the marker pass, and the same routine again undoing itself.
+@Test("The spread pass marks the water around the satellites")
+func spreadMatchesOriginal() throws {
+    let url = try #require(
+        Bundle.module.url(forResource: "terrain_reference", withExtension: "json",
+                          subdirectory: "Fixtures")
+            ?? Bundle.module.url(forResource: "terrain_reference", withExtension: "json"))
+    let reference = try JSONDecoder().decode(Reference.self, from: Data(contentsOf: url))
+    let run = try LandMassStage.run(config: reference.config,
+                                    seed: UInt16(reference.seed))
+
+    let steps = try #require(reference.bands.first)
+    var band = TerrainBand(landMask: run.mask, fromRow: 0)
+    var rng = WorldMakerRNG(seed: UInt16(steps[0].rng))
+    TerrainPhases.islands(run.islands, northern: true, in: &band, rng: &rng)
+    TerrainPhases.spread(run.satellites, northern: true, marking: true, in: &band)
+
+    let after = steps[3]
+    #expect(after.phase == "terrain")
+    #expect(sha256(band.storage) == after.sha256,
+            "the band after the spread differs from the original's")
+}
+

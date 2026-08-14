@@ -114,6 +114,10 @@ public enum LandMassStage {
         /// The second wave's islands, in the order they were placed. The original
         /// files them into two tables at `$038C` and `$03B4`, split by row.
         public let islands: [Island]
+        /// The satellites — the lake-makers — in the order they were walked.
+        /// `$1BF9` files them into `$0378` and `$0382`, split at row 215 rather
+        /// than 219, and `$2D23` is what reads them back.
+        public let satellites: [Island]
         /// Why the stage stopped before the command table ran out. `nil` means it
         /// finished, which it now does for every configuration it accepts.
         public let stoppedBecause: String?
@@ -129,6 +133,7 @@ public enum LandMassStage {
         var mask = LandMask()
         var steps: [Step] = []
         var sites: SiteSelection.Result?
+        var satellites: [Island] = []
         // `$0200`, the satellite seed pool. `$1666` rebuilds it for each
         // continent, but the second wave inherits whatever the last rebuild left
         // and spends from it across every island.
@@ -193,7 +198,8 @@ public enum LandMassStage {
                               isContinent: command.isContinent,
                               paired: command.placesPair, pairOffset: pairOffset,
                               biasX: biasX, biasY: biasY,
-                              rng: &rng, mask: &mask, steps: &steps)
+                              rng: &rng, mask: &mask, steps: &steps,
+                              filed: { satellites.append($0) })
                     break
                 }
             }
@@ -206,6 +212,17 @@ public enum LandMassStage {
                 if horizontal { mask.mirrorHorizontally() }
                 let vertical = Int8(bitPattern: rng.next()) < 0
                 if vertical { mask.flipVertically() }
+                // $1D42: the mirror also rewrites the position tables, because
+                // everything filed into them so far was filed in the old
+                // coordinates. The second wave's islands are filed afterwards and
+                // need no such thing, which is why they were right before this
+                // was — and why a satellite marked a box of open sea.
+                satellites = satellites.map { satellite in
+                    let column = horizontal ? 255 &- satellite.column : satellite.column
+                    let row = vertical ? UInt16(LandMask.height - 1) &- satellite.row
+                                       : satellite.row
+                    return Island(column: column, row: row, southern: row >= 0xD7)
+                }
                 steps.append(.mirror(horizontal: horizontal, vertical: vertical))
 
                 // $4500's second half, which is not land-mass work at all — but
@@ -219,7 +236,7 @@ public enum LandMassStage {
         let scattered = try secondWave(config: config, rng: &rng, mask: &mask,
                                        pool: &pool, steps: &steps)
         return Run(mask: mask, steps: steps, sites: sites, islands: scattered,
-                   stoppedBecause: nil)
+                   satellites: satellites, stoppedBecause: nil)
     }
 
     /// The second wave (`$280A`-`$2894`).
@@ -283,7 +300,8 @@ public enum LandMassStage {
                               isContinent: Bool, paired: Bool, pairOffset: UInt8,
                               biasX: UInt8, biasY: UInt8,
                               rng: inout WorldMakerRNG, mask: inout LandMask,
-                              steps: inout [Step]) throws {
+                              steps: inout [Step],
+                              filed: @escaping (Island) -> Void) throws {
         let partner = walk(x: x, y: y, radius: radius, biasX: biasX, biasY: biasY,
                            drift: 0x97, paired: paired, pairOffset: pairOffset,
                            rng: &rng, mask: &mask, steps: &steps)
@@ -293,14 +311,15 @@ public enum LandMassStage {
         if isContinent {
             var pool = SeedPool()
             try placeSatellite(centreX: x, centreY: y, rng: &rng, mask: &mask,
-                               pool: &pool, steps: &steps)
+                               pool: &pool, steps: &steps, filed: filed)
             // $263D: a paired command runs `$2655` twice, the second time over
             // the geometry `$186C` filed away — so the continent grown out of the
             // isthmus gets a lake of its own.
             if paired, let partner {
                 try placeSatellite(centreX: partner.centerX,
                                    centreY: partner.centerY, rng: &rng,
-                                   mask: &mask, pool: &pool, steps: &steps)
+                                   mask: &mask, pool: &pool, steps: &steps,
+                                   filed: filed)
             }
         }
 
@@ -352,7 +371,8 @@ public enum LandMassStage {
     private static func placeSatellite(centreX: UInt8, centreY: UInt16,
                                        rng: inout WorldMakerRNG,
                                        mask: inout LandMask, pool: inout SeedPool,
-                                       steps: inout [Step]) throws {
+                                       steps: inout [Step],
+                                       filed: @escaping (Island) -> Void) throws {
         // $2664: the window is the water between the coasts directly above and
         // below the centre, pulled in by two, and the search gives up after 70
         // rows either way.
@@ -404,7 +424,7 @@ public enum LandMassStage {
             // the pool, with `$1666` patched to `RTS` so it neither recurses nor
             // floods. Its own interior is left to the continent's flood fill.
             satelliteWalk(column: column, row: row, pool: &pool, rng: &rng,
-                          mask: &mask, steps: &steps)
+                          mask: &mask, steps: &steps, filed: filed)
             return
         }
     }
@@ -419,7 +439,12 @@ public enum LandMassStage {
     private static func satelliteWalk(column: UInt8, row: UInt16,
                                       pool: inout SeedPool,
                                       rng: inout WorldMakerRNG,
-                                      mask: inout LandMask, steps: inout [Step]) {
+                                      mask: inout LandMask, steps: inout [Step],
+                                      filed: ((Island) -> Void)? = nil) {
+        // $1BF9: filed before the walk, and split at row 215 — not 219, which is
+        // where the second wave's islands split. The two tables are neighbours in
+        // memory and the boundaries are four rows apart.
+        filed?(Island(column: column, row: row, southern: row >= 0xD7))
         var satellite = WorldMakerRNG(high: pool.take(&rng), low: spent)
         _ = walk(x: column, y: row, radius: 3, biasX: 0, biasY: 0, drift: 0x97,
                  rng: &satellite, mask: &mask, steps: &steps)
