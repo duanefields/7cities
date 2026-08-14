@@ -31,6 +31,148 @@ extension TerrainPhases {
             outflow(from: mark, in: &band, rng: &rng, engine: &engine,
                     secondBand: secondBand)
         }
+        upstream(in: &band, rng: &rng, engine: &engine, secondBand: secondBand)
+    }
+
+    /// `$3B75`: grow a river inland from every mouth that has room.
+    ///
+    /// Once every lake has run, the phase walks the mouth table `$3531` filled
+    /// and tries to push each one further into the land. A mouth with two or
+    /// more river neighbours east and west is measured north and south instead,
+    /// and the other way round; whichever run of unbroken land is longer wins,
+    /// and it has to be at least twenty-five cells. Then a river runs that way
+    /// until it has come far enough — ten cells at least, forty-five at most,
+    /// and never further than the mouth's own river was long.
+    private static func upstream(in band: inout TerrainBand,
+                                 rng: inout WorldMakerRNG,
+                                 engine: inout RiverEngine, secondBand: Bool) {
+        // $3B75: `$56` counts bytes, three to a mouth.
+        for mouth in engine.mouths {
+            let row = Int(mouth.row)
+            // $3BA4: the neighbours either side.
+            var beside = 0
+            for dx in [-1, 1] {
+                let nibble = band[mouth.column &+ UInt8(bitPattern: Int8(dx)), row]
+                if nibble >= 0x04 && nibble < 0x0B { beside += 1 }
+            }
+
+            let heading: UInt8
+            if beside >= 2 {
+                // $3BD1: north and south.
+                let north = landRun(from: mouth.column, row, dy: -1, in: band)
+                let south = landRun(from: mouth.column, row, dy: 1, in: band)
+                guard south >= 0x19 || north >= 0x19 else { continue }
+                if south == north {
+                    heading = Int8(bitPattern: rng.next()) < 0 ? 0 : 3
+                } else {
+                    heading = south > north ? 0 : 3               // $3C36
+                }
+            } else {
+                // $3C56: west and east.
+                let west = landRun(from: mouth.column, row, dx: -1, in: band)
+                let east = landRun(from: mouth.column, row, dx: 1, in: band)
+                guard east >= 0x19 || west >= 0x19 else { continue }
+                if east == west {
+                    heading = Int8(bitPattern: rng.next()) < 0 ? 2 : 1
+                } else {
+                    heading = east > west ? 2 : 1                 // $3CB7
+                }
+            }
+
+            // $3CD5: a third setup, whose exits are "next mouth" and "carry on".
+            engine.start(heading: heading, persistence: 0xB4)
+            engine.column = mouth.column
+            engine.row = row
+            engine.run(3, in: &band, rng: &rng)                   // $3CE6
+            inland(&engine, from: mouth, in: &band, rng: &rng,
+                   secondBand: secondBand)
+        }
+    }
+
+    /// `$3BDD` and its three siblings: how far unbroken land runs one way, to a
+    /// ceiling of twenty-six.
+    private static func landRun(from column: UInt8, _ row: Int,
+                                dx: Int = 0, dy: Int = 0,
+                                in band: TerrainBand) -> UInt8 {
+        var x = column, y = row, run: UInt8 = 0
+        // $3BD5 and $3C5A refuse to start within two of the edge at all.
+        if dy < 0 && row < 2 { return 0 }
+        if dx < 0 && column < 2 { return 0 }
+        if dy > 0 && row >= 0xCC { return 0 }
+        if dx > 0 && column >= 0xFD { return 0 }
+        while run < 0x1A {
+            x = x &+ UInt8(bitPattern: Int8(dx))
+            y += dy
+            let nibble = band[x, y]
+            if nibble == 0x0F || nibble < 0x0B { return run }
+            if dy < 0 && y == 0 { return run }
+            if dx < 0 && x == 0 { return run }
+            if dy > 0 && y >= 0xCE { return run }
+            run &+= 1
+        }
+        return run
+    }
+
+    /// `$3CEB`: the upstream walk, which only grows through solid land.
+    ///
+    /// Its fan is six cells deep in all three directions and every one of them
+    /// has to be land — anything else and the river unwinds. That is why these
+    /// are short: seven of them in the first band and none longer than ten
+    /// cells.
+    private static func inland(_ engine: inout RiverEngine,
+                               from mouth: RiverEngine.Mouth,
+                               in band: inout TerrainBand,
+                               rng: inout WorldMakerRNG, secondBand: Bool) {
+        while true {
+            engine.stopIndex = engine.index &+ 1                  // $3CEB
+            engine.choose(rng: &rng)
+            engine.aim(rng: &rng)
+
+            var give = secondBand ? engine.nextRow == 1 : engine.nextRow >= 0xCE
+            if !give {
+                let nibble = band[engine.nextColumn, engine.nextRow]
+                if nibble == 0x0F || nibble < 0x0B { give = true } // $3D05
+            }
+            if !give {
+                fan: for probe in 0..<3 {
+                    let direction = RiverEngine.lookahead[Int(engine.last) * 4 + probe]
+                    guard direction != 0xFF else { continue }
+                    let step = RiverEngine.steps[Int(direction) / 2]
+                    var x = engine.nextColumn
+                    var y = engine.nextRow
+                    for _ in 0..<6 {                              // $3D1F
+                        x = x &+ UInt8(bitPattern: step.dx)
+                        if x == 0 { continue fan }
+                        y += Int(step.dy)
+                        if secondBand ? y < 1 : y >= 0xCE { continue fan }
+                        let nibble = band[x, y]
+                        if nibble == 0x0F || nibble < 0x0B { give = true; break fan }
+                    }
+                }
+            }
+
+            if give {
+                if engine.erase(allowance: 0x06, stop: engine.stopIndex,
+                                in: &band, rng: &rng) == .exhausted { return }
+                continue
+            }
+
+            engine.take(in: &band)                                // $3D4D
+            // $3D50: far enough to stop looking, or too far to go on.
+            let far = engine.length
+            if far < 0x0A { continue }
+            if far >= 0x2D { break }
+            if far >= mouth.length { break }
+            if rng.next() >= 0x0A { continue }
+            break
+        }
+        // $3D68: the river is filed the other way round from the rest — the
+        // *source* is where this walk ended, upstream, and its other end is the
+        // mouth it grew out of.
+        let source = (column: engine.column, row: engine.row)
+        engine.column = mouth.column
+        engine.row = Int(mouth.row)
+        engine.fileSource(from: source.column, source.row, secondBand: secondBand)
     }
 
     /// `$39AB`: hunt outward from the lake for the ring of marks.

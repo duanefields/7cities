@@ -137,7 +137,21 @@ engineering record; this holds the work.
       verifies most of the water engine with it: `$32CC`, `$333C`, `$33B7`,
       `$3300`, `$33EF`, `$3531`, `$369F`, `$3755`, `$3D97` and `$3E53`.
 
-      What is left is the other two entries. `$3961` walks the satellite tables
+      **`$3961`'s per-lake work is exact** — the radius-7 marsh `$3999` drops on
+      the lake and the river that flows out of it, 211 writes cell for cell.
+
+      `$3B75`, the pass it makes over the river mouths afterwards, is written
+      and **not right yet**: it reproduces 215 of the phase's 259 writes and then
+      drifts by a single draw. The cells it erases are the right cells; only the
+      plain-or-forest coin flips are one draw out of step, which means something
+      between the last forward step and the erase costs a draw in one and not the
+      other. Suspects, in order: `$33FE`'s `DEC $56` three times, which during
+      `$3B75` is decrementing a *count* rather than a byte offset and so may
+      unfile a mouth the port keeps; the exact loop bounds of `$3BD1`/`$3C56`'s
+      land runs; and `$3D50`'s stop test. Measure `$3CEB` in the interpreter
+      rather than reading it again.
+
+      What is left after that is the last entry. `$3961` walks the satellite tables
       and calls `$4014` to measure the land either side before starting.
       `$3EAD` patches five bytes into `$3AA5` and five into `$36A2` before it
       begins, so it is the same engine again with two of its routines rewritten

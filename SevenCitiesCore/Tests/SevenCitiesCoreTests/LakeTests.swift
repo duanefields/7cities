@@ -12,8 +12,11 @@ import Testing
 /// made it, so the part that *is* ported can be checked exactly — the lake's own
 /// marsh and its outflow, which is the first river of the phase.
 ///
-/// What is not here is `$3B75`, the pass the phase makes over the river mouths
-/// after every lake has run. It is the other seven rivers of the first band.
+/// What is not verified here is `$3B75`, the pass the phase makes over the river
+/// mouths once every lake has run. It is ported, and it reproduces the
+/// original's first 215 writes of 259 before drifting by a single draw, but a
+/// test that passes on a prefix is not a test — so this grades the part that is
+/// finished and TODO.md carries the part that is not.
 private struct PipelineReference: Decodable {
     struct Mark: Decodable { let mark: String; let writes: Int; let sha256: String }
     struct Phase: Decodable {
@@ -70,9 +73,13 @@ func lakeOutflowMatchesOriginal() throws {
                                engine: &rivers, secondBand: false)
     let journal = try #require(band.journal)
 
+    // The first mark is the lake's own marsh and the river out of it, and that
+    // much is exact. `$3B75`'s upstream pass — the seven short rivers grown back
+    // from the river mouths — is written but not right yet: it diverges four
+    // writes in on a draw, so the phase as a whole is not graded here.
     let first = try #require(lakes.marks.first)
-    #expect(journal.count == first.writes,
-            "the outflow wrote \(journal.count) cells, not \(first.writes)")
-    #expect(digest(journal[...]) == first.sha256,
-            "the cells differ from the original's")
+    #expect(journal.count >= first.writes,
+            "the outflow wrote \(journal.count) cells, fewer than \(first.writes)")
+    #expect(digest(journal.prefix(first.writes)) == first.sha256,
+            "the marsh and the outflow differ from the original's")
 }
