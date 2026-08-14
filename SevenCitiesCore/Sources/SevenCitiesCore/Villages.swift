@@ -234,8 +234,10 @@ extension TerrainPhases {
                     let row = rng.nextByte(from: top &+ 4,
                                            below: top &+ 15 &+ 2)
                     if row & 1 != 0 { continue }
+                    // $498F: `SBC #$02` with the carry left clear by `$4987`'s
+                    // `LSR`, so it takes *three* off, not two.
                     let column = rng.nextByte(from: left &+ 3,
-                                              below: left &+ 15 &- 2)
+                                              below: left &+ 15 &- 3)
                     if villageFits(column: column, row: Int(row), in: band) {
                         place(column: column, row: Int(row), kind: 0,
                               in: &band, into: &villages, secondBand: secondBand)
@@ -266,6 +268,10 @@ extension TerrainPhases {
             }
             if surveyed {                                     // $4B77
                 let spread = secondBand ? budget.spread.south : budget.spread.north
+                // $4B82: measured, this fires more often than `CMP #$1A / BCS`
+                // reads — strip `$98` of the first band runs the hunt on a draw
+                // of 27. Something about that test is not what the bytes say and
+                // it is the last thing between this phase and being exact.
                 if rng.next() < 0x1A && spread != 0 {         // $4B82
                     var tries: UInt8 = 0
                     while true {
