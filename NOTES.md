@@ -2789,6 +2789,117 @@ then calls `$32CC` and `$4006` — the river engine, which `$3EAD` also uses. It
 accounts for 5,007 of the 6,601 writes the first landmass takes. So it lands with
 the rivers rather than here.
 
+### A whole continent was missing from the position tables
+
+`$1B5F` has **two** call sites, and the port had one. `$226A` files a landmass
+after the placement loop has grown it, which is the obvious one. `$1866` files
+one from inside the walker: `$17C8` builds the isthmus, works out where the
+partner continent's centre will be — `$0C` for the column and `$08`/`$09` plus
+the radius for the row — and files it *there and then*, before the walk that
+grows it has taken a step.
+
+It only shows in a configuration that places a pair, which is configuration 1
+and no other, and the fixtures were all configuration 0. The mask was right the
+whole time, in all three configurations; it is only the position tables that
+were short, and nothing read those until `$2E32` did.
+
+Measured, configuration 1, seed `$1234`, in the order they are filed:
+
+| Call      | Column | Row | Radius | Into            |
+| :-------- | -----: | --: | -----: | :-------------- |
+| placement |    166 |  94 |     70 | northern        |
+| isthmus   |    119 | 178 |     70 | northern *and* southern |
+| mirror    |        |     |        | vertical flip: the two tables swap |
+| placement |     24 | 256 |     10 | southern        |
+| placement |    114 |  80 |     10 | northern        |
+
+Two things fall out of that table. The isthmus files **before** the placement
+that contains it finishes, so order matters and appending at the end of the loop
+would put it in the wrong slot. And `$63`/`$64` count **bytes** during the
+land-mass phase — three per entry — while `$2ED2` reads them as entry counts, so
+something between the two phases divides them.
+
+The lesson is the same one as the mirror's fixup of these tables: the mask
+agreeing proves the *walk* is right and says nothing about what the walk filed
+away while it ran. Grading a second configuration is what caught it, and it was
+free — the trace tool merges runs.
+
+### The water engine: one subsystem, reached from three places
+
+`$380D`, `$3961` and `$3EAD` are not three phases that happen to look alike.
+They are three *entries* into one river engine, and the engine knows which one
+called it because the caller patches two of its operands on the way in.
+
+`$32CC` is the setup. It clears the walk state — `$39`/`$3A` the direction,
+`$3B`/`$3C` a flip bit and a step count, `$46` and `$2B` to `$FF`, `$5F` to
+`$AA` — and then writes `$3451`/`$3452` and `$348B`/`$348C` with one of two
+pairs of addresses, chosen on the **carry** it was called with. Carry set gives
+`$380D`/`$38CD`, carry clear `$399E`/`$3A83`. `$3661` is a third setup that
+patches the same two operands to `$3D83`/`$3CEB` and then jumps into the middle
+of `$32CC` to finish. So the engine's two exits are a hole the caller fills.
+
+What it does with that:
+
+- `$333C` picks the next direction. A scattered draw around zero plus `$5F`
+  gives a threshold; one LFSR draw against it decides whether to hold the
+  current direction or turn, a second above `$BF` flips `$3B`, and two tables at
+  `$32B4` and `$329C` map the pair to the direction taken. The tables are 48
+  bytes at `$329C`-`$32CB`.
+- `$3300` takes the step: it advances `$46`, wrapping at `$FB`, gets a pointer
+  from `$33DB` and stores **three bytes per step** — row, column, direction —
+  and writes nibble `$5E` at the cell.
+- `$33DB` turns the step index into that pointer with `$0A51`, an 8x8 multiply,
+  landing at `$E000` plus three times the index. So a river is up to 251 steps
+  recorded in high RAM as it is drawn, which is presumably what `$2C14` or a
+  later phase writes to disk.
+- `$363B` is the short form: take A steps in the current direction without
+  re-choosing.
+
+The two callers inside the terrain phases differ in what they are drawing from.
+`$380D` picks a spot in the middle of a mountain spine — it needs `$35` and
+`$36`, the first and last rows the spine touched, and gives up unless they are
+fifty rows apart — checks the spot is clear of the `$0F` marks `$2D23` laid
+around the lakes, and sources a river there. `$3961` walks the **satellite**
+tables at `$0378`/`$0382`, the lakes, hunts outward from each for the `$0F` mark
+that surrounds it, and calls `$4014` to measure the land east and west of the
+position before starting.
+
+**The three tables at `$329C` are what make the rivers legible.** They are 48
+bytes and they are not map data; they are routing:
+
+- `$32AC`, eight bytes, is `(dx, dy)` for each of four directions — `(0,+1)`,
+  `(-1,0)`, `(+1,0)`, `(0,-1)`. South, west, east, north.
+- `$32B4`, eight bytes, is the turn: indexed by `direction * 2 + $3B`, it gives
+  the direction to take next. Every entry turns — 0 goes to 1 or 2, 1 goes to 0
+  or 3 — so `$3B` is which way the river bends and `$333C` flips it on a draw
+  above `$BF`.
+- `$329C`, sixteen bytes, is indexed by `new * 4 + old` and gives **the nibble to
+  write**: `5`, `6`, `7`, `8`, `9`, `A`. Those are the map's river tiles, and
+  this says what they mean — a connection mask, one value per pair of directions
+  the water enters and leaves by. `$FF` marks the four illegal pairs, which are
+  the reversals, and `$33C1` re-draws rather than doubling back.
+
+So the river nibbles `5`-`A` are settled: they are shapes, not depths.
+
+**A carry that is not cleared.** `$33CC` adds `$32AC,Y` to the column with
+whatever carry the last comparison in `$333C` left, and only the row addition at
+`$33D2` clears it first. So a step is sometimes one column further east than the
+table says, and which times depends on a draw made in a different routine. Worth
+having written down before a port "fixes" it.
+
+**Two tables in high RAM.** `$3300` records each step as three bytes — row,
+column, direction — at `$E000` plus three times a step index that wraps at
+`$FB`, so a river is a ring buffer of 251 steps and the walker backtracks
+through it (`$3457`) when it runs out of room. And `$3615` records a second
+table at `$E2F1`, indexed by `$56`: row, column and `$3C`, written where the
+walker finds a cell with fewer than three land neighbours. That is the river
+*mouth*, and the nibble `4` goes down with it.
+
+The practical consequence is that `$2E32`, `$3961` and `$3EAD` cannot be ported
+one at a time. `$380D` is 5,007 of the 6,601 writes the first landmass of band 0
+takes, and it is river code sitting inside the terrain phase. The sizing in
+TODO.md treats the phases as disjoint and they are not.
+
 ### `$2AE9` reads the island tables
 
 `$2B4E` and `$2B60` patch the operand of `$2B6B` to `$038C` or `$03B4` — the two position tables the

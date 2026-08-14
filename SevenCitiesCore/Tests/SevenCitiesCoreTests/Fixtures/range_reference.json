@@ -1,114 +1,244 @@
 {
- "description": "The writes $2E32's range half makes, per landmass and per stage: how many, and the SHA-256 of the sequence. No map data.",
- "bands": [
-  [
-   {
-    "radius": 70,
-    "x": 167,
-    "y": 152,
-    "writes": 6601,
-    "stages": [
-     {
-      "stage": "spine",
-      "writes": 892,
-      "sha256": "2918a5c3641a2ccca5c12bd5e541347561b537dc63e97b91cc4458f64df1bd84"
-     },
-     {
-      "stage": "spur",
-      "writes": 212,
-      "sha256": "0d77db4f4e1d1a01d4219a44dfa961e46596df37f0db7586434e5d5bcb20cddf"
-     },
-     {
-      "stage": "clearing",
-      "writes": 490,
-      "sha256": "451b685a23692a4d137f3e5525701d39d6f82320252102f61a452ea139cc9057"
-     },
-     {
-      "stage": "sources",
-      "writes": 5007,
-      "sha256": "5da08476bdaaad49d94a7c0baac6ebe2a6851cbcc9a67a4f7abdb3c4094eb15f"
-     }
-    ],
-    "sha256": "c45e53d80d3cd679cc121bd73a18828a1d73e6cf868f2b61980230fb6a1d1fba"
-   },
-   {
-    "radius": 10,
-    "x": 187,
-    "y": 14,
-    "writes": 57,
-    "stages": [
-     {
-      "stage": "arms",
-      "writes": 57,
-      "sha256": "5c82850902b4763808045fd994a8a1e4309f70aa7a6057de6d01f54e73001263"
-     }
-    ],
-    "sha256": "5c82850902b4763808045fd994a8a1e4309f70aa7a6057de6d01f54e73001263"
-   }
-  ],
-  [
-   {
-    "radius": 70,
-    "x": 90,
-    "y": 113,
-    "writes": 2280,
-    "stages": [
-     {
-      "stage": "spine",
-      "writes": 645,
-      "sha256": "ea987ca7ddbfc790f151d2313b69348369d301206ef0306b9b3acc1f5c5ce9d3"
-     },
-     {
-      "stage": "clearing",
-      "writes": 642,
-      "sha256": "353ad1da16347410d1c8232a96f877ad11a0d6a8187268947f2d72899a3f9ba3"
-     },
-     {
-      "stage": "sources",
-      "writes": 993,
-      "sha256": "47c6afa96f59ffb7c00b894fbd9f640108e1655c9a3f48b4a6386db2941e9c90"
-     }
-    ],
-    "sha256": "43618b5c20502a9d6a0b6b610feac441d8138fb5ad555a7c6b159451d442b86b"
-   },
-   {
-    "radius": 70,
-    "x": 167,
-    "y": 15,
-    "writes": 56,
-    "stages": [
-     {
-      "stage": "spine",
-      "writes": 16,
-      "sha256": "f83281c2203a0187ad4b6a4ba56d6b6989d93fd1bc7dd283d2f78783bb1954ed"
-     },
-     {
-      "stage": "spur",
-      "writes": 37,
-      "sha256": "e1cbc4971d77444fe47a271a3b3734312a5649876ceb7d78603fd1b02ffc970b"
-     },
-     {
-      "stage": "clearing",
-      "writes": 3,
-      "sha256": "d6f0893e71842b1e549423beab84d508a448e9b8913e54c59f48c058857fe84f"
-     }
-    ],
-    "sha256": "18caa3c095aeb6d47d4945b5c7b42814d9557a8d52d8812e1e9bf4770a206446"
-   },
-   {
-    "radius": 10,
-    "x": 190,
-    "y": 156,
-    "writes": 50,
-    "stages": [
-     {
-      "stage": "arms",
-      "writes": 50,
-      "sha256": "0efa41b16e1d67816dde4d9f3f123ba5449c95f81390c918361e202d637e8a28"
-     }
-    ],
-    "sha256": "0efa41b16e1d67816dde4d9f3f123ba5449c95f81390c918361e202d637e8a28"
-   }
-  ]
+ "description": "The writes $2E32's range half makes, per landmass and per stage: how many, and the SHA-256 of the sequence, with the band and generator state the ranges started from. No map data.",
+ "runs": [
+  {
+   "seed": 4660,
+   "config": 0,
+   "bands": [
+    {
+     "islandsRng": 62780,
+     "rng": 59348,
+     "sweptSha256": "dd55fa7701440611943cb0bea9bd2eb463248e1df740fb1541f4d8abce72952b",
+     "sweptRng": 60022,
+     "ranges": [
+      {
+       "radius": 70,
+       "x": 167,
+       "y": 152,
+       "writes": 6601,
+       "stages": [
+        {
+         "stage": "spine",
+         "writes": 892,
+         "sha256": "2918a5c3641a2ccca5c12bd5e541347561b537dc63e97b91cc4458f64df1bd84"
+        },
+        {
+         "stage": "spur",
+         "writes": 212,
+         "sha256": "0d77db4f4e1d1a01d4219a44dfa961e46596df37f0db7586434e5d5bcb20cddf"
+        },
+        {
+         "stage": "clearing",
+         "writes": 490,
+         "sha256": "451b685a23692a4d137f3e5525701d39d6f82320252102f61a452ea139cc9057"
+        },
+        {
+         "stage": "sources",
+         "writes": 5007,
+         "sha256": "5da08476bdaaad49d94a7c0baac6ebe2a6851cbcc9a67a4f7abdb3c4094eb15f"
+        }
+       ],
+       "sha256": "c45e53d80d3cd679cc121bd73a18828a1d73e6cf868f2b61980230fb6a1d1fba"
+      },
+      {
+       "radius": 10,
+       "x": 187,
+       "y": 14,
+       "writes": 57,
+       "stages": [
+        {
+         "stage": "arms",
+         "writes": 57,
+         "sha256": "5c82850902b4763808045fd994a8a1e4309f70aa7a6057de6d01f54e73001263"
+        }
+       ],
+       "sha256": "5c82850902b4763808045fd994a8a1e4309f70aa7a6057de6d01f54e73001263"
+      }
+     ]
+    },
+    {
+     "islandsRng": 16072,
+     "rng": 63769,
+     "sweptSha256": "2d7901d467e662eeceef2ba6a6435ea2ea036bc617392db5e5c13e3081c42c4d",
+     "sweptRng": 35324,
+     "ranges": [
+      {
+       "radius": 70,
+       "x": 90,
+       "y": 113,
+       "writes": 2280,
+       "stages": [
+        {
+         "stage": "spine",
+         "writes": 645,
+         "sha256": "ea987ca7ddbfc790f151d2313b69348369d301206ef0306b9b3acc1f5c5ce9d3"
+        },
+        {
+         "stage": "clearing",
+         "writes": 642,
+         "sha256": "353ad1da16347410d1c8232a96f877ad11a0d6a8187268947f2d72899a3f9ba3"
+        },
+        {
+         "stage": "sources",
+         "writes": 993,
+         "sha256": "47c6afa96f59ffb7c00b894fbd9f640108e1655c9a3f48b4a6386db2941e9c90"
+        }
+       ],
+       "sha256": "43618b5c20502a9d6a0b6b610feac441d8138fb5ad555a7c6b159451d442b86b"
+      },
+      {
+       "radius": 70,
+       "x": 167,
+       "y": 15,
+       "writes": 56,
+       "stages": [
+        {
+         "stage": "spine",
+         "writes": 16,
+         "sha256": "f83281c2203a0187ad4b6a4ba56d6b6989d93fd1bc7dd283d2f78783bb1954ed"
+        },
+        {
+         "stage": "spur",
+         "writes": 37,
+         "sha256": "e1cbc4971d77444fe47a271a3b3734312a5649876ceb7d78603fd1b02ffc970b"
+        },
+        {
+         "stage": "clearing",
+         "writes": 3,
+         "sha256": "d6f0893e71842b1e549423beab84d508a448e9b8913e54c59f48c058857fe84f"
+        }
+       ],
+       "sha256": "18caa3c095aeb6d47d4945b5c7b42814d9557a8d52d8812e1e9bf4770a206446"
+      },
+      {
+       "radius": 10,
+       "x": 190,
+       "y": 156,
+       "writes": 50,
+       "stages": [
+        {
+         "stage": "arms",
+         "writes": 50,
+         "sha256": "0efa41b16e1d67816dde4d9f3f123ba5449c95f81390c918361e202d637e8a28"
+        }
+       ],
+       "sha256": "0efa41b16e1d67816dde4d9f3f123ba5449c95f81390c918361e202d637e8a28"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "seed": 4660,
+   "config": 1,
+   "bands": [
+    {
+     "islandsRng": 44265,
+     "rng": 5631,
+     "sweptSha256": "223d0452379751d6029a9fc6b2125e845343d9521a15934369d324c06b613102",
+     "sweptRng": 51900,
+     "ranges": [
+      {
+       "radius": 70,
+       "x": 119,
+       "y": 207,
+       "writes": 287,
+       "stages": [
+        {
+         "stage": "spine",
+         "writes": 223,
+         "sha256": "268225ebd997bbd2ccf27f627bf04db5be910bf160eb00c3f1ad04f498135009"
+        },
+        {
+         "stage": "clearing",
+         "writes": 64,
+         "sha256": "b9b603931027d53f99aa4fe41c5d4f998d3ea2dd732ea5484fd22ab4d88ab545"
+        }
+       ],
+       "sha256": "71a44540b5bd4614310b45dc3c72ea051425deb8b5b35d0a84b8335a04fbaa58"
+      },
+      {
+       "radius": 10,
+       "x": 114,
+       "y": 80,
+       "writes": 49,
+       "stages": [
+        {
+         "stage": "arms",
+         "writes": 49,
+         "sha256": "0556d73a6ad0aff746333775f65f6dcd1e0c41850ebe34470aea4ae66cd1a016"
+        }
+       ],
+       "sha256": "0556d73a6ad0aff746333775f65f6dcd1e0c41850ebe34470aea4ae66cd1a016"
+      }
+     ]
+    },
+    {
+     "islandsRng": 49988,
+     "rng": 589,
+     "sweptSha256": "36b1ff856790a282da2ad3b83eb4029a590afbccc510443033475d7ae122cb00",
+     "sweptRng": 28335,
+     "ranges": [
+      {
+       "radius": 70,
+       "x": 166,
+       "y": 113,
+       "writes": 2631,
+       "stages": [
+        {
+         "stage": "spine",
+         "writes": 1246,
+         "sha256": "1b155156da2c7419ee663c119b22f1b3d36a5b0e952fc871388274fdad3fc47c"
+        },
+        {
+         "stage": "clearing",
+         "writes": 813,
+         "sha256": "3973bbc83ed360afe1d8f838536a90f5296263c400287a5683920b255941d245"
+        },
+        {
+         "stage": "sources",
+         "writes": 572,
+         "sha256": "3d0daee33ffe2ff12c44c0d8f7457dab1703c3081043ecfd1942417493635cc5"
+        }
+       ],
+       "sha256": "24725fdcb42e52da3bd2b18d21eea0d34563db933031e64d82d771c3099f725f"
+      },
+      {
+       "radius": 70,
+       "x": 119,
+       "y": 29,
+       "writes": 433,
+       "stages": [
+        {
+         "stage": "spine",
+         "writes": 5,
+         "sha256": "7e1b35e2ed856bb72334b3c820767272963f1696e6c443c66954227ba37411cc"
+        },
+        {
+         "stage": "clearing",
+         "writes": 428,
+         "sha256": "6dda4d65e16ef30e872292767217e53f54eebaa19c56b9032ba4d9bff48ef8aa"
+        }
+       ],
+       "sha256": "b54b6cc5d9f956175884353ff511fcb07dbdbf2e97c56ace0dc405bed046b845"
+      },
+      {
+       "radius": 10,
+       "x": 24,
+       "y": 64,
+       "writes": 80,
+       "stages": [
+        {
+         "stage": "arms",
+         "writes": 80,
+         "sha256": "b9d0e0662443930dd6527951172dfbd0ba6054037055e95c2c87604c004e9f17"
+        }
+       ],
+       "sha256": "b9d0e0662443930dd6527951172dfbd0ba6054037055e95c2c87604c004e9f17"
+      }
+     ]
+    }
+   ]
+  }
  ]
 }

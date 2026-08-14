@@ -5,6 +5,21 @@
 /// cosmetic — see ``saved``, which the original relies on.
 public struct WalkerState: Sendable {
 
+    /// Where `$1866` filed the partner continent.
+    ///
+    /// `$17C8` builds the isthmus, works out where the partner's centre will be,
+    /// and files it into the position tables **there and then** — before the walk
+    /// that grows it has taken a step. Nothing else in the phase files from
+    /// inside the walker, and missing it leaves a whole continent out of the
+    /// tables `$2E32` and `$3961` read. It only shows in a configuration that
+    /// places a pair, which is configuration 1 and no other.
+    public struct IsthmusLandmass: Sendable, Equatable {
+        public let column: UInt8
+        public let row: UInt16
+    }
+    public var isthmusLandmass: IsthmusLandmass?
+
+
     /// The generator this fill draws from.
     ///
     /// **Which generator that is depends on the landmass.** `$0A9D` runs the

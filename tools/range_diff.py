@@ -8,6 +8,8 @@ the difference between knowing a routine is wrong and knowing why.
 
 Both files live in `local/` and neither may be committed: they are lists of map
 cells.
+
+    tools/range_diff.py [band] [config]
 """
 import json
 import os
@@ -17,9 +19,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONTEXT = 6
 
 
-def load_original(band):
+def load_original(band, config):
     """The original's writes for one band, flattened, tagged by stage."""
-    trace = json.load(open(f"{ROOT}/local/range_trace.json"))
+    trace = json.load(open(f"{ROOT}/local/range_trace_{config}.json"))
     out = []
     for entry in trace[band]:
         for x, y, value, stage in entry["writes"]:
@@ -37,7 +39,8 @@ def load_port():
 
 def main():
     band = int(sys.argv[1]) if len(sys.argv) > 1 else 0
-    original, port = load_original(band), load_port()
+    config = int(sys.argv[2]) if len(sys.argv) > 2 else 0
+    original, port = load_original(band, config), load_port()
     print(f"original {len(original)} writes, port {len(port)}")
 
     stages = {}

@@ -790,6 +790,9 @@ extension CoastlineWalker {
         s.centerX = drawn.x
         s.switchRow = UInt16(truncatingIfNeeded: drawn.y) &+ 30
         s.centerY = UInt16(truncatingIfNeeded: drawn.y) &+ UInt16(s.workingRadius)
+        // $1866 JSR $1B5F: and that centre goes into the position tables now.
+        s.isthmusLandmass = WalkerState.IsthmusLandmass(column: s.centerX,
+                                                        row: s.centerY)
 
         // $184E: restart the walk from the top of the new circle.
         s.candidate = Offset(dx: 0, dy: s.workingRadius)

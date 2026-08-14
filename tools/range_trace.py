@@ -49,6 +49,12 @@ SCATTER_CASES = 400
 # can be graded on `$2F8C`'s writes instead of having to match the whole entry.
 STAGES = {0x2F0B: "arms", 0x2F8C: "spine", 0x3134: "spur",
           0x31E6: "clearing", 0x380D: "sources"}
+# The generator state at `$2E32`'s entry and the band digest at `$2ED2`, so the
+# range fixture stands on its own: a test can drive the port's own sweeps to the
+# digest and then grade the ranges from the state the original actually had,
+# without a second fixture for the phase boundaries.
+BAND_BYTES = 208 * 128
+ISLANDS = 0x2AE9        # the pipeline's first phase, and the port's entry too
 
 
 def capture(seed, config, budget):
@@ -71,17 +77,27 @@ def capture(seed, config, budget):
                             "value": cpu.a,
                             "after": cpu.rd(0xCD) << 8 | cpu.rd(0xCF)})
         if pc == PIPELINE:
-            bands.append([])
+            bands.append({"islandsRng": None, "rng": None,
+                          "sweptSha256": None, "ranges": []})
             live["drawing"] = False
+        elif pc == ISLANDS and bands and bands[-1]["islandsRng"] is None:
+            bands[-1]["islandsRng"] = cpu.rd(0xCD) << 8 | cpu.rd(0xCF)
+        elif pc == TERRAIN and bands:
+            bands[-1]["rng"] = cpu.rd(0xCD) << 8 | cpu.rd(0xCF)
         elif pc == RANGES:
             live["drawing"] = True
+            if bands:
+                band = bytes(cpu.mem[BASE:BASE + BAND_BYTES])
+                bands[-1]["sweptSha256"] = hashlib.sha256(band).hexdigest()
+                bands[-1]["sweptRng"] = cpu.rd(0xCD) << 8 | cpu.rd(0xCF)
         elif pc == DONE_RANGES:
             live["drawing"] = False
         elif pc == ENTRY and bands:
             live["writes"] = []
             live["stage"] = "?"
-            bands[-1].append({"radius": cpu.rd(0x21), "x": cpu.rd(0x22),
-                              "y": cpu.rd(0x23), "writes": live["writes"]})
+            bands[-1]["ranges"].append({"radius": cpu.rd(0x21),
+                                        "x": cpu.rd(0x22), "y": cpu.rd(0x23),
+                                        "writes": live["writes"]})
         elif pc in STAGES:
             live["stage"] = STAGES[pc]
         elif pc == WRITE and live["drawing"] and live["writes"] is not None:
@@ -112,9 +128,9 @@ def main():
 
     bands, scatter = capture(int(args.seed, 0), args.config, args.budget)
     out = []
-    for i, ranges in enumerate(bands):
+    for i, band in enumerate(bands):
         summary = []
-        for entry in ranges:
+        for entry in band["ranges"]:
             writes = entry["writes"]
             stages = []
             for stage in STAGES.values():
@@ -129,10 +145,21 @@ def main():
                   f"({entry['x']:3d},{entry['y']:3d}): {len(writes):5d} writes "
                   + ", ".join(f"{s['stage']} {s['writes']}/{s['sha256'][:8]}"
                               for s in stages))
-        out.append(summary)
+        out.append({"islandsRng": band["islandsRng"], "rng": band["rng"],
+                    "sweptSha256": band["sweptSha256"],
+                    "sweptRng": band.get("sweptRng"), "ranges": summary})
 
     fixture = (f"{ROOT}/SevenCitiesCore/Tests/SevenCitiesCoreTests/Fixtures"
                "/scatter_reference.json")
+    # Merged, not replaced: each draw carries the generator state it started
+    # from, so draws from different configurations are all equally good cases and
+    # a re-run for one should not throw away another's.
+    if os.path.exists(fixture):
+        have = {(d["mean"], d["spread"], d["rng"]): d
+                for d in json.load(open(fixture))["draws"]}
+        for draw in scatter:
+            have.setdefault((draw["mean"], draw["spread"], draw["rng"]), draw)
+        scatter = [have[k] for k in sorted(have)]
     with open(fixture, "w") as handle:
         json.dump({"description": "$0B16, the scattered draw, as the World Maker "
                                   "called it: mean, spread, the generator before "
@@ -142,17 +169,27 @@ def main():
 
     stage_path = (f"{ROOT}/SevenCitiesCore/Tests/SevenCitiesCoreTests/Fixtures"
                   "/range_reference.json")
+    # Merged rather than overwritten: which drawer runs first in a band depends
+    # on the configuration, and only a band whose first landmass is small can
+    # grade `$2F0B` at all.
+    runs = []
+    if os.path.exists(stage_path):
+        runs = [r for r in json.load(open(stage_path))["runs"]
+                if (r["seed"], r["config"]) != (int(args.seed, 0), args.config)]
+    runs.append({"seed": int(args.seed, 0), "config": args.config, "bands": out})
+    runs.sort(key=lambda r: (r["seed"], r["config"]))
     with open(stage_path, "w") as handle:
         json.dump({"description": "The writes $2E32's range half makes, per "
                                   "landmass and per stage: how many, and the "
-                                  "SHA-256 of the sequence. No map data.",
-                   "bands": out}, handle, indent=1)
+                                  "SHA-256 of the sequence, with the band and "
+                                  "generator state the ranges started from. "
+                                  "No map data.",
+                   "runs": runs}, handle, indent=1)
     print(f"wrote {os.path.relpath(stage_path, ROOT)}")
 
-    path = f"{ROOT}/local/range_trace.json"
+    path = f"{ROOT}/local/range_trace_{args.config}.json"
     with open(path, "w") as handle:
-        json.dump([[{**e, "writes": e["writes"]} for e in b] for b in bands],
-                  handle)
+        json.dump([b["ranges"] for b in bands], handle)
     print(f"wrote {os.path.relpath(path, ROOT)} "
           f"({os.path.getsize(path):,} bytes) — not for committing")
     return out

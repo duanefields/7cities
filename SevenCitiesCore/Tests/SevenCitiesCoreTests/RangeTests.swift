@@ -8,103 +8,123 @@ import Testing
 ///
 /// The band cannot be the test here. `$2E32` draws each landmass in four stages
 /// and the last of them, `$380D`, is not ported — so from the first landmass
-/// onward the port's band and the original's are legitimately different, and a
-/// digest of either says nothing useful. What *is* comparable is the sequence of
-/// writes each stage makes, which `tools/range_trace.py` records off the
-/// interpreter and ``TerrainBand/journal`` records off the port.
+/// that reaches it onward the port's band and the original's are legitimately
+/// different, and a digest of either says nothing useful. What *is* comparable
+/// is the sequence of writes each stage makes, which `tools/range_trace.py`
+/// records off the interpreter and ``TerrainBand/journal`` records off the port.
 ///
-/// So this grades the stages the port has, on the landmass they run on first,
-/// and stops where the port does.
+/// Which stages are reachable depends on the configuration, which is why the
+/// fixture holds more than one. Configuration 0's first band reaches `$380D` on
+/// its first landmass, so everything after that — including the small-landmass
+/// drawer at `$2F0B` — is out of reach. Configuration 1's continent sits on the
+/// last row of the band, which is too low for `$3134` and too short a spine for
+/// `$380D`, so nothing in that band is unreachable and it grades end to end.
 private struct RangeReference: Decodable {
     struct Stage: Decodable { let stage: String; let writes: Int; let sha256: String }
     struct Entry: Decodable {
         let radius: Int, x: Int, y: Int, writes: Int
         let stages: [Stage]
     }
-    let bands: [[Entry]]
+    struct Band: Decodable {
+        let islandsRng: Int, rng: Int
+        let sweptSha256: String, sweptRng: Int
+        let ranges: [Entry]
+    }
+    struct Run: Decodable {
+        let seed: Int, config: Int
+        let bands: [Band]
+    }
+    let runs: [Run]
 }
 
-private struct TerrainReference: Decodable {
-    struct Step: Decodable { let phase: String; let sha256: String; let rng: Int }
-    let seed: Int, config: Int
-    let bands: [[Step]]
-    let terrainSweeps: [[Step]]
-}
-
-private func fixture<T: Decodable>(_ name: String, as type: T.Type) throws -> T {
-    let url = try #require(
-        Bundle.module.url(forResource: name, withExtension: "json",
-                          subdirectory: "Fixtures")
-            ?? Bundle.module.url(forResource: name, withExtension: "json"),
-        "\(name).json fixture is missing")
-    return try JSONDecoder().decode(T.self, from: Data(contentsOf: url))
-}
-
-/// The digest the trace tool takes, over the same text.
+/// The digest `tools/range_trace.py` takes, over the same text.
 private func digest(_ writes: ArraySlice<TerrainBand.Write>) -> String {
     let text = writes.map { "\($0.x),\($0.y),\($0.nibble)" }.joined(separator: "\n")
     return SHA256.hash(data: Data(text.utf8))
         .map { String(format: "%02x", $0) }.joined()
 }
 
-/// The band the ranges start from: the mask, the two phases before `$2E32`, and
-/// its three sweeps — all of which the tests either side of this one pin down.
-private func bandBeforeRanges(_ reference: TerrainReference) throws
-    -> (TerrainBand, WorldMakerRNG, LandMassStage.Run) {
-    let run = try LandMassStage.run(config: reference.config,
-                                    seed: UInt16(reference.seed))
-    let steps = try #require(reference.bands.first)
-    var band = TerrainBand(landMask: run.mask, fromRow: 0)
-    var rng = WorldMakerRNG(seed: UInt16(steps[0].rng))
-    TerrainPhases.islands(run.islands, northern: true, in: &band, rng: &rng)
-    TerrainPhases.spread(run.satellites, northern: true, marking: true, in: &band)
-    TerrainPhases.coastSweep(in: &band, rng: &rng, secondBand: false)
-    TerrainPhases.shelfSweep(in: &band, secondBand: false)
-    TerrainPhases.forestSweep(in: &band, rng: &rng, secondBand: false)
-
-    let sweeps = try #require(reference.terrainSweeps.first)
-    try #require(sha256Hex(band.storage) == sweeps[2].sha256,
-                 "the sweeps disagree; the range test cannot mean anything")
-    return (band, rng, run)
-}
-
-private func sha256Hex(_ bytes: [UInt8]) -> String {
+private func hex(_ bytes: [UInt8]) -> String {
     SHA256.hash(data: Data(bytes)).map { String(format: "%02x", $0) }.joined()
 }
 
 @Test("The mountain ranges write what the original wrote")
 func rangesMatchOriginal() throws {
-    let terrain = try fixture("terrain_reference", as: TerrainReference.self)
-    let ranges = try fixture("range_reference", as: RangeReference.self)
+    let url = try #require(
+        Bundle.module.url(forResource: "range_reference", withExtension: "json",
+                          subdirectory: "Fixtures")
+            ?? Bundle.module.url(forResource: "range_reference",
+                                 withExtension: "json"),
+        "range_reference.json fixture is missing")
+    let reference = try JSONDecoder().decode(RangeReference.self,
+                                             from: Data(contentsOf: url))
+    try #require(!reference.runs.isEmpty)
 
-    var (band, rng, run) = try bandBeforeRanges(terrain)
-    band.journal = []
-    let segments = TerrainPhases.ranges(run.landmasses, in: &band, rng: &rng,
-                                        secondBand: false)
-    let journal = try #require(band.journal)
+    for run in reference.runs {
+        // Only the first band. The second starts at row 192 with sixteen rows of
+        // terrain the first band generated, and cannot be built until `$2C14` is.
+        let reference = try #require(run.bands.first)
+        let stage = try LandMassStage.run(config: run.config,
+                                          seed: UInt16(run.seed))
+        let label = "seed \(String(format: "%04X", run.seed)) config \(run.config)"
 
-    // The first landmass in the band is the only one gradeable end to end: the
-    // stage after the ones ported here changes the band, so everything drawn
-    // afterward starts from somewhere the port has not been.
-    let first = try #require(ranges.bands.first?.first)
-    let ported = ["spine", "spur", "clearing"]
-    var start = 0
-    for segment in segments where ported.contains(segment.stage.rawValue) {
-        let expected = first.stages.first { $0.stage == segment.stage.rawValue }
-        let slice = journal[start..<segment.end]
-        start = segment.end
-        guard let expected else {
-            #expect(slice.isEmpty,
-                    """
-                    \(segment.stage.rawValue) wrote \(slice.count) cells and \
-                    the original never ran it
-                    """)
-            continue
+        var band = TerrainBand(landMask: stage.mask, fromRow: 0)
+        var rng = WorldMakerRNG(seed: UInt16(reference.islandsRng))
+        TerrainPhases.islands(stage.islands, northern: true, in: &band, rng: &rng)
+        TerrainPhases.spread(stage.satellites, northern: true, marking: true,
+                             in: &band)
+        try #require(Int(rng.state) == reference.rng,
+                     "\(label): the phases before $2E32 disagree")
+
+        TerrainPhases.coastSweep(in: &band, rng: &rng, secondBand: false)
+        TerrainPhases.shelfSweep(in: &band, secondBand: false)
+        TerrainPhases.forestSweep(in: &band, rng: &rng, secondBand: false)
+        try #require(hex(band.storage) == reference.sweptSha256,
+                     "\(label): the sweeps disagree, so the ranges cannot mean anything")
+        try #require(Int(rng.state) == reference.sweptRng, "\(label): sweep draws")
+
+        band.journal = []
+        let segments = TerrainPhases.ranges(stage.landmasses, in: &band, rng: &rng,
+                                            secondBand: false)
+        let journal = try #require(band.journal)
+
+        // Everything up to the first stage the port does not have. After that
+        // the original is working on a band the port has never seen.
+        var expected: [RangeReference.Stage] = []
+        var complete = true
+        entries: for entry in reference.ranges {
+            for stage in entry.stages where stage.stage == "sources" {
+                complete = false
+                break entries
+            }
+            expected += entry.stages
         }
-        #expect(slice.count == expected.writes,
-                "\(segment.stage.rawValue): \(slice.count) writes, not \(expected.writes)")
-        #expect(digest(slice) == expected.sha256,
-                "\(segment.stage.rawValue): the cells differ from the original's")
-        if slice.count != expected.writes || digest(slice) != expected.sha256 { break }
+        // A stage that wrote nothing does not appear in the fixture — the trace
+        // tool only records stages that put a cell down — and the port marks
+        // every stage it runs whether it drew or not. `$3134` skips a landmass
+        // too near the bottom of the band, and that is the usual reason.
+        var drawn: [(stage: TerrainPhases.Stage,
+                     slice: ArraySlice<TerrainBand.Write>)] = []
+        var start = 0
+        for segment in segments {
+            let slice = journal[start..<segment.end]
+            start = segment.end
+            if !slice.isEmpty { drawn.append((segment.stage, slice)) }
+        }
+        if complete {
+            #expect(drawn.count == expected.count,
+                    "\(label): the port drew \(drawn.count) stages, not \(expected.count)")
+        }
+
+        for (segment, want) in zip(drawn, expected) {
+            let slice = segment.slice
+            #expect(segment.stage.rawValue == want.stage,
+                    "\(label): expected \(want.stage), got \(segment.stage.rawValue)")
+            #expect(slice.count == want.writes,
+                    "\(label) \(want.stage): \(slice.count) writes, not \(want.writes)")
+            #expect(digest(slice) == want.sha256,
+                    "\(label) \(want.stage): the cells differ from the original's")
+            if slice.count != want.writes || digest(slice) != want.sha256 { break }
+        }
     }
 }

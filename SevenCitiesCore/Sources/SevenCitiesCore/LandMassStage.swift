@@ -240,13 +240,21 @@ public enum LandMassStage {
                         else { continue }
                     }
 
-                    try build(x: x, y: y, radius: radius,
-                              isContinent: command.isContinent,
-                              paired: command.placesPair, pairOffset: pairOffset,
-                              biasX: biasX, biasY: biasY,
-                              rng: &rng, mask: &mask, steps: &steps,
-                              filed: { satellites.append($0) })
+                    let isthmus = try build(x: x, y: y, radius: radius,
+                                            isContinent: command.isContinent,
+                                            paired: command.placesPair,
+                                            pairOffset: pairOffset,
+                                            biasX: biasX, biasY: biasY,
+                                            rng: &rng, mask: &mask, steps: &steps,
+                                            filed: { satellites.append($0) })
+                    // $2263 files the placement itself, and it comes *after*
+                    // $1866's — the isthmus files as soon as its centre is
+                    // known, which is in the middle of the walk.
                     landmasses += filed(column: x, row: y, radius: radius)
+                    if let isthmus {
+                        landmasses += filed(column: isthmus.column,
+                                            row: isthmus.row, radius: radius)
+                    }
                     break
                 }
             }
@@ -372,10 +380,12 @@ public enum LandMassStage {
                               biasX: UInt8, biasY: UInt8,
                               rng: inout WorldMakerRNG, mask: inout LandMask,
                               steps: inout [Step],
-                              filed: @escaping (Island) -> Void) throws {
-        let partner = walk(x: x, y: y, radius: radius, biasX: biasX, biasY: biasY,
-                           drift: 0x97, paired: paired, pairOffset: pairOffset,
-                           rng: &rng, mask: &mask, steps: &steps)
+                              filed: @escaping (Island) -> Void)
+        throws -> WalkerState.IsthmusLandmass? {
+        let (partner, isthmus) = walk(x: x, y: y, radius: radius, biasX: biasX,
+                                      biasY: biasY, drift: 0x97, paired: paired,
+                                      pairOffset: pairOffset, rng: &rng,
+                                      mask: &mask, steps: &steps)
 
         // $1666: `$54` is the command's size class. Islands go straight to the
         // flood fill; continents place a satellite first.
@@ -399,6 +409,7 @@ public enum LandMassStage {
         steps.append(.interior(x: x, y: y))
         guard InteriorFill.fill(column: x, row: Int(y), in: &mask) == .filled
         else { throw Restart() }
+        return isthmus
     }
 
     /// `$23D3`: set up the walker's state and trace an outline.
@@ -410,7 +421,9 @@ public enum LandMassStage {
                              biasX: UInt8, biasY: UInt8, drift: UInt8,
                              paired: Bool = false, pairOffset: UInt8 = 0xFF,
                              rng: inout WorldMakerRNG, mask: inout LandMask,
-                             steps: inout [Step]) -> WalkerState.Partner? {
+                             steps: inout [Step])
+        -> (partner: WalkerState.Partner?,
+            isthmus: WalkerState.IsthmusLandmass?) {
         var s = WalkerState(
             rng: rng, workingRadius: radius, centerX: x, centerY: y, shape: 0,
             offset: .init(dx: 0, dy: 0), candidate: .init(dx: 0, dy: 0),
@@ -424,7 +437,7 @@ public enum LandMassStage {
         steps.append(.outline(x: x, y: y, radius: radius))
         _ = CoastlineWalker.traceOutline(&s, in: &mask)
         rng = s.rng
-        return s.partnerGeometry
+        return (s.partnerGeometry, s.isthmusLandmass)
     }
 
     // MARK: - The satellite

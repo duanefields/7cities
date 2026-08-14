@@ -111,9 +111,19 @@ engineering record; this holds the work.
       bulk of it. Every phase read so far has come in bigger than it looked, so
       treat the numbers as a floor.
 
-      One correction to that, after `$2E32`: the phases are not as independent as
-      the sizing implies. `$380D` sits inside `$2E32` and is river code, so the
-      1,750 and the 1,635 overlap. Expect the same of `$3961`.
+      **That estimate is now measured to be far too high, and the reason is
+      worth keeping.** `$380D`, `$3961` and `$3EAD` are not three phases; they
+      are three entries into one water engine, and they share 776 addresses
+      between all three. Measured: 1,060, 1,459 and 1,635 distinct addresses
+      each, **1,996 in union** — one phase's worth of work rather than three,
+      and about the size of the land-mass phase. The 7,200 figure counted the
+      same code up to three times.
+
+      So what is actually left of the World Maker is roughly: the water engine
+      at 1,996, `$47DF` villages at 1,092 (which overlaps it too, since it also
+      draws through `$0FD3` — measure before believing that number), `$2C14`
+      the band writer at 419, and `$4CF2` at 83 which needs no port. Call it
+      3,000-3,500 rather than 7,200.
 - [x] ~~**Confirm the band structure.**~~ **Done.** 208 rows, and two bands
       cover the map: rows 0-207 and 192-399, overlapping by sixteen. The nibbles
       *do* overwrite the 1-bit mask at `$5700` in place, and the bands run top
