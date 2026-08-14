@@ -137,26 +137,14 @@ engineering record; this holds the work.
       verifies most of the water engine with it: `$32CC`, `$333C`, `$33B7`,
       `$3300`, `$33EF`, `$3531`, `$369F`, `$3755`, `$3D97` and `$3E53`.
 
-      **`$3961`'s per-lake work is exact** — the radius-7 marsh `$3999` drops on
-      the lake and the river that flows out of it, 211 writes cell for cell.
+      **`$3961` is complete** — all 259 writes of the first band and the
+      generator left exactly where the original leaves it, which is what makes
+      `$3EAD` gradeable in turn.
 
-      `$3B75`, the pass it makes over the river mouths afterwards, is written
-      and **not right yet**: it reproduces 215 of the phase's 259 writes and then
-      drifts by a single draw. The cells it erases are the right cells; only the
-      plain-or-forest coin flips are one draw out of step, which means something
-      between the last forward step and the erase costs a draw in one and not the
-      other. Suspects, in order: `$33FE`'s `DEC $56` three times, which during
-      `$3B75` is decrementing a *count* rather than a byte offset and so may
-      unfile a mouth the port keeps; the exact loop bounds of `$3BD1`/`$3C56`'s
-      land runs; and `$3D50`'s stop test. Measure `$3CEB` in the interpreter
-      rather than reading it again.
-
-      What is left after that is the last entry. `$3961` walks the satellite tables
-      and calls `$4014` to measure the land either side before starting.
-      `$3EAD` patches five bytes into `$3AA5` and five into `$36A2` before it
-      begins, so it is the same engine again with two of its routines rewritten
-      — read those patches before anything else. `$348D` (is this cell already
-      in the record) and `$42C6` are not read yet.
+      What is left of the water engine is `$3EAD`. It patches five bytes into
+      `$3AA5` and five into `$36A2` before it begins, so it is the same engine
+      again with its direction-pick and its finish swapped; read those patches
+      before anything else. `$42C6` is not read yet.
 
       **Grade it with `tools/pipeline_trace.py`**, which records every write of
       every phase tagged with the river that made it. Band 0 of seed `$1234`

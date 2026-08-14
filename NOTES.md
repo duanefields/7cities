@@ -2805,6 +2805,17 @@ nothing has yet asked them a question they can get wrong. That is now twice this
 has happened with these tables — the paired continent's missing entry was the
 other.
 
+**`$3755` has no `RTS`, and that is worth a paragraph.** Every river finish in
+the World Maker goes through it, and it does not return — it falls through into
+`$3D90` or `$3E8B` and so places a swamp on its way out. A port that reads
+`JSR $36CC` as "file the river" and moves on is short a swamp and, worse, short
+the draws that go with it: the rivers after it come out in the right places with
+the wrong nibbles, because only the coin flips are out of step. Diffing the
+writes says *where* a port diverges; diffing the **generator at each write**
+says how many draws it is out by, and that is usually the answer. Recording the
+generator alongside the journal for one run is what found this in minutes after
+an hour of reading had not.
+
 **`$3961` is the lakes' outflow.** For each satellite in the tables at
 `$0378`/`$0382` it takes a radius-10 box and hunts outward for the `$0F` mark
 `$2D23` laid around that lake — west along the row first, then east, then a row

@@ -12,11 +12,10 @@ import Testing
 /// made it, so the part that *is* ported can be checked exactly — the lake's own
 /// marsh and its outflow, which is the first river of the phase.
 ///
-/// What is not verified here is `$3B75`, the pass the phase makes over the river
-/// mouths once every lake has run. It is ported, and it reproduces the
-/// original's first 215 writes of 259 before drifting by a single draw, but a
-/// test that passes on a prefix is not a test — so this grades the part that is
-/// finished and TODO.md carries the part that is not.
+/// The whole phase is graded: the marsh `$3999` drops on each lake, the river
+/// that flows out of it, and `$3B75`'s pass growing rivers back inland from the
+/// mouths. Both what it wrote and where it left the generator, because the phase
+/// after this one starts from that.
 private struct PipelineReference: Decodable {
     struct Mark: Decodable { let mark: String; let writes: Int; let sha256: String }
     struct Phase: Decodable {
@@ -73,13 +72,19 @@ func lakeOutflowMatchesOriginal() throws {
                                engine: &rivers, secondBand: false)
     let journal = try #require(band.journal)
 
-    // The first mark is the lake's own marsh and the river out of it, and that
-    // much is exact. `$3B75`'s upstream pass — the seven short rivers grown back
-    // from the river mouths — is written but not right yet: it diverges four
-    // writes in on a draw, so the phase as a whole is not graded here.
-    let first = try #require(lakes.marks.first)
-    #expect(journal.count >= first.writes,
-            "the outflow wrote \(journal.count) cells, fewer than \(first.writes)")
-    #expect(digest(journal.prefix(first.writes)) == first.sha256,
-            "the marsh and the outflow differ from the original's")
+    #expect(journal.count == lakes.writes,
+            "the phase wrote \(journal.count) cells, not \(lakes.writes)")
+    var start = 0
+    for mark in lakes.marks {
+        let slice = journal[start..<min(start + mark.writes, journal.count)]
+        start += mark.writes
+        #expect(slice.count == mark.writes,
+                "\(mark.mark): \(slice.count) writes, not \(mark.writes)")
+        #expect(digest(slice) == mark.sha256,
+                "\(mark.mark): the cells differ from the original's")
+        if digest(slice) != mark.sha256 { break }
+    }
+    let next = try #require(band0.phases.first { $0.phase == "rivers" })
+    #expect(Int(rng.state) == next.rng,
+            "the phase left the generator somewhere the original did not")
 }

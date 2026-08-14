@@ -168,11 +168,22 @@ extension TerrainPhases {
         }
         // $3D68: the river is filed the other way round from the rest — the
         // *source* is where this walk ended, upstream, and its other end is the
-        // mouth it grew out of.
-        let source = (column: engine.column, row: engine.row)
+        // mouth it grew out of. And `$3755` does not simply return: it falls
+        // into the swamp placement like every other finish does.
+        engine.sourceColumn = engine.column
+        engine.sourceRow = engine.row
         engine.column = mouth.column
         engine.row = Int(mouth.row)
-        engine.fileSource(from: source.column, source.row, secondBand: secondBand)
+        engine.fileSource(from: engine.sourceColumn, engine.sourceRow,
+                          secondBand: secondBand)
+        if engine.tile == 0x04 {
+            let radius = rng.nextByte(from: 4, below: 8)      // $3D90
+            swamp(radius: radius, at: engine.column, engine.row, in: &band,
+                  rng: &rng, secondBand: secondBand)
+        } else {
+            shiftAndSwamp(&engine, source: engine.sourceColumn, in: &band,
+                          rng: &rng, secondBand: secondBand)  // $3E8B
+        }
     }
 
     /// `$39AB`: hunt outward from the lake for the ring of marks.
@@ -425,14 +436,25 @@ extension TerrainPhases {
         }
     }
 
-    /// `$364C` into `$36CC`, then the distant swamp unless the river ended on a
-    /// shallow.
+    /// `$3AA5`: file the river and put the swamps down.
+    ///
+    /// **Two** swamps, not one, and that is easy to miss because they are
+    /// reached differently. `$364C` calls `$36CC`, which falls through `$3755`
+    /// into `$3D90` or `$3E8B` and so places one without ever looking like it
+    /// does — `$3755` has no `RTS`. Only then does `$3AAE` call `$3E53` for the
+    /// second, and only where the river did not end on a shallow.
     private static func finish(_ engine: inout RiverEngine,
                                in band: inout TerrainBand,
                                rng: inout WorldMakerRNG, secondBand: Bool) {
         engine.fileSource(from: engine.sourceColumn, engine.sourceRow,
-                          secondBand: secondBand)
-        if engine.tile != 0x04 {                              // $3AAA
+                          secondBand: secondBand)             // $3755
+        if engine.tile == 0x04 {
+            let radius = rng.nextByte(from: 4, below: 8)      // $3D90
+            swamp(radius: radius, at: engine.column, engine.row, in: &band,
+                  rng: &rng, secondBand: secondBand)
+        } else {
+            shiftAndSwamp(&engine, source: engine.sourceColumn, in: &band,
+                          rng: &rng, secondBand: secondBand)  // $3E8B
             distantSwamp(&engine, in: &band, rng: &rng, secondBand: secondBand)
         }
     }

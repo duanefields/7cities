@@ -234,7 +234,7 @@ extension TerrainPhases {
     }
 
     /// `$3E8B`: a swamp four to seven cells to one side of the river's end.
-    private static func shiftAndSwamp(_ engine: inout RiverEngine,
+    static func shiftAndSwamp(_ engine: inout RiverEngine,
                                       source: UInt8, in band: inout TerrainBand,
                                       rng: inout WorldMakerRNG,
                                       secondBand: Bool) {
