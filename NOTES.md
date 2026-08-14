@@ -2642,15 +2642,32 @@ swamp from row 110 down, band 1 up to row 108 — map rows 110 to 299. The World
 Maker puts swamp in the tropics and nowhere else. A forbidden draw is *redrawn*,
 so the gate costs randomness as well as outcomes.
 
-Both are ported (`TerrainPhases.scatter`, `scatterAroundIslands`) and both are
-graded from the generator state the fixture records, because it carries straight
-through from the land-mass phase and the band writer and cannot be derived yet.
-They do not pass, and what is missing is `$2977`: the scatter alone gets 42 cells
-of `$3` against 51, 55 of forest against 61, 46 of mountain against 51 — close —
-but the original's band also holds **644 cells of medium water and 212 of
-shallow**, which nothing in the scatter writes. `$2977` is the coastal shading,
-and it consumes randomness, which is what moves the rest of the counts. It is the
-next thing to port.
+**`$2AE9` is ported and exact.** The band it leaves hashes to what the original
+handed the next phase. It is three things, and the middle one is the one that
+hides:
+
+1. `$28F1` — per island: scatter over a radius-10 box, then features, then the
+   coastal shading at `$2977`.
+2. `$2AEC` — on a coin flip, **one more of the same at a random position** rather
+   than an island's. That is 107 of the 856 shading writes in band 0, all of them
+   nowhere near any island, and it is exactly what an island-driven port cannot
+   account for.
+3. `$2B42` — mark whatever plain is left inside each island's box as `$3`.
+
+`$2977` itself is the coastal shading, and two readings of it were wrong before
+the writes were diffed. The first: `$295B`'s edge test and `$2972`'s coin flip
+both jump to `$296F JMP $29D0`, which is the *middle* of `$2977` rather than past
+it — so what they skip is the feature placement, not the shading, and the shading
+runs for every island. Reading them as a guard on the whole routine leaves a coast
+with a fifth of the water it should have, 131 cells of medium against 644.
+
+The second: `$2A78` is one routine with a hole in it. `$2A96` is a branch whose
+opcode is rewritten — `$F0` for `BEQ`, `$D0` for `BNE` — and the four bytes at
+`$2A98` are its body, copied in from `$2ADB`. `$2ABC` makes it count non-water
+neighbours; `$2AD5` makes it write water into them. Same nine cells, opposite
+jobs. And `$2A02` patches the coin flip at `$2A9E` into a `BNE` for the second
+pass, so shallow water shades its neighbours flatly to medium — which is what
+gives a coast two rings rather than one.
 
 ### `$2AE9` reads the island tables
 

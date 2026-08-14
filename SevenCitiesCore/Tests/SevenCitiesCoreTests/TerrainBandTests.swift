@@ -108,57 +108,12 @@ func boundingBoxesMatchOriginal() throws {
     }
 }
 
-/// `$2AE9`'s effect on the band.
-///
-/// It is **not** just the marking, which is what this was written to find out.
-/// `$28F1` runs first, over the same boxes, and on a coin flip per cell sends
-/// land through `$2BEA` — so by the time `$2B67` starts marking, many of the
-/// cells that were plain are not any more. Measured: the original marks 165 cells
-/// in band 0 and 47 in band 1, against 308 and 97 marked from the raw band.
-///
-/// So the marking cannot be graded on its own, and this stays disabled until
-/// `$28F1` and `$2BEA` are ported. The digests it needs are already in the
-/// fixture, and `markIslands` itself is transcribed and believed right.
-@Test("Marking the islands is all $2AE9 does to the band",
-      .disabled("""
-          $2AE9 changes the band before the marking runs: $28F1 goes over the \
-          same boxes first and rewrites land through $2BEA on a coin flip. The \
-          original marks 165 cells where the raw band would give 308, so this \
-          needs $28F1 ported before it can pass. See NOTES.md.
-          """))
-func islandMarkingMatchesOriginal() throws {
-    let url = try #require(
-        Bundle.module.url(forResource: "terrain_reference", withExtension: "json",
-                          subdirectory: "Fixtures")
-            ?? Bundle.module.url(forResource: "terrain_reference", withExtension: "json"))
-    let reference = try JSONDecoder().decode(Reference.self, from: Data(contentsOf: url))
-
-    let run = try LandMassStage.run(config: reference.config,
-                                    seed: UInt16(reference.seed))
-    var band = TerrainBand(landMask: run.mask, fromRow: 0)
-    TerrainPhases.markIslands(run.islands, northern: true, in: &band, bandRow: 0)
-
-    let after = try #require(reference.bands.first?[1])
-    #expect(after.phase == "spread")
-    #expect(sha256(band.storage) == after.sha256,
-            "the band after marking differs from the original's")
-}
-
-
-
 /// `$28F1`, the scatter that runs before the marking.
 ///
 /// Graded from the generator state the original actually had, because it carries
 /// straight through from the land-mass phase and the band writer and a port cannot
 /// derive it yet.
-@Test("Scattering terrain around the islands matches the original",
-      .disabled("""
-          Needs $2977. The scatter itself is close — 42 cells of $3 against 51, \
-          55 of forest against 61, 46 of mountain against 51 — but the original's \
-          band also holds 644 cells of medium water and 212 of shallow, which \
-          nothing in $28F1's scatter writes. $2977 makes those, and it consumes \
-          randomness on the way, which is what moves the rest. See NOTES.md.
-          """))
+@Test("Scattering terrain around the islands matches the original")
 func scatterMatchesOriginal() throws {
     let url = try #require(
         Bundle.module.url(forResource: "terrain_reference", withExtension: "json",
@@ -178,7 +133,33 @@ func scatterMatchesOriginal() throws {
     var rng = WorldMakerRNG(seed: UInt16(entry.rng))
     TerrainPhases.scatterAroundIslands(run.islands, northern: true,
                                        in: &band, rng: &rng)
+    if Int8(bitPattern: rng.next()) < 0 {
+        TerrainPhases.placeStray(in: &band, rng: &rng, secondBand: false)
+    }
     #expect(sha256(band.storage) == after.sha256,
             "the band after scattering differs from the original's")
 }
+
+/// The whole of `$2AE9`, against the band the next phase started from.
+@Test("$2AE9 leaves the band the original left")
+func islandPhaseMatchesOriginal() throws {
+    let url = try #require(
+        Bundle.module.url(forResource: "terrain_reference", withExtension: "json",
+                          subdirectory: "Fixtures")
+            ?? Bundle.module.url(forResource: "terrain_reference", withExtension: "json"))
+    let reference = try JSONDecoder().decode(Reference.self, from: Data(contentsOf: url))
+    let run = try LandMassStage.run(config: reference.config,
+                                    seed: UInt16(reference.seed))
+
+    let steps = try #require(reference.bands.first)
+    var band = TerrainBand(landMask: run.mask, fromRow: 0)
+    var rng = WorldMakerRNG(seed: UInt16(steps[0].rng))
+    TerrainPhases.islands(run.islands, northern: true, in: &band, rng: &rng)
+
+    let after = steps[2]
+    #expect(after.phase == "spread")
+    #expect(sha256(band.storage) == after.sha256,
+            "the band after $2AE9 differs from the original's")
+}
+
 
