@@ -61,7 +61,10 @@ engineering record; this holds the work.
       stage runs from a seed to the original's mask for configurations 0 and 2 —
       checked against `interior_reference.json`, whose own digests agree with the
       VICE-captured ones in `landmass_reference.json` on all nine cases.
-- [ ] **Find out what reads `$77`-`$81`.** `$44EF` files two sites there —
+- [x] ~~**Find out what reads `$77`-`$81`.**~~ **`$47DF` does**, and it is the
+      first thing the village phase looks at: the two sites the mirror picked
+      become the first two villages on the map. See NOTES.md. Original note:
+      `$44EF` files two sites there —
       column, row, a row-past-`$D0` flag and a kind of 9 or 7, one of each. Two
       advanced civilizations is the obvious guess and is only a guess.
 - [x] ~~**Port the walk's `$50` mode (`$1860`, `$186C`), which builds paired

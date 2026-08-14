@@ -2869,11 +2869,13 @@ That is why `$3EAD` draws 21 rivers in the first band against `$3961`'s 8.
 half open on *both* axes — `$3E1B` and `$3E23` are both `BCC` — so neither the
 right column nor the bottom row is counted. Counting the bottom row is worth ten
 mountains on the flank of a range, and then a swamp that should have been placed
-is not, and the river after it is out of step. Three of these now: `$3897`,
-`$3506` and `$3DE7`. Every box in the *terrain* phases is closed on all four
-sides and every box in the *water* phases is half open, which is too consistent
-to be a slip after all — they are different hands, or the same hand on a
-different day.
+is not, and the river after it is out of step.
+
+Three of these now — `$3897`, `$3506` and `$3DE7` — against none in the terrain
+phases, which looked like a pattern until `$4441` turned up in the villages
+scanning its radius-5 box **closed** on both axes (`$445C CPX $04 / BEQ / BCC`
+and `$4466 CMP $06 / BEQ / BCC`). So it is not a house style and not a rule to
+generalize from. Check the two branches every time; there is no shortcut here.
 
 ### A whole continent was missing from the position tables
 
@@ -2909,6 +2911,36 @@ The lesson is the same one as the mirror's fixup of these tables: the mask
 agreeing proves the *walk* is right and says nothing about what the walk filed
 away while it ran. Grading a second configuration is what caught it, and it was
 free — the trace tool merges runs.
+
+### `$47DF` is what reads `$77`-`$81`
+
+That was an open question in TODO.md since `$44EF` was ported: the mirror's
+second half files two sites into `$77`-`$81` and nothing was known to read them.
+`$47DF` does, and it reads them first, before anything else it does. `$7A,X` is
+the band the site belongs to, `$78,X` the row (less `$C0` for the second band)
+and `$77,X` the column, and the phase walks east from there until `$4428` finds
+somewhere a village will go. So the two sites the land-mass phase picked out are
+the first two villages on the map.
+
+The rest of the phase, read but not ported:
+
+1. `$4823` — one village thrown at random, row in 8 to `$CD` masked to a
+   multiple of four and column in `$10` to `$F0` masked to even. `$482E` patches
+   `$443F` to `$60` for this one, which turns `$4428`'s box test into an `RTS`
+   and so places it on the strength of the cell alone; `$485C` puts the `BCC`
+   back.
+2. `$486F` — the main loop, over the same sixteen-by-sixteen strips `$3EAD`
+   uses but walked **downward** for the first band and upward for the second.
+   Each strip is quartered, and a quarter with twenty or more land cells and no
+   lake mark gets a draw against `$6E,X`; winning that picks a random spot in
+   the quarter and tests it with `$4425`.
+3. `$4965` — where all four quarters placed, one more across the whole strip.
+4. `$49A1 JSR $4AAB` — bookkeeping that does not touch the band: it divides the
+   map into regions and fills `$87` onward.
+
+Villages are recorded in high RAM as well as on the band: `$40C8` writes the
+column to `$E800`, half the map row to `$E900` and a byte from `$EA00` — indexed
+by `$69`, which is the count.
 
 ### The water engine: one subsystem, reached from three places
 
