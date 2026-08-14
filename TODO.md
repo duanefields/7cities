@@ -114,6 +114,16 @@ engineering record; this holds the work.
       machine at that instant for a clean plaintext, and the cipher is a fixed
       byte substitution that reproduces `$0800-$8BFF` with **zero errors**.
       `tools/decrypt_game.py` now decrypts the main program with no emulator.
+- [ ] **Build an input-driven oracle before porting game rules.** The World
+      Maker was fast to port because it is a pure function with a perfect diff —
+      seed in, 51,200 bytes out. Every structural correction to the coastline
+      walker came from a diff and not one from reading. Game rules have the
+      opposite shape: legible code, no oracle, because state evolves from player
+      input. The same trick that unblocked terrain should work — run `game` in
+      `sim6502` with `vdrive.py` serving a generated map disk, stub the joystick
+      and keyboard to a scripted input sequence, and diff the state (position,
+      supplies, crew, date, rank) after *n* frames. Probably a day, and it makes
+      everything after it the same capture-port-diff loop.
 - [ ] **Disassemble the decrypted main program.** This is where the game's rules
       live — movement and pace, the Old World and the court, natives and trade,
       scoring — and where the terrain charset generator must be, since the
