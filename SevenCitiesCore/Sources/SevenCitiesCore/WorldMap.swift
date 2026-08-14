@@ -32,6 +32,22 @@ public struct WorldMap: Sendable {
         }
     }
 
+    /// A world the World Maker built.
+    ///
+    /// The pipeline works in nibbles and `Terrain` is that same vocabulary, so
+    /// this is a reinterpretation rather than a translation. The one value that
+    /// cannot appear is `$3` — `$2C14` puts it back to plain as the last thing
+    /// it does — which is why `ship` never turns up in a generated world even
+    /// though the historical map disk carries fourteen of them.
+    public init(_ world: WorldMaker.World) {
+        let rows = world.rows
+        self.width = 256
+        self.height = rows.count
+        self.tiles = rows.flatMap { row in
+            row.map { Terrain(rawValue: $0) ?? .deepWater }
+        }
+    }
+
     public init(width: Int, height: Int, tiles: [Terrain]) {
         precondition(tiles.count == width * height)
         self.width = width

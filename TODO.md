@@ -6,8 +6,13 @@ engineering record; this holds the work.
 
 ## Fidelity gaps — things that are approximations today
 
-- [ ] **Port the real World Maker.** `WorldGenerator` is *a* world generator,
-      not *the* one. Ozark Softscape's runs a plate tectonics model and a
+- [x] ~~**Port the real World Maker.**~~ **Done.** Both bands reproduce the
+      original's byte for byte and the generator ends where the original's ends;
+      `WorldMaker.world(config:seed:)` is the whole thing, about fifty
+      milliseconds in a release build. What follows is the record of how it was
+      read, kept because it is the account of the investigation.
+
+      Original note: `WorldGenerator` is *a* world generator, not *the* one. Ozark Softscape's runs a plate tectonics model and a
       cultural diffusion model in 18 KB of 6502. The pipeline is mapped
       (`$0E20`, phases at `$2AE9`, `$2D23`, `$2E32`, `$3961`, `$3EAD`) and its
       RNG and arithmetic are already ported and verified against the original —
@@ -215,19 +220,19 @@ engineering record; this holds the work.
       each `$0E20` and `$0F47` writes it out at the bottom — so by the time the
       second band is read, the sixteen rows it shares with the first have been
       overwritten by the first band's *finished* terrain.
-- [ ] **Replace `WorldGenerator` in the viewer** with the real pipeline. This is
-      the point of all of it, and everything it needs is now in place:
-      `WorldMaker.world(config:seed:)` goes from a seed to 400 rows of nibbles
-      in about fifty milliseconds, so the viewer can regenerate on a keypress
-      and needs no caching, no progress bar and no background thread.
+- [x] ~~**Replace `WorldGenerator` in the viewer.**~~ **Done, and the
+      placeholder is deleted.** "Generate World" now runs the real pipeline;
+      `--dump ... generated --gen <seed>` renders one headlessly. The
+      configuration is drawn the way `$2146` draws it, a byte over ninety,
+      because the port's seed is the generator's state *after* that choice — so
+      the two are separate inputs rather than one.
 
-      Two things to watch when wiring it. Several routines are rejection
-      samplers with no iteration bound — `$0FF8` redraws until it lands on land,
-      `$3D97` tries up to 256 times a cell — and while they terminate on every
-      seed and configuration measured, "in principle" is doing real work in that
-      sentence; a watchdog is worth having before the viewer regenerates on
-      input. And a debug build is about a hundred and sixty times slower than a
-      release one, so a world takes eight seconds under the debugger.
+      Still worth doing: **a watchdog.** Several routines are rejection samplers
+      with no iteration bound — `$0FF8` redraws until it lands on land, `$3D97`
+      tries up to 256 times a cell, `$4A37` retries until a village fits. They
+      terminate on every seed and configuration measured, but the viewer now
+      generates from a random seed on a menu click, so "measured" is no longer
+      the same as "all of them".
 - [ ] **Re-check `wm_trace.py`'s phase snapshots.** It waits for checkpoints by
       polling `vice_ping` for "paused", which fires for unrelated reasons — the
       same bug that misread three runs of `wm_config.py`. Its snapshots may have

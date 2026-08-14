@@ -150,9 +150,9 @@ public enum LandMassStage {
 
     /// Runs the command-table stage for one seed and configuration.
     ///
-    /// Runs it to the end, for configurations 0 and 2. Configuration 1 throws:
-    /// its command pairs the continent, and the partner is built by a mode of the
-    /// walk that is not ported.
+    /// All three configurations, to the end. `seed` is the generator's state at
+    /// `$212A` — *after* `$2146` has drawn the configuration — which is why the
+    /// two are separate arguments rather than one.
     public static func run(config: Int, seed: UInt16) throws -> Run {
         var rng = WorldMakerRNG(seed: seed)
         var mask = LandMask()

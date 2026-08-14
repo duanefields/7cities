@@ -13,12 +13,14 @@ import UniformTypeIdentifiers
 /// nor the original art ships with the engine.
 public enum MapChoice {
     case historical
-    case generated(seed: UInt16)
+    /// `config` is which of the World Maker's three worlds `$2146` chose.
+    case generated(seed: UInt16, config: Int)
 
     public var title: String {
         switch self {
         case .historical: "Classic (North & South America)"
-        case .generated(let s): "Generated World #\(s)"
+        case .generated(let s, let c):
+            "Generated World — seed $\(String(format: "%04X", s)), world \(c + 1)"
         }
     }
 }
@@ -196,11 +198,22 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
     }
 
     @objc private func generateWorld() {
+        // Two inputs, not one. `seed` is the generator's state where the
+        // land-mass phase picks it up, and the configuration is what `$2146`
+        // chose from a draw *before* that — which the port does not model, so
+        // it is drawn here the same way: a byte over ninety.
         let seed = UInt16.random(in: 1...UInt16.max)
-        var generator = WorldGenerator(seed: seed)
-        generated = generator.generate()
-        mapChoice = .generated(seed: seed)
-        reload()
+        let config = Int(UInt8.random(in: 0...255)) / 90
+        do {
+            let world = try WorldMaker.world(config: config, seed: seed)
+            generated = WorldMap(world)
+            mapChoice = .generated(seed: seed, config: config)
+            reload()
+        } catch {
+            NSSound.beep()
+            FileHandle.standardError.write(
+                Data("could not generate a world: \(error)\n".utf8))
+        }
     }
 
     /// The C64 emits composite video, so every palette is a model of it and

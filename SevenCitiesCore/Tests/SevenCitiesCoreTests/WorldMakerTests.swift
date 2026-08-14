@@ -177,3 +177,28 @@ func worldFromASeed() throws {
     #expect(world.first.terrain != other.first.terrain,
             "two seeds gave the same world")
 }
+
+
+/// The rivers the World Maker draws are made of connection masks, and a mask
+/// that names fewer than two directions would be a river tile that goes
+/// nowhere.
+///
+/// This one outlived the placeholder generator it was written for. It was a
+/// guess about what `5` to `A` meant then; `$329C` has since settled it, and
+/// the test is a better test for being pointed at the real thing.
+@Test("River tiles only ever use valid connection masks")
+func riverTilesAreWellFormed() throws {
+    let world = try WorldMaker.world(config: 0, seed: 31337)
+    let map = WorldMap(world)
+    var rivers = 0
+    for y in 0..<map.height {
+        for x in 0..<map.width {
+            let terrain = map[x, y]
+            guard terrain.isRiver else { continue }
+            rivers += 1
+            #expect(terrain.riverConnections.count >= 2,
+                    "\(terrain) at (\(x),\(y)) connects to fewer than two sides")
+        }
+    }
+    #expect(rivers > 0, "a world should have rivers")
+}

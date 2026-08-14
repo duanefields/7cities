@@ -15,8 +15,10 @@ public enum DumpMode {
         let mapURL = assetDirectory.appendingPathComponent(mapFile)
         let loaded: WorldMap?
         if let seed = generateSeed {
-            var g = WorldGenerator(seed: seed)
-            loaded = g.generate()
+            // Configuration 0 rather than a draw, so a dump of a given seed is
+            // the same picture every time.
+            loaded = (try? WorldMaker.world(config: 0, seed: seed))
+                .map(WorldMap.init)
         } else {
             loaded = try? WorldMap(contentsOf: mapURL)
         }
@@ -29,11 +31,34 @@ public enum DumpMode {
         // Must pass the map position: terrain is drawn per position, and a
         // dump that always used variant 0 verified a path the viewer does not
         // take, which is how a broken detail layer got shipped twice.
+        // `SKTexture.cgImage()` rasterises, and `OriginalTiles` rebuilds the
+        // texture from pixels on every call — so a generated dump asks for a
+        // hundred thousand of them and takes minutes. Memoise.
+        //
+        // The key has to be what the tile *is*, not the texture's identity:
+        // `ObjectIdentifier` is only unique while the object lives, these are
+        // released as soon as the image is taken, and a cache keyed on identity
+        // hands the first tile's image back for everything that lands on the
+        // same freed address. That rendered the whole map as ocean.
+        //
+        // `Tile.pixels(x:y:)` picks its variant from `(x % 4, y % 4)` and
+        // nothing else, so terrain plus that pair names the tile exactly —
+        // sixteen terrains by sixteen positions, two hundred and fifty-six
+        // images at most.
+        struct TileKey: Hashable { let terrain: Terrain, x: Int, y: Int }
+        var images: [TileKey: CGImage?] = [:]
         func texture(_ t: Terrain, _ x: Int = 0, _ y: Int = 0) -> CGImage? {
+            let key = TileKey(terrain: t, x: ((x % 4) + 4) % 4,
+                              y: ((y % 4) + 4) % 4)
+            if let hit = images[key] { return hit }
+            let made: CGImage?
             if style == .original, let tex = originals?.texture(for: t, x: x, y: y) {
-                return tex.cgImage()
+                made = tex.cgImage()
+            } else {
+                made = TileArt.texture(for: t).cgImage()
             }
-            return TileArt.texture(for: t).cgImage()
+            images[key] = made
+            return made
         }
 
         let tile = generateSeed == nil ? 16 : 4
