@@ -8,14 +8,34 @@
    {
     "phase": "islands",
     "sha256": "6a88ffede10e1a3c016f86a52084edabec7eba5520f0c520b5e6fdf0d48df473",
+    "rng": 62780,
+    "band": 0,
     "nibbles": {
      "0": 37518,
      "B": 15730
     }
    },
    {
+    "phase": "afterScatter",
+    "sha256": "1013cf0580f4e41d933184ca189f331b9a7a75389c0b28e826850013c25b5a78",
+    "rng": 59348,
+    "band": 0,
+    "nibbles": {
+     "0": 36632,
+     "1": 644,
+     "2": 212,
+     "3": 51,
+     "B": 15587,
+     "C": 61,
+     "D": 51,
+     "E": 10
+    }
+   },
+   {
     "phase": "spread",
     "sha256": "dc4d4f62629df08edbcb97c2de9d7fca47e11b244a712b46bfed429fd9b56213",
+    "rng": 59348,
+    "band": 0,
     "nibbles": {
      "0": 36632,
      "1": 644,
@@ -30,6 +50,8 @@
    {
     "phase": "terrain",
     "sha256": "8712064ba692acd4a81c4dc0189f33a1a6c67c0a5bfae5dc1070a564433f572b",
+    "rng": 59348,
+    "band": 0,
     "nibbles": {
      "0": 36606,
      "1": 644,
@@ -45,6 +67,8 @@
    {
     "phase": "3961",
     "sha256": "b5897dc26af391ff19ba48d74c6026b921b6e3f189fc30529574671d2d24fba1",
+    "rng": 21482,
+    "band": 0,
     "nibbles": {
      "0": 33410,
      "1": 3770,
@@ -67,6 +91,8 @@
    {
     "phase": "rivers",
     "sha256": "0ded6f986169aaf6389db740befa344c78f143d7c82ae41d2e3a51a47c562d4e",
+    "rng": 2610,
+    "band": 0,
     "nibbles": {
      "0": 33410,
      "1": 3770,
@@ -89,6 +115,8 @@
    {
     "phase": "unspread",
     "sha256": "8f1584ddd6a6bb47026b7af036335c64830392764c13c501b121d2fe6deff084",
+    "rng": 46289,
+    "band": 0,
     "nibbles": {
      "0": 33410,
      "1": 3770,
@@ -111,6 +139,8 @@
    {
     "phase": "villages",
     "sha256": "38c8c7bd4a758d837198bfd2300e89049181b49e18efa402a1ce0e7bced71598",
+    "rng": 46289,
+    "band": 0,
     "nibbles": {
      "0": 33436,
      "1": 3770,
@@ -132,6 +162,8 @@
    {
     "phase": "4CF2",
     "sha256": "d2be31a1574293b2a474266573e92e17d67916ba790073529644f09b3b041e04",
+    "rng": 16072,
+    "band": 0,
     "nibbles": {
      "0": 33435,
      "1": 3770,
@@ -154,6 +186,8 @@
    {
     "phase": "write",
     "sha256": "d2be31a1574293b2a474266573e92e17d67916ba790073529644f09b3b041e04",
+    "rng": 16072,
+    "band": 0,
     "nibbles": {
      "0": 33435,
      "1": 3770,
@@ -178,6 +212,8 @@
    {
     "phase": "islands",
     "sha256": "7131e621249f78082679c86619692be6156ba68003508dc898aaa4930c6642d2",
+    "rng": 16072,
+    "band": 255,
     "nibbles": {
      "0": 35364,
      "1": 423,
@@ -195,8 +231,32 @@
     }
    },
    {
+    "phase": "afterScatter",
+    "sha256": "f1be19ad5e4c23d93371cfb453410517deef9dd60ac46774e2e9e4d5fae1e421",
+    "rng": 63769,
+    "band": 255,
+    "nibbles": {
+     "0": 35165,
+     "1": 563,
+     "2": 69,
+     "3": 20,
+     "4": 2,
+     "5": 33,
+     "7": 6,
+     "8": 17,
+     "9": 7,
+     "B": 16905,
+     "C": 283,
+     "D": 134,
+     "E": 30,
+     "F": 14
+    }
+   },
+   {
     "phase": "spread",
     "sha256": "5cb3f4223dfb544a2576aa14e40d0a43249d83c3319fcd783e1b63a3ecc9420b",
+    "rng": 63769,
+    "band": 255,
     "nibbles": {
      "0": 35165,
      "1": 563,
@@ -217,6 +277,8 @@
    {
     "phase": "terrain",
     "sha256": "80635909014c0bc5c2d907ee858b09db7b4cfeacdb12850f2e5e1555a3f65438",
+    "rng": 63769,
+    "band": 255,
     "nibbles": {
      "0": 35144,
      "1": 563,
@@ -237,6 +299,8 @@
    {
     "phase": "3961",
     "sha256": "88e6872fa7dd5ef7816388821e1a1ac56d4bb02ce21e48c64b00e6e84a63c0ac",
+    "rng": 20416,
+    "band": 255,
     "nibbles": {
      "0": 30785,
      "1": 4827,
@@ -259,6 +323,8 @@
    {
     "phase": "rivers",
     "sha256": "c180b13b3bb09e9f925049ca0efb4b6ee2f1e7d3b0a546a4964f3785fc65ee8a",
+    "rng": 48190,
+    "band": 255,
     "nibbles": {
      "0": 30785,
      "1": 4827,
@@ -281,6 +347,8 @@
    {
     "phase": "unspread",
     "sha256": "7610182bfc2c79c098fc9422606ade2ae1f9ca18426041e5b94fefc93db9b3e2",
+    "rng": 37892,
+    "band": 255,
     "nibbles": {
      "0": 30785,
      "1": 4827,
@@ -303,6 +371,8 @@
    {
     "phase": "villages",
     "sha256": "c15610e80d9f845ff5cff5271c2bde9d5c643c267c264f80224759e65056c59c",
+    "rng": 37892,
+    "band": 255,
     "nibbles": {
      "0": 30806,
      "1": 4827,
@@ -325,6 +395,8 @@
    {
     "phase": "4CF2",
     "sha256": "8220c3ff425eed50013a13286f92cea28a51e3feb5bcf03b205f8a3766615f1c",
+    "rng": 64270,
+    "band": 255,
     "nibbles": {
      "0": 30805,
      "1": 4827,
@@ -347,6 +419,8 @@
    {
     "phase": "write",
     "sha256": "8220c3ff425eed50013a13286f92cea28a51e3feb5bcf03b205f8a3766615f1c",
+    "rng": 64270,
+    "band": 255,
     "nibbles": {
      "0": 30805,
      "1": 4827,

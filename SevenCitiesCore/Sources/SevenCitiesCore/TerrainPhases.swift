@@ -48,6 +48,68 @@ public enum TerrainPhases {
         return Box(left: left, right: right, top: top, bottom: bottom)
     }
 
+    /// Whether swamp is allowed at this row (`$1021`).
+    ///
+    /// `$3E` gates the fourth outcome of ``scatter(at:row:in:rng:)``, and it is a
+    /// **latitude** test: band 0 allows it from row 110 down, band 1 up to row
+    /// 108 — which in map coordinates is rows 110 to 299, the middle of the map.
+    /// The World Maker puts swamp in the tropics and nowhere else.
+    public static func allowsSwamp(bandRow row: UInt8, secondBand: Bool) -> Bool {
+        secondBand ? row < 0x6C : row >= 0x6E
+    }
+
+    /// Scatters terrain over one cell (`$2BEA`).
+    ///
+    /// A draw of four decides: `$0C` forest, `$0D` mountain, `$0E` swamp — and the
+    /// fourth outcome, which arithmetic would make `$0B` plain, is rewritten to
+    /// `$03` instead. Swamp is redrawn rather than taken when the latitude
+    /// forbids it, so the gate costs randomness as well as outcomes.
+    ///
+    /// That `$03` is the same nibble the island marking writes, which is what
+    /// settles what `$03` means: **plain, provisionally**. It marks the ground
+    /// this phase has been over so later phases can tell it apart, and something
+    /// downstream turns it back into terrain — the finished map has none.
+    public static func scatter(at column: UInt8, row: Int, in band: inout TerrainBand,
+                               rng: inout WorldMakerRNG, secondBand: Bool) {
+        var draw: UInt8
+        repeat {
+            draw = rng.nextModulo(4)                        // $2BF3
+        } while draw == 3 && !allowsSwamp(bandRow: UInt8(row), secondBand: secondBand)
+        let nibble = draw &+ 0x0B                           // $2C02
+        band[column, row] = nibble == 0x0B ? 0x03 : nibble  // $2C07
+    }
+
+    /// Scatters terrain around every island in the band (`$28F1`).
+    ///
+    /// The same radius-10 boxes the marking uses, walked first: every cell that is
+    /// **land** — nibble `$3` or above, which at this point means plain — gets a
+    /// coin flip, and half of them go through ``scatter(at:row:in:rng:)``. So by
+    /// the time `$2B67` marks, most of the plain around an island is gone; that is
+    /// why the original marks 165 cells in band 0 where the raw band would give
+    /// 308.
+    public static func scatterAroundIslands(_ islands: [LandMassStage.Island],
+                                            northern: Bool,
+                                            in band: inout TerrainBand,
+                                            rng: inout WorldMakerRNG) {
+        for island in islands where island.southern == !northern {
+            let row = northern ? Int(island.row) : Int(island.row) - 192
+            guard row >= 0 && row < TerrainBand.rows else { continue }
+            let area = box(around: island.column, UInt8(row), radius: 10)
+            for y in Int(area.top)...Int(area.bottom) {
+                var x = area.left
+                while true {
+                    // $2939: below `$3` is water, and water is left alone.
+                    if band[x, y] >= 0x03 && Int8(bitPattern: rng.next()) >= 0 {
+                        scatter(at: x, row: y, in: &band, rng: &rng,
+                                secondBand: !northern)
+                    }
+                    if x == area.right { break }
+                    x &+= 1
+                }
+            }
+        }
+    }
+
     /// Marks the second wave's islands (`$2B67`-`$2BA9`).
     ///
     /// For each island the land-mass phase filed into `$038C` or `$03B4`, every

@@ -2627,11 +2627,30 @@ captures the pipeline phase by phase per band.
 What is not ported is any phase. The first one, `$2AE9`, turned out to be three
 things rather than one, which is worth writing down because the same shape will
 recur: `$28F1` walks the island boxes and rewrites land through `$2BEA` on a coin
-flip per cell; a coin flip at `$2AEC` can send it through a placement search at
-`$2977`; and only then does `$2B67` mark. The marking is transcribed
-(`TerrainPhases.markIslands`) and cannot yet be graded, because its input is
-whatever `$28F1` left — measured, the original marks 165 cells in band 0 where
-the raw band would give 308.
+flip per cell, then runs `$2977`; a coin flip at `$2AEC` can run `$2977` again;
+and only then does `$2B67` mark.
+
+`$2BEA` is small and settles what nibble `$3` means. A draw of four picks `$0C`
+forest, `$0D` mountain or `$0E` swamp — and the fourth outcome, which arithmetic
+would make `$0B` plain, is rewritten to **`$03`**. The same nibble the marking
+writes. So `$03` is *plain, provisionally*: it marks ground this phase has been
+over so later phases can tell it apart, and something downstream turns it back,
+which is why the finished map has none.
+
+`$1021` gates the swamp outcome, and it is a **latitude** test: band 0 allows
+swamp from row 110 down, band 1 up to row 108 — map rows 110 to 299. The World
+Maker puts swamp in the tropics and nowhere else. A forbidden draw is *redrawn*,
+so the gate costs randomness as well as outcomes.
+
+Both are ported (`TerrainPhases.scatter`, `scatterAroundIslands`) and both are
+graded from the generator state the fixture records, because it carries straight
+through from the land-mass phase and the band writer and cannot be derived yet.
+They do not pass, and what is missing is `$2977`: the scatter alone gets 42 cells
+of `$3` against 51, 55 of forest against 61, 46 of mountain against 51 — close —
+but the original's band also holds **644 cells of medium water and 212 of
+shallow**, which nothing in the scatter writes. `$2977` is the coastal shading,
+and it consumes randomness, which is what moves the rest of the counts. It is the
+next thing to port.
 
 ### `$2AE9` reads the island tables
 

@@ -46,10 +46,14 @@ BOX_CASES = 200
 # cells rather than the band isolates the marking from `$28F1`, which has already
 # been over the same band and changed it.
 MARK = 0x2B8A
-PHASES = [(0x2AE9, "islands"), (0x2D23, "spread"), (0x2E32, "terrain"),
+# `$28F1` is the first thing `$2AE9` does and the first that touches the band, so
+# it gets its own boundary.
+PHASES = [(0x2AE9, "islands"), (0x2B42, "afterScatter"), (0x2D23, "spread"), (0x2E32, "terrain"),
           (0x3961, "3961"), (0x3EAD, "rivers"), (0x2D23, "unspread"),
           (0x47DF, "villages"), (0x4CF2, "4CF2"), (0x2C14, "write")]
 ENTRIES = {address for address, _ in PHASES}
+# `$2B42` is inside `$2AE9`, so it must not reset the step list the way `$0E20`
+# does; the index bookkeeping below already handles that.
 
 
 def capture(seed, config, budget):
@@ -72,6 +76,11 @@ def capture(seed, config, budget):
             counts[byte >> 4] += 1
             counts[byte & 15] += 1
         return {"sha256": hashlib.sha256(band).hexdigest(),
+                # The generator carries straight through from the land-mass phase
+                # and the band writer, so a port cannot derive it — a phase can
+                # only be graded from the state it actually started with.
+                "rng": cpu.rd(0xCD) << 8 | cpu.rd(0xCF),
+                "band": cpu.rd(0x10),
                 "nibbles": {f"{k:X}": counts[k] for k in sorted(counts) if counts[k]}}
 
     def hook(pc, op):

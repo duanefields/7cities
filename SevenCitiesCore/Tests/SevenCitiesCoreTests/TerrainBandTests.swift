@@ -22,6 +22,8 @@ private struct Reference: Decodable {
     struct Step: Decodable {
         let phase: String
         let sha256: String
+        let rng: Int
+        let band: Int
         let nibbles: [String: Int]
     }
     let seed: Int
@@ -140,5 +142,43 @@ func islandMarkingMatchesOriginal() throws {
     #expect(after.phase == "spread")
     #expect(sha256(band.storage) == after.sha256,
             "the band after marking differs from the original's")
+}
+
+
+
+/// `$28F1`, the scatter that runs before the marking.
+///
+/// Graded from the generator state the original actually had, because it carries
+/// straight through from the land-mass phase and the band writer and a port cannot
+/// derive it yet.
+@Test("Scattering terrain around the islands matches the original",
+      .disabled("""
+          Needs $2977. The scatter itself is close — 42 cells of $3 against 51, \
+          55 of forest against 61, 46 of mountain against 51 — but the original's \
+          band also holds 644 cells of medium water and 212 of shallow, which \
+          nothing in $28F1's scatter writes. $2977 makes those, and it consumes \
+          randomness on the way, which is what moves the rest. See NOTES.md.
+          """))
+func scatterMatchesOriginal() throws {
+    let url = try #require(
+        Bundle.module.url(forResource: "terrain_reference", withExtension: "json",
+                          subdirectory: "Fixtures")
+            ?? Bundle.module.url(forResource: "terrain_reference", withExtension: "json"))
+    let reference = try JSONDecoder().decode(Reference.self, from: Data(contentsOf: url))
+    let run = try LandMassStage.run(config: reference.config,
+                                    seed: UInt16(reference.seed))
+
+    let steps = try #require(reference.bands.first)
+    let entry = steps[0], after = steps[1]
+    #expect(after.phase == "afterScatter")
+
+    var band = TerrainBand(landMask: run.mask, fromRow: 0)
+    #expect(sha256(band.storage) == entry.sha256)
+
+    var rng = WorldMakerRNG(seed: UInt16(entry.rng))
+    TerrainPhases.scatterAroundIslands(run.islands, northern: true,
+                                       in: &band, rng: &rng)
+    #expect(sha256(band.storage) == after.sha256,
+            "the band after scattering differs from the original's")
 }
 
