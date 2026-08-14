@@ -192,4 +192,145 @@ public struct RiverEngine: Sendable {
         Int(index) < record.count ? record[Int(index)]
                                   : Step(row: 0, column: 0, direction: 0)
     }
+
+    // MARK: - Taking it back
+
+    /// Which way `$33EF` handed control back.
+    public enum Unwind: Sendable {
+        /// `$3450`: the record ran out — there is nothing left of this river.
+        case exhausted
+        /// `$348A`: the erase used up its allowance and stopped somewhere that
+        /// is not open water, so the caller can carry on from there.
+        case stopped
+    }
+
+    /// `$33EF`: walk the record backwards, putting the land back.
+    ///
+    /// A river that cannot finish is not left half-drawn; the engine erases it
+    /// cell by cell, plain or forest on a coin flip, following the record it
+    /// kept on the way out. `allowance` is `$33F0`'s operand — ten from `$38C3`,
+    /// six from `$38F0` — and `stop` is `$4F`, the index the caller marked
+    /// before its last step.
+    ///
+    /// Stepping back over a river mouth takes it off the mouth table as well
+    /// (`$33FE`), which is the only place `$56` ever goes down.
+    mutating func erase(allowance: UInt8, stop: UInt8, in band: inout TerrainBand,
+                        rng: inout WorldMakerRNG) -> Unwind {
+        var remaining = allowance
+        while true {
+            // $33F3: a mouth here is a mouth no longer.
+            if band[column, row] == 0x04 && mouthBytes != 0 {
+                mouthBytes &-= 3
+                if mouths.count * 3 > Int(mouthBytes) {
+                    mouths.removeLast()
+                }
+            }
+            // $3408: plain, or forest on the sign of a draw.
+            band[column, row] = Int8(bitPattern: rng.next()) < 0 ? 0x0C : 0x0B
+            if length != 0 { length &-= 1 }                   // $3441
+
+            // $3447: nothing before this, so there is nothing to go back to.
+            if wrapped != 0 && index == 0 { return .exhausted }
+            if index == stop { return .exhausted }            // $3453
+
+            index = index == 0 ? 0xFA : index &- 1            // $3457
+            let previous = step(at: index)
+            row = Int(previous.row)
+            column = previous.column
+            last = previous.direction
+
+            remaining &-= 1
+            if remaining != 0 { continue }
+            // $347B: out of allowance. Open water underfoot buys one more step,
+            // which is how the erase keeps going until it is clear of the river
+            // it is unwinding.
+            if band[column, row] == 0x04 { remaining = 1; continue }
+            return .stopped
+        }
+    }
+
+    // MARK: - Mouths
+
+    /// `$3531`: find where this river meets the sea, and file it.
+    ///
+    /// Walks fifteen steps back along the record. The cell three steps back is
+    /// the candidate; the four after it must still carry this river's own tile,
+    /// and none of the fifteen may be a `$4` already. Then the candidate's four
+    /// neighbours are counted, and it is a mouth only if **fewer than three** of
+    /// them are river or shallow — the edges of the band counting as if they
+    /// were.
+    ///
+    /// It gives up before it starts unless the river is at least twenty steps
+    /// long and its last tile was a `$5` or an `$8`: a straight run, not a bend.
+    ///
+    /// What it files at `$E2F1` is row, column and the river's length, and it
+    /// puts a `$4` down — the same nibble the shallows use, which is why a mouth
+    /// reads as navigable water rather than as river.
+    mutating func fileMouth(in band: inout TerrainBand, sourcesFull: Bool)
+        -> Bool {
+        guard !sourcesFull else { return false }              // $3534
+        guard length >= 0x14 else { return false }            // $353A
+        guard tile == 0x05 || tile == 0x08 else { return false } // $3540
+
+        var countdown: UInt8 = 0x0F                           // $3548
+        var probe = index                                     // $354C
+        let ceiling = index &+ 1                              // $3553
+        var mouth: Step?
+
+        while true {
+            // $3555: the same two guards the erase stops on.
+            if wrapped != 0 && probe == 0 { return false }
+            if probe == ceiling { return false }              // $355F
+            let candidate = step(at: probe)
+
+            if countdown == 0x0F {
+                // The first look back records nothing at all.
+                _ = candidate                                 // $3569
+            } else if countdown >= 0x0B {
+                if countdown == 0x0D { mouth = candidate }    // $3574, $357F
+                let nibble = band[candidate.column, Int(candidate.row)]
+                if nibble == 0x04 { return false }            // $358A
+                if nibble != tile { return false }            // $358E
+            } else {
+                // $3592: a shallow anywhere further back and this is not a mouth.
+                if band[candidate.column, Int(candidate.row)] == 0x04 {
+                    return false
+                }
+            }
+
+            probe = probe == 0 ? 0xFA : probe &- 1            // $35A1
+            countdown &-= 1
+            if countdown == 0 { break }                       // $35AD
+        }
+
+        guard let mouth else { return false }
+        // $35B1: how many of the four neighbours are river or shallow — nibble
+        // `$4` through `$A`. Running off the band counts as one, which is what
+        // stops a mouth being filed against the edge of the map.
+        var crowded = 0
+        func occupied(_ column: UInt8, _ row: Int) -> Bool {
+            let nibble = band[column, row]
+            return nibble >= 0x04 && nibble < 0x0B
+        }
+        if mouth.column == 0 || occupied(mouth.column &- 1, Int(mouth.row)) {
+            crowded += 1                                      // $35BC
+        }
+        if mouth.column == 0xFF || occupied(mouth.column &+ 1, Int(mouth.row)) {
+            crowded += 1                                      // $35CE
+        }
+        if mouth.row == 0 || occupied(mouth.column, Int(mouth.row) - 1) {
+            crowded += 1                                      // $35E0
+        }
+        if mouth.row >= 0xCE || occupied(mouth.column, Int(mouth.row) + 1) {
+            crowded += 1                                      // $35F6
+        }
+        guard crowded < 3 else { return false }               // $3610
+
+        guard mouthBytes < 0xFB else { return false }         // $3617
+        mouths.append(Mouth(row: mouth.row, column: mouth.column,
+                            length: length))
+        mouthBytes &+= 3
+        band[mouth.column, Int(mouth.row)] = 0x04             // $3636
+        return true
+    }
 }
