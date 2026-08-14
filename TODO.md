@@ -169,10 +169,16 @@ engineering record; this holds the work.
       146/95 with 0/0 for 2 — including the two deductions, which come off the
       run rather than out of the fixture.
 
-      What is left is the placement itself: `$47E1`'s two sites, `$4823`'s
-      single random village, and `$486F`'s walk over the strips. Still unread:
-      `$4AAB`'s region bookkeeping, which does not touch the band, and `$49F2`'s
-      tail.
+      **`$47E1` and `$4823` are ported and exact** — the two sites the mirror
+      chose and the one thrown at random after them, the first three villages
+      on the map, at (126,176), (214,32) and the draw that follows.
+
+      What is left is `$486F`'s walk over the strips, which places the other
+      hundred and twenty-odd, and its helpers: `$42CD` (which picks a village's
+      kind), `$4AAB`'s region bookkeeping, which does not touch the band, and
+      `$49F2`'s tail. The structure is in NOTES.md — sixteen-by-sixteen strips
+      walked downward for the first band and upward for the second, quartered,
+      with a quadrant needing twenty land cells and a draw against `$6E,X`.
 - [ ] **Port `$2C14`, the band writer.** 419 addresses, and it is not only a
       writer: it puts 213 cells down in the first band and 65 in the second.
 - [ ] **Assemble the second band.** Everything above is graded on band 0 only,
