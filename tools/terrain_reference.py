@@ -55,6 +55,13 @@ PHASES = [(0x2AE9, "islands"), (0x2B42, "afterScatter"), (0x2D23, "spread"), (0x
           (0x3961, "3961"), (0x3EAD, "rivers"), (0x2D23, "unspread"),
           (0x47DF, "villages"), (0x4CF2, "4CF2"), (0x2C14, "write")]
 ENTRIES = {address for address, _ in PHASES}
+# Inside `$2E32`, which is the largest phase and too big to port in one go. Its
+# three band sweeps run back to back with no observable boundary between them, so
+# without these a first attempt can only be graded on the phase as a whole — which
+# says nothing about *which* sweep is wrong. `$2F04` is the head of the per-
+# landmass range loop, and records the entry it is about to draw.
+SWEEPS = {0x2E5B: "sweep1", 0x2E84: "sweep2", 0x2ED2: "sweep3"}
+RANGE = 0x2F04
 # `$2B42` is inside `$2AE9`, so it must not reset the step list the way `$0E20`
 # does; the index bookkeeping below already handles that.
 
@@ -72,6 +79,7 @@ def capture(seed, config, budget):
     boxes, box_seen, box_pending = [], set(), []
     marks = [[]]
     tables = []
+    sweeps = []
 
     def snapshot():
         band = bytes(cpu.mem[BASE:BASE + BAND_BYTES])
@@ -103,11 +111,17 @@ def capture(seed, config, budget):
                                 cpu.rd(base + i * 3 + 2)] for i in range(count)])
         if pc == MARK:
             marks[-1].append((cpu.rd(0x27), cpu.rd(0x05)))
+        if pc in SWEEPS and sweeps:
+            sweeps[-1].append({"phase": SWEEPS[pc], **snapshot()})
+        elif pc == RANGE and sweeps:
+            sweeps[-1].append({"phase": "range", "radius": cpu.rd(0x21),
+                               "x": cpu.rd(0x22), "y": cpu.rd(0x23), **snapshot()})
         if pc == PIPELINE:
             if marks[-1]:
                 marks.append([])
             live["steps"] = []
             bands.append(live["steps"])
+            sweeps.append([])
         elif pc in ENTRIES and bands:
             # Which phase this is depends on how many have run for this band,
             # because `$2D23` is two different steps.
@@ -127,7 +141,7 @@ def capture(seed, config, budget):
                "sha256": hashlib.sha256(
                    "\n".join(f"{x},{y}" for x, y in cells).encode()).hexdigest()}
               for cells in marks if cells]
-    return bands, boxes, marked, tables, finished
+    return bands, boxes, marked, tables, sweeps, finished
 
 
 def main():
@@ -138,7 +152,7 @@ def main():
     args = parser.parse_args()
 
     seed = int(args.seed, 0)
-    bands, boxes, marked, tables, finished = capture(seed, args.config, args.budget)
+    bands, boxes, marked, tables, sweeps, finished = capture(seed, args.config, args.budget)
     print(f"seed ${seed:04X} config {args.config}: {len(bands)} bands, "
           f"{'finished' if finished else 'BUDGET EXHAUSTED'}", flush=True)
     print(f"  {len(boxes)} distinct bounding boxes")
@@ -147,13 +161,16 @@ def main():
     for i, steps in enumerate(bands):
         print(f"  band {i}: " + ", ".join(
             f"{s['phase']} {s['sha256'][:8]}" for s in steps))
+    for i, steps in enumerate(sweeps):
+        print(f"  band {i} inside $2E32: {len(steps)} checkpoints, " + ", ".join(
+            f"{s['phase']} {s['sha256'][:8]}" for s in steps[:4]) + " ...")
 
     out = {"description": "The terrain pipeline at $0E20, one entry per phase "
                           "per band. Digests and nibble histograms of the "
                           "26,624-byte band at $5700. No map data.",
            "seed": seed, "config": args.config,
            "bandRows": BAND_ROWS, "bands": bands, "boundingBoxes": boxes,
-           "islandMarks": marked,
+           "islandMarks": marked, "terrainSweeps": sweeps,
            "landmassTables": {"northern": tables[0] if tables else [],
                               "southern": tables[1] if len(tables) > 1 else []}}
     path = f"{FIX}/terrain_reference.json"

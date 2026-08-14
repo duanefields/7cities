@@ -1,0 +1,114 @@
+{
+ "description": "The writes $2E32's range half makes, per landmass and per stage: how many, and the SHA-256 of the sequence. No map data.",
+ "bands": [
+  [
+   {
+    "radius": 70,
+    "x": 167,
+    "y": 152,
+    "writes": 6601,
+    "stages": [
+     {
+      "stage": "spine",
+      "writes": 892,
+      "sha256": "2918a5c3641a2ccca5c12bd5e541347561b537dc63e97b91cc4458f64df1bd84"
+     },
+     {
+      "stage": "spur",
+      "writes": 212,
+      "sha256": "0d77db4f4e1d1a01d4219a44dfa961e46596df37f0db7586434e5d5bcb20cddf"
+     },
+     {
+      "stage": "clearing",
+      "writes": 490,
+      "sha256": "451b685a23692a4d137f3e5525701d39d6f82320252102f61a452ea139cc9057"
+     },
+     {
+      "stage": "sources",
+      "writes": 5007,
+      "sha256": "5da08476bdaaad49d94a7c0baac6ebe2a6851cbcc9a67a4f7abdb3c4094eb15f"
+     }
+    ],
+    "sha256": "c45e53d80d3cd679cc121bd73a18828a1d73e6cf868f2b61980230fb6a1d1fba"
+   },
+   {
+    "radius": 10,
+    "x": 187,
+    "y": 14,
+    "writes": 57,
+    "stages": [
+     {
+      "stage": "arms",
+      "writes": 57,
+      "sha256": "5c82850902b4763808045fd994a8a1e4309f70aa7a6057de6d01f54e73001263"
+     }
+    ],
+    "sha256": "5c82850902b4763808045fd994a8a1e4309f70aa7a6057de6d01f54e73001263"
+   }
+  ],
+  [
+   {
+    "radius": 70,
+    "x": 90,
+    "y": 113,
+    "writes": 2280,
+    "stages": [
+     {
+      "stage": "spine",
+      "writes": 645,
+      "sha256": "ea987ca7ddbfc790f151d2313b69348369d301206ef0306b9b3acc1f5c5ce9d3"
+     },
+     {
+      "stage": "clearing",
+      "writes": 642,
+      "sha256": "353ad1da16347410d1c8232a96f877ad11a0d6a8187268947f2d72899a3f9ba3"
+     },
+     {
+      "stage": "sources",
+      "writes": 993,
+      "sha256": "47c6afa96f59ffb7c00b894fbd9f640108e1655c9a3f48b4a6386db2941e9c90"
+     }
+    ],
+    "sha256": "43618b5c20502a9d6a0b6b610feac441d8138fb5ad555a7c6b159451d442b86b"
+   },
+   {
+    "radius": 70,
+    "x": 167,
+    "y": 15,
+    "writes": 56,
+    "stages": [
+     {
+      "stage": "spine",
+      "writes": 16,
+      "sha256": "f83281c2203a0187ad4b6a4ba56d6b6989d93fd1bc7dd283d2f78783bb1954ed"
+     },
+     {
+      "stage": "spur",
+      "writes": 37,
+      "sha256": "e1cbc4971d77444fe47a271a3b3734312a5649876ceb7d78603fd1b02ffc970b"
+     },
+     {
+      "stage": "clearing",
+      "writes": 3,
+      "sha256": "d6f0893e71842b1e549423beab84d508a448e9b8913e54c59f48c058857fe84f"
+     }
+    ],
+    "sha256": "18caa3c095aeb6d47d4945b5c7b42814d9557a8d52d8812e1e9bf4770a206446"
+   },
+   {
+    "radius": 10,
+    "x": 190,
+    "y": 156,
+    "writes": 50,
+    "stages": [
+     {
+      "stage": "arms",
+      "writes": 50,
+      "sha256": "0efa41b16e1d67816dde4d9f3f123ba5449c95f81390c918361e202d637e8a28"
+     }
+    ],
+    "sha256": "0efa41b16e1d67816dde4d9f3f123ba5449c95f81390c918361e202d637e8a28"
+   }
+  ]
+ ]
+}
