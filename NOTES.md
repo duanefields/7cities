@@ -2922,6 +2922,32 @@ and `$77,X` the column, and the phase walks east from there until `$4428` finds
 somewhere a village will go. So the two sites the land-mass phase picked out are
 the first two villages on the map.
 
+**Where the village budget comes from, which is the part that makes `$47DF`
+portable.** It is not computed in the phase; it is computed during the *mask
+unpack*, two phases earlier, and carried in zero page.
+
+`$0C9B` walks the mask in 8x8 windows, buffering each into `$0200`. `$1047`
+splits a window into four 4x4 quadrants and `$1060` counts the cells of a
+quadrant that are `$0B` or above. A quadrant with **twenty or more** land cells
+increments a sixteen-bit counter — `$70`/`$71` for the northern half of the map,
+`$72`/`$73` for the southern, chosen on `$0C` against `$D0`. So the two counters
+are the number of village-eligible quadrants in each band, and twenty is the
+same threshold `$48EC` applies when it comes to place one.
+
+`$0D5D` then calls `$40FA` once the unpack is done, and that turns the two
+counts into what the phase actually reads: `$6C`/`$6D`, how many villages each
+band may have, `$6E`/`$6F`, the draw a quadrant has to beat, and `$82`/`$83`.
+The arithmetic is a multiply by ten (`$0B83`), a divide (`$0BEE`) and `$0C0C`,
+and the result is complemented at `$4173` — so a band with more eligible ground
+gets more villages *and* an easier draw.
+
+That is the whole dependency chain for `$47DF`, and none of it is in the phase
+itself:
+
+    $0C9B unpack -> $1047/$1060 count eligible quadrants -> $70-$73
+    $0D5D -> $40FA -> $6C/$6D budget, $6E/$6F threshold, $82/$83
+    $0E84 -> $47DF places them
+
 The rest of the phase, read but not ported:
 
 1. `$4823` — one village thrown at random, row in 8 to `$CD` masked to a

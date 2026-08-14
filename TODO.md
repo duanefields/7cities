@@ -150,10 +150,21 @@ engineering record; this holds the work.
       config 0: `$380D` draws 10 rivers inside `$2E32` (16, 36, 339, 259, 10,
       20, 1941, 50, 1715, 678 writes), `$3961` draws 8, `$3EAD` draws 21. A port
       can be checked one river at a time.
-- [ ] **Port `$47DF`, the villages.** 127 writes a band, and it may share the
-      water engine — measure the address overlap before sizing it. Everything
-      before it in the pipeline is now exact, so it can be graded straight away
-      from `pipeline_reference.json`.
+- [ ] **Port `$47DF`, the villages.** 127 writes a band, all of them nibble
+      `$F`, and everything before it in the pipeline is exact — so it can be
+      graded straight off `pipeline_reference.json` the moment it is written.
+
+      **Read it first in NOTES.md.** The phase itself is only half the work; its
+      budget is computed two phases earlier, during the mask unpack, and carried
+      in zero page. The chain is `$0C9B` -> `$1047`/`$1060` counting
+      village-eligible quadrants into `$70`-`$73`, then `$0D5D` -> `$40FA`
+      turning those into `$6C`/`$6D` (how many villages a band may have),
+      `$6E`/`$6F` (the draw a quadrant must beat) and `$82`/`$83`. None of that
+      is in `$47DF`, and a port that starts at `$47DF` will not find it.
+
+      Still unread: `$0BEE` and `$0C0C`, the divide and whatever `$40FA` does
+      with it; `$4AAB`'s region bookkeeping, which does not touch the band; and
+      `$49F2`'s tail.
 - [ ] **Port `$2C14`, the band writer.** 419 addresses, and it is not only a
       writer: it puts 213 cells down in the first band and 65 in the second.
 - [ ] **Assemble the second band.** Everything above is graded on band 0 only,
