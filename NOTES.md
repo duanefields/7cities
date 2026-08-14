@@ -2576,10 +2576,25 @@ Two things that came out of it. The nibbles on that disk are only `0` and `$B` �
 — so the band writer runs *before* terrain and the terrain phases rewrite what it laid down. And the
 land count on the disk is 31,712, the port's figure for the same seed.
 
-What is not yet established is how long the terrain phases take. 900 million interpreted instructions
-took 820 seconds and left the generator still inside `$0B16`, so either it needs several times that
-or it is looping on something the stubs get wrong. That is the next thing to find out, and it is a
-question about the harness rather than about the port.
+**The whole World Maker now runs.** It was looping, and the reason was a hole in the drive: under
+`TALK` it served the error status whatever channel was asked for, so every `U1` read came back as 256
+bytes of `00, OK,00,00`. A drive that only ever gets asked for status looks exactly like that and
+passes every earlier test, because the land-mass phase only ever *writes*. Serving the channel's
+buffer instead — from wherever `B-P` left the pointer — was the whole fix.
+
+Telling a loop from slow progress is what found it. Running in 50-million-instruction chunks and
+watching the set of distinct program counters: 2,598 in the first chunk and **not one new address**
+in the next two, with `$0B16` called 22,500 times per chunk. After the fix the set kept growing —
+2,600, 3,682, 4,460, 4,720 — which is what real progress through new code looks like.
+
+From a seed to a finished map disk is **320 seconds** and 414 sector writes. `$0E1C` is `JMP $0E1C`;
+the World Maker prints its last message, closes the drive and spins there, and that is what finished
+looks like. The disk that comes out has the full terrain set on it — deep, medium and shallow water,
+all seven river tiles, plain, forest, mountain, swamp and village — and `map_preview` renders it
+without complaint.
+
+So every phase after the land mass is now traceable the same way the land-mass phase was: capture
+from the interpreter, port, diff. That was the whole point of building the drive.
 
 ### Where the land-mass phase stands
 

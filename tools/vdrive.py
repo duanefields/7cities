@@ -84,6 +84,7 @@ class VirtualDrive:
         self.pointers = {}          # channel -> offset within the buffer
         self.channel = None         # the secondary address in force
         self.listening = False
+        self.talking = False
         self.command = bytearray()  # what has been sent to channel 15
         self.pending = []           # what a TALK will hand back
         self.unhandled = []
@@ -97,18 +98,29 @@ class VirtualDrive:
         elif value == 0x5F:                     # UNTALK
             self.channel = None
         elif 0x20 <= value < 0x40:              # LISTEN
-            self.listening = True
+            self.listening, self.talking = True, False
         elif 0x40 <= value < 0x60:              # TALK
-            self.listening = False
-            if not self.pending:
-                self.pending = list(STATUS.encode())
+            self.listening, self.talking = False, True
 
     def _secondary(self, value):
         self.channel = value & 0x0F
+        if not self.talking:
+            if self.channel == 15:
+                self.command = bytearray()
+            else:
+                self.buffers.setdefault(self.channel, bytearray(256))
+            return
+        # Under TALK the secondary address chooses what comes back: the error
+        # channel on 15, and otherwise the channel's buffer from wherever `B-P`
+        # left the pointer. Serving the status for both — which is what a drive
+        # that only ever gets asked for status looks like — makes every `U1` read
+        # 256 bytes of "00, OK,00,00" and leaves whatever consumes the block
+        # spinning on data that never arrives.
         if self.channel == 15:
-            self.command = bytearray()
-        elif self.listening:
-            self.buffers.setdefault(self.channel, bytearray(256))
+            self.pending = list(STATUS.encode())
+        else:
+            buffer = self.buffers.setdefault(self.channel, bytearray(256))
+            self.pending = list(buffer[self.pointers.get(self.channel, 0):])
 
     def _data(self, value):
         if self.channel == 15:

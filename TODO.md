@@ -70,11 +70,15 @@ engineering record; this holds the work.
       The World Maker now runs past the land-mass phase and writes a real map
       disk — 200 sectors, tracks 22 to 34 — whose land and water match the Swift
       port's mask exactly. `tools/wm_disk.py` drives it.
-- [ ] **Find out why the terrain phases do not finish.** 900 million interpreted
-      instructions (820s) leave the generator still inside `$0B16`. Either the
-      phases need several times that, or one of `vdrive.py`'s stubs has it in a
-      loop. Instrument which phase entries it reaches and how the distinct-PC set
-      grows over time before assuming either.
+- [x] ~~**Find out why the terrain phases do not finish.**~~ **Fixed.** The drive
+      served the error status for every `TALK`, so `U1` reads came back as 256
+      bytes of `00, OK,00,00`. Serving the channel's buffer instead finishes the
+      whole World Maker in 320 seconds — 414 sector writes, terrain, rivers and
+      villages. `tools/wm_disk.py --seed --config --out`.
+- [ ] **Port the terrain phases.** Now unblocked, and the same loop applies as
+      for the land mass: capture from the interpreter, port, diff. `$2CD3` and
+      `$0FAE`/`$0FC3`/`$0FEA` dominate the profile; `$3688` and `$48DA` appear
+      later. Start by identifying which phase writes which nibbles.
 - [ ] **Confirm the band structure.** The finished map is assembled on disk —
       51,200 bytes of nibbles will not fit in a C64 — and `$2C14` bounds its
       row counter at 208, which is very likely the band height. Still unknown:
