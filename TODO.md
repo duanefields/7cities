@@ -162,15 +162,14 @@ engineering record; this holds the work.
       `$6E`/`$6F` (the draw a quadrant must beat) and `$82`/`$83`. None of that
       is in `$47DF`, and a port that starts at `$47DF` will not find it.
 
-      **The numbers to hit are measured and in NOTES.md** — seed `$1234`
-      configuration 0 gives 240 northern eligible quadrants and 246 southern,
-      and `$40FA` turns those into budgets of 121 and 125 with thresholds of
-      127 and 127. Port the counter first and check it against 240/246 before
-      touching `$47DF` itself; it needs nothing but the mask.
+      **The counter is ported and exact** for all three configurations —
+      `VillageBudget.eligibleQuadrants` reproduces 240/246, 84/361 and 171/92.
+      `$40FA` is read and written up in NOTES.md but not ported; the one thing
+      still missing for it is `$A8`/`$A9`, which `$41BB` subtracts along with
+      the island counts and which nothing has identified yet.
 
-      Still unread: `$0BEE` and `$0C0C`, the divide and whatever `$40FA` does
-      with it; `$4AAB`'s region bookkeeping, which does not touch the band; and
-      `$49F2`'s tail.
+      Still unread: `$4AAB`'s region bookkeeping, which does not touch the band,
+      and `$49F2`'s tail.
 - [ ] **Port `$2C14`, the band writer.** 419 addresses, and it is not only a
       writer: it puts 213 cells down in the first band and 65 in the second.
 - [ ] **Assemble the second band.** Everything above is graded on band 0 only,

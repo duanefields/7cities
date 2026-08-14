@@ -2959,11 +2959,34 @@ listing; the buffer is rolling and the self-modified `ASL abs,X` in the unpack
 makes it hard to read directly.
 
 `$0D5D` then calls `$40FA` once the unpack is done, and that turns the two
-counts into what the phase actually reads: `$6C`/`$6D`, how many villages each
-band may have, `$6E`/`$6F`, the draw a quadrant has to beat, and `$82`/`$83`.
-The arithmetic is a multiply by ten (`$0B83`), a divide (`$0BEE`) and `$0C0C`,
-and the result is complemented at `$4173` — so a band with more eligible ground
-gets more villages *and* an easier draw.
+counts into what the phase actually reads. Per band, with `$27` running 1 then 0
+so the southern band is done first:
+
+1. `$1B` = round(count x 10 / total). **Rounded**, not truncated — `$0BEE` and
+   `$0C0C` both compare the remainder against half the divisor and carry. That
+   matters: configuration 0's two bands are 4.94 and 5.06 tenths and both come
+   out as 5.
+2. `$82,X` = min(2 x `$1B`, 20), and `$41DE` then overwrites `$83` with
+   `20 - $82`, so the two always sum to twenty.
+3. `$58,X` = round(`$1B` x 255 / 10), which is the band's village budget. If
+   that is *more* than the band has eligible quadrants, `$4151` gives up and the
+   threshold becomes zero; otherwise `$4155` recomputes against the count itself.
+   Either way the result is complemented at `$4173` into `$6E,X`, so a bigger
+   number is an easier draw.
+4. `$419C` caps `$6C + $6D` at 255 by decrementing whichever is larger until it
+   fits — configuration 0 computes 128 for each band and one of them loses a
+   village to the cap.
+5. `$41BB` subtracts `$67`/`$68` plus `$A8`/`$A9` from the two, taking any
+   shortfall on the southern band out of the northern. That is what turns
+   configuration 0's 127 and 128 into the 121 and 125 the phase starts with.
+
+**Measured, seed `$1234`:**
+
+| Config | North | South | Villages | Threshold |
+| -----: | ----: | ----: | :------- | :-------- |
+| 0      |   240 |   246 | 121, 125 | 127, 127  |
+| 1      |    84 |   361 | 46, 202  | 102, 102  |
+| 2      |   171 |    92 | 146, 95  | 0, 0      |
 
 That is the whole dependency chain for `$47DF`, and none of it is in the phase
 itself:

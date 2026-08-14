@@ -1,0 +1,62 @@
+{
+ "description": "What $0C9B's quadrant count and $40FA's arithmetic leave in zero page for $47DF to read. Counts only. No map data.",
+ "runs": [
+  {
+   "seed": 4660,
+   "config": 0,
+   "quadrantsEvaluated": 1600,
+   "northEligible": 240,
+   "southEligible": 246,
+   "villages": [
+    121,
+    125
+   ],
+   "threshold": [
+    127,
+    127
+   ],
+   "82": [
+    10,
+    10
+   ]
+  },
+  {
+   "seed": 4660,
+   "config": 1,
+   "quadrantsEvaluated": 1600,
+   "northEligible": 84,
+   "southEligible": 361,
+   "villages": [
+    46,
+    202
+   ],
+   "threshold": [
+    102,
+    102
+   ],
+   "82": [
+    4,
+    16
+   ]
+  },
+  {
+   "seed": 4660,
+   "config": 2,
+   "quadrantsEvaluated": 1600,
+   "northEligible": 171,
+   "southEligible": 92,
+   "villages": [
+    146,
+    95
+   ],
+   "threshold": [
+    0,
+    0
+   ],
+   "82": [
+    14,
+    6
+   ]
+  }
+ ]
+}
