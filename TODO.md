@@ -94,12 +94,6 @@ engineering record; this holds the work.
       also uses. 5,007 of the first landmass's 6,601 writes. Porting it is
       porting the river engine, so do `$3EAD` and this together.
 
-      Not yet gradeable: `$2F0B`, the small-landmass drawer. It is transcribed
-      and it is the only landmass drawer in bands where every landmass is small,
-      but every instance in the captured run is drawn *after* a `$380D`, so
-      nothing in the port can reach the state it starts from. It gets graded the
-      moment `$380D` does.
-
       **Sizing**, measured as distinct instruction addresses actually executed,
       against the land-mass phase's 2,276 as the yardstick: `$2AE9` 658,
       `$2D23` 192, `$2E32` 1,750, `$3961` 1,459, `$3EAD` 1,635, `$47DF` 1,092,
@@ -129,6 +123,35 @@ engineering record; this holds the work.
       *do* overwrite the 1-bit mask at `$5700` in place, and the bands run top
       down. Verified by unpacking the port's own mask and matching the
       original's band digest exactly.
+- [ ] **Port the water engine.** The next thing, and the biggest. `$380D`,
+      `$3961` and `$3EAD` are three entries into one walker; `$32CC` tells it
+      which by writing the caller's two addresses into the operands of `$3450`
+      and `$348A`. NOTES.md has the shape. Ported so far, in `RiverEngine`: the
+      routing tables at `$329C`, `$333C`'s chooser, `$33B7`'s aim, `$3300`'s
+      recorded step and `$363B`'s straight run — the forward half of the walk.
+
+      Still to read and port: `$33EF`, which walks the record *backwards*
+      overwriting cells with plain and forest, so a river that cannot finish is
+      erased rather than left; `$348D`, which asks whether a cell is already in
+      the record; `$34F3`, the lake-mark test; `$3531`, which finds the river
+      mouth and files it at `$E2F1`; and the three entries themselves, including
+      `$36CC`, `$3E53`, `$42C6` and `$4006`/`$4014`, which are not read at all.
+
+      **Grade it with `tools/pipeline_trace.py`**, which records every write of
+      every phase tagged with the river that made it. Band 0 of seed `$1234`
+      config 0: `$380D` draws 10 rivers inside `$2E32` (16, 36, 339, 259, 10,
+      20, 1941, 50, 1715, 678 writes), `$3961` draws 8, `$3EAD` draws 21. A port
+      can be checked one river at a time.
+- [ ] **Port `$47DF`, the villages.** 127 writes a band, and it may share the
+      water engine — measure the address overlap before sizing it.
+- [ ] **Port `$2C14`, the band writer.** 419 addresses, and it is not only a
+      writer: it puts 213 cells down in the first band and 65 in the second.
+- [ ] **Assemble the second band.** Everything above is graded on band 0 only,
+      because band 1 starts at row 192 with sixteen rows of terrain band 0
+      generated and cannot be built until `$2C14` is. That is the last thing
+      between a phase-by-phase port and a whole map.
+- [ ] **Replace `WorldGenerator` in the viewer** with the real pipeline. This is
+      the point of all of it.
 - [ ] **Re-check `wm_trace.py`'s phase snapshots.** It waits for checkpoints by
       polling `vice_ping` for "paused", which fires for unrelated reasons — the
       same bug that misread three runs of `wm_config.py`. Its snapshots may have
