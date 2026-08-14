@@ -2624,6 +2624,17 @@ had at `$2AE9`'s entry. `$2A45`'s bounding box is ported and graded against ever
 distinct box a whole run computes, 200 of them. `tools/terrain_reference.py`
 captures the pipeline phase by phase per band.
 
+**Two grading methods, and the second one had to be built.** A phase that leaves
+the band in a state a port can reach is graded on the band's digest, and that
+covers `$2AE9`, `$2D23` and all three of `$2E32`'s sweeps. A phase that does not
+cannot be — `$2E32` draws each landmass in four stages and the port has three of
+them, so from the first landmass onward the two bands legitimately differ and a
+digest of either says nothing. `tools/range_trace.py` records every write the
+original makes through `$0FD3`, tagged with the stage that made it;
+`TerrainBand.journal` records the port's; and the two are compared stage by
+stage. `tools/range_diff.py` prints the first cell they disagree on. That is what
+made a 1,750-address phase portable in pieces instead of all at once.
+
 What is not ported is any phase. The first one, `$2AE9`, turned out to be three
 things rather than one, which is worth writing down because the same shape will
 recur: `$28F1` walks the island boxes and rewrites land through `$2BEA` on a coin
@@ -2720,18 +2731,63 @@ are now checked against a capture:
   exactly as they were filed — which is what made two of five entries look
   untransformed and briefly looked like a bug in the arithmetic.
 
-**`$2E32`, the terrain generator, is read but not ported.** It is a series of full
-band sweeps, and the first three are: every plain cell through `$2C3A`; every
-cell holding `4` or `5` through `$2CDB`; and then plain to forest on a draw
-against a threshold — `$96` for band 0, `$36` for band 1. The row each sweep
-starts at is `0` for band 0 and `$10` or `$0E` for band 1, which is the sixteen-row
-overlap being skipped rather than done twice. More sweeps follow `$2EBC`, and from `$2ED2` it walks the **landmass** tables at
-`$0300`/`$033C` — three-byte `(row, column, radius)` entries — drawing mountain
-ranges of `random(2 * radius) + 15` cells for anything smaller than a continent.
-Those tables are now ported and exact, so what remains is `$2E32` itself. Its
-first sweep opens a chain that is not read yet: `$2C3A` walks the neighbours of
-every plain cell through `$2D96` and `$2D9E`, which test for water and go on to
-`$2CAF` and `$2CC0`. At 1,750 addresses it is the biggest phase in the pipeline.
+**`$2E32`, the terrain generator, is ported except for its last stage.** At 1,750
+addresses it is the biggest phase in the pipeline, and it comes apart into two
+halves that do not depend on each other.
+
+The first half is three sweeps of the whole band, each a plain nested loop over
+208 rows and 256 columns:
+
+| Sweep   | On                | Does                                                    |
+| :------ | :---------------- | :------------------------------------------------------ |
+| `$2E3E` | every plain cell  | `$2C3A` shallows the water around it: `$4` in a cross five rows tall and three columns wide, and `$5` — on a draw under `$64` — in a plus inside that |
+| `$2E63` | every `4` or `5`  | `$2CDB` turns it into `$1` or `$2` and drags up to six more `$1` out to sea each way, stopping at the first cell that is not deep water |
+| `$2E92` | every plain cell  | forest, on a draw against a threshold that moves with latitude |
+
+The threshold is the interesting one. The first band starts at `$96` and loses
+one every even row; from row 202 it gains again. The second starts at `$36` and
+gains one every even row all the way. So the map is forested at both poles and
+bare across the middle, and the whole of that comes out of four constants and an
+`LSR` on the row counter.
+
+The rows they start at differ, and not consistently: `0` for the first band, and
+`$10`, `$0E`, `$10` for the second. The overlap is skipped by the first and third
+sweeps and swept twice by the second — two rows of the seam get their shelves
+laid over again, and that is in the finished map.
+
+The second half, from `$2ED2`, walks the landmass tables at `$0300`/`$033C` and
+draws a range through each. **The radius picks between two completely different
+drawers**, at `$46`:
+
+- Below `$46`, `$2F0B` throws two arms of `random(2 x radius) + 15` mountain
+  cells into two different quadrants, and a third of `random(2 x radius) + 20`
+  swamp cells where the latitude allows swamp at all. Nothing walks — every cell
+  is thrown independently through `$0FF8`, which rejects anything landing on
+  water and redraws. So a small island's mountains are a blotch.
+- At `$46` and above, `$2F8C` follows the **west coast** down. Each row it finds
+  where the land begins, steps inland by a drifting amount, and runs east —
+  never past the landmass center, so the spine only ever occupies the western
+  half. `$306C` is what makes it a range rather than a stack of bars: after each
+  row it looks along the row above for mountain further east than it reached, and
+  closes a gap of five or more columns by halves.
+
+Then `$3134` adds a second range east of the spine on a coin flip, and `$31E6`
+runs back down the middle turning forest into plain on a draw that widens toward
+both ends of the range — **treeline, and the only thing in the World Maker that
+takes terrain away rather than putting it down**.
+
+Two things a port has to get right or it desynchronizes silently. `$0B16` is a
+scattered draw — twelve register advances summed, centered, halved and scaled —
+and it is what gives the walkers a wandering line rather than a fraying one. And
+`$328A` reads `$03` off the zero page instead of the value `$0B16` returned,
+because the return is clamped at zero and `$03` still holds the signed step; that
+is the only reason a run drifts west as well as east.
+
+What is left is `$380D`, and it is not really part of this phase: it picks a spot
+in the middle of the spine, checks it clear of the lake marks `$2D23` laid, and
+then calls `$32CC` and `$4006` — the river engine, which `$3EAD` also uses. It
+accounts for 5,007 of the 6,601 writes the first landmass takes. So it lands with
+the rivers rather than here.
 
 ### `$2AE9` reads the island tables
 

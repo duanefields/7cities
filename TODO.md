@@ -81,12 +81,24 @@ engineering record; this holds the work.
       at `$0E20` runs once per 208-row band and is mapped in NOTES.md — `$2AE9`
       water depth, `$2E32` terrain, `$3EAD` rivers, `$47DF` villages, `$2D23` a
       parameterized spread run twice, `$2C14` the band writer. Start with
-      `$2AE9`. Started: `TerrainBand` reproduces band 0 exactly, `$2A45`'s
-      bounding box is graded against 200 captured cases, and `markIslands` is
-      transcribed, and so are `$28F1`'s scatter and `$2BEA`. Blocked on
-      **`$2977`**, the coastal shading — it writes the medium and shallow water,
-      644 and 212 cells of it in band 0, and consumes randomness that moves
-      everything after. Port that and both disabled tests should come back.
+      `$2AE9`. **Done so far:** `$2AE9` and `$2D23` are exact against the band
+      digest at the next phase's entry; the landmass tables and `$1D42`'s fixup
+      of them are exact; `$0B16`'s scattered draw is exact across 400 real calls,
+      value and generator state both. `$2E32` is exact except for `$380D` — its
+      three band sweeps against the band digest, and `$2F8C`, `$3134` and `$31E6`
+      against the writes the original made, 892, 212 and 490 of them.
+
+      **What is left in `$2E32` is `$380D`, and it belongs with the rivers.** It
+      picks a spot in the middle of the mountain spine, checks it clear of the
+      lake marks, and then calls `$32CC` and `$4006` — the river engine `$3EAD`
+      also uses. 5,007 of the first landmass's 6,601 writes. Porting it is
+      porting the river engine, so do `$3EAD` and this together.
+
+      Not yet gradeable: `$2F0B`, the small-landmass drawer. It is transcribed
+      and it is the only landmass drawer in bands where every landmass is small,
+      but every instance in the captured run is drawn *after* a `$380D`, so
+      nothing in the port can reach the state it starts from. It gets graded the
+      moment `$380D` does.
 
       **Sizing**, measured as distinct instruction addresses actually executed,
       against the land-mass phase's 2,276 as the yardstick: `$2AE9` 658,
@@ -98,6 +110,10 @@ engineering record; this holds the work.
       this is days rather than a day, and `$2E32`, `$3961` and `$3EAD` are the
       bulk of it. Every phase read so far has come in bigger than it looked, so
       treat the numbers as a floor.
+
+      One correction to that, after `$2E32`: the phases are not as independent as
+      the sizing implies. `$380D` sits inside `$2E32` and is river code, so the
+      1,750 and the 1,635 overlap. Expect the same of `$3961`.
 - [x] ~~**Confirm the band structure.**~~ **Done.** 208 rows, and two bands
       cover the map: rows 0-207 and 192-399, overlapping by sixteen. The nibbles
       *do* overwrite the 1-bit mask at `$5700` in place, and the bands run top

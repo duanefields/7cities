@@ -28,6 +28,19 @@ public struct TerrainBand: Sendable, Equatable {
 
     private var bytes: [UInt8]
 
+    /// One cell written, for the diagnostic journal below.
+    public struct Write: Sendable, Equatable {
+        public let x: UInt8, y: Int, nibble: UInt8
+    }
+
+    /// Every write in order, when it is switched on.
+    ///
+    /// The original funnels all of them through `$0FD3`, and `tools/range_trace.py`
+    /// records the sequence off the interpreter — so a port that disagrees can be
+    /// diffed write by write instead of being told only that a digest is wrong.
+    /// It is `nil` unless a diagnostic asks for it.
+    public var journal: [Write]?
+
     public init() {
         bytes = [UInt8](repeating: 0, count: Self.byteCount)
     }
@@ -76,6 +89,7 @@ public struct TerrainBand: Sendable, Equatable {
             let (index, high) = Self.address(x: x, y: y)
             bytes[index] = high ? (bytes[index] & 0x0F) | (newValue << 4)
                                 : (bytes[index] & 0xF0) | (newValue & 0x0F)
+            journal?.append(Write(x: x, y: y, nibble: newValue))
         }
     }
 

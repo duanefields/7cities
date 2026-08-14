@@ -225,3 +225,55 @@ func landmassTablesMatchOriginal() throws {
     #expect(rendered(true) == reference.landmassTables.southern,
             "southern table: \(rendered(true)) against \(reference.landmassTables.southern)")
 }
+
+/// The three band sweeps at the head of `$2E32`, one checkpoint each.
+///
+/// `$2E32` is the largest phase in the pipeline and there is no observable
+/// boundary between its sweeps, so the fixture records the band and the generator
+/// state at `$2E5B`, `$2E84` and `$2ED2` — the three points where one sweep hands
+/// over to the next. Grading them separately is the difference between "the phase
+/// is wrong" and knowing which sweep is wrong.
+///
+/// Band 0 only, for the same reason ``firstBandMatchesOriginal()`` is: the second
+/// band's input is not a function of the mask.
+@Test("The terrain generator's band sweeps match the original's")
+func terrainSweepsMatchOriginal() throws {
+    struct Sweeps: Decodable {
+        struct Step: Decodable { let phase: String; let sha256: String; let rng: Int }
+        let seed: Int, config: Int
+        let bands: [[Reference.Step]]
+        let terrainSweeps: [[Step]]
+    }
+    let url = try #require(
+        Bundle.module.url(forResource: "terrain_reference", withExtension: "json",
+                          subdirectory: "Fixtures")
+            ?? Bundle.module.url(forResource: "terrain_reference", withExtension: "json"))
+    let reference = try JSONDecoder().decode(Sweeps.self, from: Data(contentsOf: url))
+    let run = try LandMassStage.run(config: reference.config,
+                                    seed: UInt16(reference.seed))
+
+    // Up to the head of $2E32, which the phase tests above already pin down.
+    let steps = try #require(reference.bands.first)
+    var band = TerrainBand(landMask: run.mask, fromRow: 0)
+    var rng = WorldMakerRNG(seed: UInt16(steps[0].rng))
+    TerrainPhases.islands(run.islands, northern: true, in: &band, rng: &rng)
+    TerrainPhases.spread(run.satellites, northern: true, marking: true, in: &band)
+    try #require(sha256(band.storage) == steps[3].sha256)
+
+    let sweeps = try #require(reference.terrainSweeps.first)
+    func check(_ index: Int, _ name: String) {
+        #expect(sweeps[index].phase == name, "the sweep order moved")
+        #expect(sha256(band.storage) == sweeps[index].sha256,
+                "the band after \(name) differs from the original's")
+        let reached = String(format: "%04X", rng.state)
+        let wanted = String(format: "%04X", sweeps[index].rng)
+        #expect(Int(rng.state) == sweeps[index].rng,
+                "the generator after \(name) is at \(reached), not \(wanted)")
+    }
+    TerrainPhases.coastSweep(in: &band, rng: &rng, secondBand: false)
+    check(0, "sweep1")
+    TerrainPhases.shelfSweep(in: &band, secondBand: false)
+    check(1, "sweep2")
+    TerrainPhases.forestSweep(in: &band, rng: &rng, secondBand: false)
+    check(2, "sweep3")
+}

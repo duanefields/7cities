@@ -156,4 +156,43 @@ extension WorldMakerRNG {
             if value >= lower && value < upper { return value }
         }
     }
+
+    /// A value scattered around `mean` (`$0B16`).
+    ///
+    /// Twelve draws summed, centered, halved, scaled by `spread` and added to the
+    /// mean — the central-limit trick, so the result is bell-shaped rather than
+    /// flat. That is what gives the mountain walkers their wandering line: a
+    /// uniform step would fray, and this one drifts.
+    ///
+    /// Two details a port has to keep. It costs **twelve** register advances, not
+    /// one, which matters everywhere the sequence is graded. And the clamp at the
+    /// end is on the *sign bit of a byte*, so anything from `$80` up comes back as
+    /// zero — a mean above 127 always does, and every caller here stays well
+    /// below that.
+    ///
+    /// A spread of zero returns the mean without drawing at all (`$0B18`).
+    ///
+    /// `offset` is the routine's other output, and it is not a tidy one: `$03`
+    /// holds the high byte of the scaled draw, *before* the clamp, and `$328A`
+    /// reads it directly off the zero page to recover a signed step the clamped
+    /// return value has already thrown away. Callers that only want the value
+    /// ignore it. A spread of zero leaves it stale in the original; here it is
+    /// zero, and no caller with a spread of zero reads it.
+    public mutating func nextScattered(around mean: UInt8, spread: UInt8)
+        -> (value: UInt8, offset: UInt8) {
+        guard spread != 0 else { return (mean, 0) }
+        var sum = 0
+        for _ in 0..<12 { sum += Int(next()) }
+        // $0B5D: less 1536, then an arithmetic shift right — the sign is carried
+        // in by $0B6A's ASL of the high byte.
+        let centered = (sum - 1536) >> 1
+        // $0B83 is a 16-bit multiply and only the low word is kept, so the
+        // two's-complement multiplicand needs no sign handling.
+        let product = (centered * Int(spread)) & 0xFFFF
+        // $0B79: the +$80 is the rounding, and its carry joins the high byte.
+        let carry = (product & 0xFF) + 0x80 > 0xFF ? 1 : 0
+        let value = (Int(mean) + (product >> 8) + carry) & 0xFF
+        return (value < 0x80 ? UInt8(value) : 0,          // $0B7E
+                UInt8(product >> 8))
+    }
 }
