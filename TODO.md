@@ -150,7 +150,7 @@ engineering record; this holds the work.
       config 0: `$380D` draws 10 rivers inside `$2E32` (16, 36, 339, 259, 10,
       20, 1941, 50, 1715, 678 writes), `$3961` draws 8, `$3EAD` draws 21. A port
       can be checked one river at a time.
-- [ ] **Port `$47DF`, the villages.** 127 writes a band, all of them nibble
+- [x] ~~**Port `$47DF`, the villages.**~~ 127 writes a band, all of them nibble
       `$F`, and everything before it in the pipeline is exact — so it can be
       graded straight off `pipeline_reference.json` the moment it is written.
 

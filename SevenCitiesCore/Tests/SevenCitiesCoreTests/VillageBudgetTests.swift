@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import Testing
 
@@ -79,13 +80,21 @@ func eligibleQuadrantsMatchOriginal() throws {
     }
 }
 
-/// `$47E1` and `$4823`: the two sites the mirror chose, and the one thrown at
-/// random after them.
+/// The whole of `$47DF`, graded on the cells it puts down and on where it leaves
+/// the generator.
 ///
-/// The first three villages on the map, and the only part of `$47DF` ported so
-/// far — `$486F`'s walk over the strips places the other hundred and twenty-odd.
-@Test("The first villages go where the original put them")
-func firstVillagesMatchOriginal() throws {
+/// Four sections, and they are not alike: the two sites `$44EF` chose, one
+/// village thrown at random, `$486F`'s walk over the sixteen-by-sixteen strips,
+/// and `$49F2`'s pass over the landmass and island tables afterwards. Between
+/// them they place 127 villages in the first band.
+private func villageDigest(_ writes: ArraySlice<TerrainBand.Write>) -> String {
+    let text = writes.map { "\($0.x),\($0.y),\($0.nibble)" }.joined(separator: "\n")
+    return SHA256.hash(data: Data(text.utf8))
+        .map { String(format: "%02x", $0) }.joined()
+}
+
+@Test("The villages go where the original put them")
+func villagesMatchOriginal() throws {
     struct Reference: Decodable {
         struct Run: Decodable {
             let seed: Int, config: Int
@@ -94,7 +103,11 @@ func firstVillagesMatchOriginal() throws {
         let runs: [Run]
     }
     struct Pipeline: Decodable {
-        struct Phase: Decodable { let phase: String; let rng: Int }
+        struct Mark: Decodable { let mark: String; let writes: Int; let sha256: String }
+        struct Phase: Decodable {
+            let phase: String, rng: Int, writes: Int
+            let marks: [Mark]
+        }
         struct Band: Decodable { let phases: [Phase] }
         struct Run: Decodable { let seed: Int, config: Int; let bands: [Band] }
         let runs: [Run]
@@ -135,16 +148,35 @@ func firstVillagesMatchOriginal() throws {
         let villages = try #require(band0.phases.first { $0.phase == "villages" })
         try #require(Int(rng.state) == villages.rng,
                      "the phases before $47DF disagree")
+        _ = villages.marks
 
         var budget = VillageBudget.budget(for: stage)
+        var eligible = VillageBudget.eligibleQuadrants(in: stage.mask)
         var placed: [TerrainPhases.Village] = []
+        band.journal = []
         TerrainPhases.placeSites(try #require(stage.sites), budget: &budget,
                                  in: &band, into: &placed, rng: &rng,
                                  secondBand: false)
-        // The fixture holds column, row and kind; the port keeps half the row,
-        // which is what `$40C8` files.
+        // The fixture holds column, row and kind for the first three; the port
+        // keeps half the row, which is what `$40C8` files.
         let got = placed.map { [Int($0.column), Int($0.halfRow) * 2, Int($0.kind)] }
         #expect(got == Array(expected.prefix(got.count)),
                 "the first villages are \(got), not \(expected.prefix(got.count))")
+
+        TerrainPhases.placeAcrossStrips(budget: &budget, eligible: &eligible,
+                                        in: &band, into: &placed, rng: &rng,
+                                        secondBand: false)
+        TerrainPhases.placeOnLandmasses(stage.landmasses, stage.islands,
+                                        in: &band, into: &placed, rng: &rng,
+                                        secondBand: false)
+        let journal = try #require(band.journal)
+        #expect(journal.count == villages.writes,
+                "the phase placed \(journal.count) villages, not \(villages.writes)")
+        let mark = try #require(villages.marks.first)
+        #expect(villageDigest(journal[...]) == mark.sha256,
+                "the villages differ from the original's")
+        let after = try #require(band0.phases.first { $0.phase == "4CF2" })
+        #expect(Int(rng.state) == after.rng,
+                "$47DF left the generator somewhere the original did not")
     }
 }

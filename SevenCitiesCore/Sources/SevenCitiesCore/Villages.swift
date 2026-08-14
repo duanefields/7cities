@@ -316,4 +316,87 @@ extension TerrainPhases {
             }
         }
     }
+
+    /// `$4343`: how many villages are already inside a box.
+    ///
+    /// Half open on both axes, like the water engine's boxes and unlike
+    /// `$4441`'s.
+    static func villagesIn(_ area: Box, of band: TerrainBand) -> Int {
+        var count = 0
+        var y = area.top
+        while y < area.bottom {
+            var x = area.left
+            while x < area.right {
+                if band[x, Int(y)] == 0x0F { count += 1 }
+                x &+= 1
+                if x == 0 { break }
+            }
+            y &+= 1
+        }
+        return count
+    }
+
+    /// `$49F2`: the last few villages, placed on the land rather than on a grid.
+    ///
+    /// Two passes once the strips are done, and both are outside the `$6C`
+    /// budget — which has usually run to zero by now. First every *small*
+    /// landmass in the position tables gets villages until it holds three,
+    /// retrying as often as it needs to. Then every second-wave island that
+    /// holds none at all gets one.
+    ///
+    /// So the small islands are guaranteed inhabitants the strip walk would
+    /// rarely have given them: a sixteen-by-sixteen quarter needs twenty land
+    /// cells to qualify, and a ten-radius island spread across four quarters
+    /// may not put twenty into any of them.
+    static func placeOnLandmasses(_ landmasses: [LandMassStage.Landmass],
+                                  _ islands: [LandMassStage.Island],
+                                  in band: inout TerrainBand,
+                                  into villages: inout [Village],
+                                  rng: inout WorldMakerRNG, secondBand: Bool) {
+        // $49FA: the same tables `$2E32` reads, and the same split.
+        for mass in landmasses where mass.southern == secondBand {
+            guard mass.radius < 0x46 else { continue }        // $4A2C
+            let row = Int(mass.row)
+            // $4A2A: one village, and `$4A46` only comes back here when the
+            // spot it drew would not take one. `$4A48` falls through to the
+            // next entry rather than looping, so a landmass gets exactly one
+            // however much room it has.
+            place: while true {
+                let area = box(around: mass.column,
+                               UInt8(truncatingIfNeeded: row),
+                               radius: mass.radius)
+                guard villagesIn(area, of: band) < 3 else { break }  // $4A33
+                while true {
+                    let y = rng.nextByte(from: area.top, below: area.bottom)
+                    if y & 1 != 0 { continue }                // $4A3C
+                    let x = rng.nextByte(from: area.left, below: area.right)
+                    guard villageFits(column: x, row: Int(y), in: band) else {
+                        continue place                        // $4A46
+                    }
+                    self.place(column: x, row: Int(y), kind: 0, in: &band,
+                               into: &villages, secondBand: secondBand)
+                    break place                               // $4A48
+                }
+            }
+        }
+
+        // $4A4F: and one for every second-wave island that has none.
+        for island in islands where island.southern == secondBand {
+            let row = secondBand ? Int(island.row) - 192 : Int(island.row)
+            guard row >= 0 && row < TerrainBand.rows else { continue }
+            let area = box(around: island.column,
+                           UInt8(truncatingIfNeeded: row), radius: 5)
+            guard villagesIn(area, of: band) == 0 else { continue }  // $4A86
+            while true {
+                let y = rng.nextByte(from: area.top, below: area.bottom)
+                if y & 1 != 0 { continue }                    // $4A8D
+                let x = rng.nextByte(from: area.left, below: area.right)
+                // $4A9B: no fit test here, only "not water".
+                guard band[x, Int(y)] >= 3 else { continue }
+                place(column: x, row: Int(y), kind: 0, in: &band,
+                      into: &villages, secondBand: secondBand)
+                break
+            }
+        }
+    }
 }
