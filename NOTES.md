@@ -2791,6 +2791,20 @@ the rivers rather than here.
 
 ### The other two water entries, read
 
+**A satellite column that was off by one for months.** `$1D42` mirrors the
+satellite table the same way it mirrors the landmass tables — `256 - column`,
+not `255 - column`. Measured across all three configurations: configuration 0's
+northern satellite goes from column 106 before the mirror to 150 after, and
+`256 - 106` is 150.
+
+The port had `255` and nothing noticed, because until `$3961` the only thing
+reading that table was `$2D23`, whose radius-10 box marks the same cells either
+way whenever the ring around a lake is land rather than sea. A digest that
+matches is not proof that the numbers behind it are right; it is proof that
+nothing has yet asked them a question they can get wrong. That is now twice this
+has happened with these tables — the paired continent's missing entry was the
+other.
+
 **`$3961` is the lakes' outflow.** For each satellite in the tables at
 `$0378`/`$0382` it takes a radius-10 box and hunts outward for the `$0F` mark
 `$2D23` laid around that lake — west along the row first, then east, then a row
@@ -2813,8 +2827,14 @@ river crossing another becomes navigable water rather than a knot. Land ahead
 goes to the same three-direction, seven-deep fan `$380D` uses, but scored:
 `$37DD` and `$37E8` keep the best direction found in `$47`/`$48`/`$49` rather
 than taking the first, and `$37FF` then commits to it through `$3B5E` or
-`$3B66`. `$3B2F` also refuses a step that would land within ten cells of where
-the river started, which is what stops a lake's outflow curling back into it.
+`$3B66`. `$3B2F` does the opposite of what it looks like: while the walk is still within
+ten cells of where it started, it **skips** the lake test entirely. That is not
+a bug — the source is against a lake by construction, so the test would refuse
+every step out of it.
+
+And `$3999`, before any of that, drops a radius-7 marsh on the lake itself. It
+is the largest swamp the World Maker places, and missing it costs a draw as well
+as ninety-eight cells, so the river that follows diverges four steps in.
 
 **`$3EAD` is the same engine with two of its routines rewritten.** It copies
 five bytes from `$3FE4` over `$3AA5` and five from `$3FE9` over `$36A2`:

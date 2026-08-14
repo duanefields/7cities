@@ -99,6 +99,7 @@ extension TerrainPhases {
                              rng: inout WorldMakerRNG, secondBand: Bool) -> Bool {
         while true {
             let stop = engine.index &+ 1                      // $38CD
+            engine.stopIndex = stop
             engine.choose(rng: &rng)                          // $38D2
             engine.aim(rng: &rng)
 
@@ -250,7 +251,7 @@ extension TerrainPhases {
     }
 
     /// `$3E53`: a second swamp, well away from the river.
-    private static func distantSwamp(_ engine: inout RiverEngine,
+    static func distantSwamp(_ engine: inout RiverEngine,
                                      in band: inout TerrainBand,
                                      rng: inout WorldMakerRNG,
                                      secondBand: Bool) {

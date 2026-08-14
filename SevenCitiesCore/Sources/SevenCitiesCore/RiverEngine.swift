@@ -99,6 +99,8 @@ public struct RiverEngine: Sendable {
     /// `$E000` and `$E2F1`. Both are ring buffers of `recordLimit` entries.
     public var record: [Step] = []
     public var mouths: [Mouth] = []
+    /// `$4F`, the index the caller marked before its last step.
+    public internal(set) var stopIndex: UInt8 = 0
     /// `$76` and `$37`, where the river started, and `$22`, the landmass it
     /// belongs to — all three outlive the walk and the swamp placement reads
     /// them.

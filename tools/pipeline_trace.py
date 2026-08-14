@@ -55,7 +55,14 @@ MOUTHS, MOUTHS_BYTES = 0xE2F1, 0xFB * 3
 
 
 def digest(items):
-    return hashlib.sha256("\n".join(map(str, items)).encode()).hexdigest()
+    """The same text `range_trace.py` hashes, so the two agree."""
+    return hashlib.sha256(
+        "\n".join(f"{a},{b},{c}" for a, b, c in items).encode()).hexdigest()
+
+
+def table_digest(data):
+    """High-RAM tables are flat bytes rather than triples."""
+    return hashlib.sha256(bytes(data)).hexdigest()
 
 
 def capture(seed, config, budget):
@@ -156,7 +163,7 @@ def main():
     for name, data in tables.items():
         used = len([b for b in data if b])
         print(f"  {name}: {used} non-zero of {len(data)} bytes, "
-              f"{digest(data)[:8]}")
+              f"{table_digest(data)[:8]}")
 
     path = f"{FIX}/pipeline_reference.json"
     runs = []
@@ -164,7 +171,8 @@ def main():
         runs = [r for r in json.load(open(path))["runs"]
                 if (r["seed"], r["config"]) != (seed, args.config)]
     runs.append({"seed": seed, "config": args.config, "bands": summary,
-                 "tables": {name: {"bytes": len(data), "sha256": digest(data)}
+                 "tables": {name: {"bytes": len(data),
+                                   "sha256": table_digest(data)}
                             for name, data in tables.items()}})
     runs.sort(key=lambda r: (r["seed"], r["config"]))
     with open(path, "w") as handle:

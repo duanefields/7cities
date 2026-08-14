@@ -295,8 +295,17 @@ public enum LandMassStage {
                                         radius: mass.radius, southern: southern)
                     }
                 }
+                // `256 - column`, the same as the landmass tables — not
+                // `255 - column`. Measured across all three configurations:
+                // configuration 0's northern satellite goes from column 106 to
+                // 150, and 256 - 106 is 150. The one-off survived because the
+                // only thing reading these before `$3961` was `$2D23`, whose
+                // radius-10 box marks the same cells either way when the ring
+                // around a lake is land.
                 satellites = satellites.map { satellite in
-                    let column = horizontal ? 255 &- satellite.column : satellite.column
+                    let column = horizontal
+                        ? UInt8(truncatingIfNeeded: 256 - Int(satellite.column))
+                        : satellite.column
                     let row = vertical ? UInt16(LandMask.height - 1) &- satellite.row
                                        : satellite.row
                     return Island(column: column, row: row, southern: row >= 0xD7)
