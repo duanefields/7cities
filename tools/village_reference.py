@@ -54,7 +54,12 @@ def capture(seed, config):
             "northEligible": word(0x70), "southEligible": word(0x72),
             "villages": [cpu.rd(0x6C), cpu.rd(0x6D)],
             "threshold": [cpu.rd(0x6E), cpu.rd(0x6F)],
-            "82": [cpu.rd(0x82), cpu.rd(0x83)]}
+            "82": [cpu.rd(0x82), cpu.rd(0x83)],
+            # `$41BB` takes these off the budgets: the second wave's island
+            # counts and, from `$1BD6`, how many small landmasses were filed
+            # into each position table.
+            "islands": [cpu.rd(0x67), cpu.rd(0x68)],
+            "smallLandmasses": [cpu.rd(0xA8), cpu.rd(0xA9)]}
 
 
 def main():

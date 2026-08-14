@@ -17,6 +17,15 @@ func eligibleQuadrantsMatchOriginal() throws {
             let seed: Int, config: Int
             let quadrantsEvaluated: Int
             let northEligible: Int, southEligible: Int
+            let villages: [Int], threshold: [Int]
+            let islands: [Int], smallLandmasses: [Int]
+            enum CodingKeys: String, CodingKey {
+                case seed, config, quadrantsEvaluated, northEligible
+                case southEligible, villages, threshold, islands
+                case smallLandmasses
+                case spread = "82"
+            }
+            let spread: [Int]
         }
         let runs: [Run]
     }
@@ -43,5 +52,27 @@ func eligibleQuadrantsMatchOriginal() throws {
         // the interpreter evaluates.
         #expect(run.quadrantsEvaluated == 1600,
                 "the original evaluated \(run.quadrantsEvaluated) quadrants, not 1600")
+
+        // The two deductions come off the run itself rather than the fixture,
+        // so the whole chain is the port's.
+        let take = VillageBudget.deductions(from: stage)
+        #expect([take.islands.north, take.islands.south] == run.islands,
+                "\(label): island counts \(take.islands), not \(run.islands)")
+        #expect([take.smallLandmasses.north, take.smallLandmasses.south]
+                    == run.smallLandmasses,
+                """
+                \(label): small landmasses \(take.smallLandmasses), \
+                not \(run.smallLandmasses)
+                """)
+
+        let budget = VillageBudget.budget(for: stage)
+        #expect([Int(budget.villages.north), Int(budget.villages.south)]
+                    == run.villages,
+                "\(label): villages \(budget.villages), not \(run.villages)")
+        #expect([Int(budget.threshold.north), Int(budget.threshold.south)]
+                    == run.threshold,
+                "\(label): threshold \(budget.threshold), not \(run.threshold)")
+        #expect([Int(budget.spread.north), Int(budget.spread.south)] == run.spread,
+                "\(label): spread \(budget.spread), not \(run.spread)")
     }
 }

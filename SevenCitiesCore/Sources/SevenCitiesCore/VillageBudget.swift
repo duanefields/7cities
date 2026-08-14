@@ -64,4 +64,135 @@ public enum VillageBudget {
         }
         return (north, south)
     }
+
+    // MARK: - `$40FA`
+
+    /// What the village phase is handed, per band.
+    public struct Budget: Sendable, Equatable {
+        /// `$6C`/`$6D`: how many villages the band may have.
+        public var villages: (north: UInt8, south: UInt8)
+        /// `$6E`/`$6F`: the draw a quadrant has to beat before one is placed.
+        /// Complemented at `$4173`, so a bigger number is an easier draw.
+        public var threshold: (north: UInt8, south: UInt8)
+        /// `$82`/`$83`, which always sum to twenty.
+        public var spread: (north: UInt8, south: UInt8)
+
+        public static func == (a: Budget, b: Budget) -> Bool {
+            a.villages == b.villages && a.threshold == b.threshold
+                && a.spread == b.spread
+        }
+    }
+
+    /// `$0BEE` and `$0C0C`: divide, rounding to nearest.
+    ///
+    /// Both compare the remainder against **`divisor >> 1`** and carry when it
+    /// reaches it, so the halfway case rounds up and an odd divisor rounds up a
+    /// shade early. That is not a detail to smooth over: configuration 2's
+    /// southern band divides 920 by 263 for a remainder of exactly 131 against a
+    /// half of 131, and the difference between three and four there is the
+    /// difference between a threshold of 51 and one of 0.
+    static func rounded(_ dividend: Int, over divisor: Int) -> Int {
+        guard divisor != 0 else { return 0 }
+        let quotient = dividend / divisor
+        return dividend % divisor >= divisor >> 1 ? quotient + 1 : quotient
+    }
+
+    /// Everything `$40FA` takes off the budgets, straight off a finished run.
+    ///
+    /// `$67`/`$68` are the second wave's island counts, and `$A8`/`$A9` are how
+    /// many *small* landmasses went into each position table — `$1BD6`
+    /// increments it whenever `$1B5F` files something with a radius under `$46`.
+    /// Both are pre-mirror counts in the original, and both come out the same
+    /// after it: the small landmasses are all placed by the second command,
+    /// which runs once the mirror has already happened.
+    public static func deductions(from run: LandMassStage.Run)
+        -> (islands: (north: Int, south: Int),
+            smallLandmasses: (north: Int, south: Int)) {
+        func split<T>(_ items: [T], _ southern: (T) -> Bool) -> (Int, Int) {
+            (items.filter { !southern($0) }.count,
+             items.filter { southern($0) }.count)
+        }
+        let islands = split(run.islands) { $0.southern }
+        let small = split(run.landmasses.filter { $0.radius < 0x46 }) {
+            $0.southern
+        }
+        return (islands, small)
+    }
+
+    /// `$40FA`: turn the two quadrant counts into what `$47DF` reads.
+    ///
+    /// `$27` runs 1 then 0, so the southern band is worked out first and the
+    /// northern second — which matters, because `$419C`'s cap and `$41BB`'s
+    /// subtraction both treat them asymmetrically afterwards.
+    public static func budget(north: Int, south: Int,
+                              islands: (north: Int, south: Int),
+                              smallLandmasses: (north: Int, south: Int))
+        -> Budget {
+        let total = north + south
+
+        func band(_ eligible: Int) -> (villages: UInt8, threshold: UInt8,
+                                       spread: UInt8) {
+            // $410B: how many tenths of the map's eligible ground this band has.
+            let tenths = rounded(eligible * 10, over: total)
+            guard tenths != 0 else { return (0, 0xFF, 0) }    // $4122
+            let clamped = min(tenths, 10)                     // $412C
+            let product = clamped * 255                       // $4132
+            let villages = rounded(product, over: 10)         // $413D
+
+            let threshold: UInt8
+            if villages >= eligible {
+                // $4151: the band wants more villages than it has ground for,
+                // and the draw becomes impossible to fail.
+                threshold = 0
+            } else {
+                // $4155: the same product against the band's own count.
+                let share = UInt8(truncatingIfNeeded: rounded(product,
+                                                              over: eligible))
+                let scaled = rounded(Int(share) * 255, over: 10)
+                threshold = UInt8(truncatingIfNeeded: scaled) ^ 0xFF
+            }
+            return (UInt8(truncatingIfNeeded: villages), threshold,
+                    UInt8(min(2 * clamped, 0x14)))            // $417B
+        }
+
+        let southern = band(south)                            // $27 = 1
+        let northern = band(north)                            // $27 = 0
+
+        // $419C: the two together may not exceed 255, and the larger gives way.
+        var villages = (north: northern.villages, south: southern.villages)
+        while Int(villages.north) + Int(villages.south) > 0xFF {
+            if villages.north < villages.south || villages.north == 0 {
+                villages.south &-= 1
+            } else {
+                villages.north &-= 1
+            }
+        }
+
+        // $41BB: and the islands come off the top. A southern shortfall is
+        // taken out of the northern band instead of being clamped away.
+        let takeNorth = islands.north + smallLandmasses.north
+        let takeSouth = islands.south + smallLandmasses.south
+        villages.north = Int(villages.north) >= takeNorth
+            ? villages.north &- UInt8(takeNorth) : 0
+        if Int(villages.south) >= takeSouth {
+            villages.south &-= UInt8(takeSouth)
+        } else {
+            villages.north &-= UInt8(truncatingIfNeeded:
+                                        takeSouth - Int(villages.south))
+            villages.south = 0
+        }
+
+        return Budget(villages: villages,
+                      threshold: (northern.threshold, southern.threshold),
+                      spread: (northern.spread, 0x14 &- northern.spread))
+    }
+
+    /// The budget a finished land-mass run implies, end to end.
+    public static func budget(for run: LandMassStage.Run) -> Budget {
+        let counted = eligibleQuadrants(in: run.mask)
+        let take = deductions(from: run)
+        return budget(north: counted.north, south: counted.south,
+                      islands: take.islands,
+                      smallLandmasses: take.smallLandmasses)
+    }
 }

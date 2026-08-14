@@ -162,14 +162,17 @@ engineering record; this holds the work.
       `$6E`/`$6F` (the draw a quadrant must beat) and `$82`/`$83`. None of that
       is in `$47DF`, and a port that starts at `$47DF` will not find it.
 
-      **The counter is ported and exact** for all three configurations —
-      `VillageBudget.eligibleQuadrants` reproduces 240/246, 84/361 and 171/92.
-      `$40FA` is read and written up in NOTES.md but not ported; the one thing
-      still missing for it is `$A8`/`$A9`, which `$41BB` subtracts along with
-      the island counts and which nothing has identified yet.
+      **Everything the phase is handed is ported and exact** for all three
+      configurations. `VillageBudget.budget(for:)` goes from a finished
+      land-mass run to `$6C`/`$6D`, `$6E`/`$6F` and `$82`/`$83` — 121/125 with
+      thresholds 127/127 for configuration 0, 46/202 with 102/102 for 1, and
+      146/95 with 0/0 for 2 — including the two deductions, which come off the
+      run rather than out of the fixture.
 
-      Still unread: `$4AAB`'s region bookkeeping, which does not touch the band,
-      and `$49F2`'s tail.
+      What is left is the placement itself: `$47E1`'s two sites, `$4823`'s
+      single random village, and `$486F`'s walk over the strips. Still unread:
+      `$4AAB`'s region bookkeeping, which does not touch the band, and `$49F2`'s
+      tail.
 - [ ] **Port `$2C14`, the band writer.** 419 addresses, and it is not only a
       writer: it puts 213 cells down in the first band and 65 in the second.
 - [ ] **Assemble the second band.** Everything above is graded on band 0 only,
