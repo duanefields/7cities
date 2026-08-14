@@ -83,14 +83,26 @@ engineering record; this holds the work.
       parameterized spread run twice, `$2C14` the band writer. Start with
       `$2AE9`. Started: `TerrainBand` reproduces band 0 exactly, `$2A45`'s
       bounding box is graded against 200 captured cases, and `markIslands` is
-      transcribed. Blocked on `$28F1` and `$2BEA`, which go over the same boxes
-      first and rewrite land on a coin flip per cell — so the marking's input is
-      not the raw band and cannot be graded until they exist.
-- [ ] **Confirm the band structure.** The finished map is assembled on disk —
-      51,200 bytes of nibbles will not fit in a C64 — and `$2C14` bounds its
-      row counter at 208, which is very likely the band height. Still unknown:
-      whether bands overwrite the 1-bit mask at `$5700` in place, and in which
-      direction. Break on writes to `$5700` in a headless run.
+      transcribed, and so are `$28F1`'s scatter and `$2BEA`. Blocked on
+      **`$2977`**, the coastal shading — it writes the medium and shallow water,
+      644 and 212 cells of it in band 0, and consumes randomness that moves
+      everything after. Port that and both disabled tests should come back.
+
+      **Sizing**, measured as distinct instruction addresses actually executed,
+      against the land-mass phase's 2,276 as the yardstick: `$2AE9` 658,
+      `$2D23` 192, `$2E32` 1,750, `$3961` 1,459, `$3EAD` 1,635, `$47DF` 1,092,
+      `$4CF2` 83, `$2C14` 419 — about 7,200 unique in all, roughly three times
+      the land-mass phase. That one took a day *with* its generator, arithmetic,
+      command table and clearance test already ported. The harness is far better
+      now and the band, the bounding box and the nibble addressing are done, but
+      this is days rather than a day, and `$2E32`, `$3961` and `$3EAD` are the
+      bulk of it. Every phase read so far has come in bigger than it looked, so
+      treat the numbers as a floor.
+- [x] ~~**Confirm the band structure.**~~ **Done.** 208 rows, and two bands
+      cover the map: rows 0-207 and 192-399, overlapping by sixteen. The nibbles
+      *do* overwrite the 1-bit mask at `$5700` in place, and the bands run top
+      down. Verified by unpacking the port's own mask and matching the
+      original's band digest exactly.
 - [ ] **Re-check `wm_trace.py`'s phase snapshots.** It waits for checkpoints by
       polling `vice_ping` for "paused", which fires for unrelated reasons — the
       same bug that misread three runs of `wm_config.py`. Its snapshots may have
