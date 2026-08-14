@@ -2691,13 +2691,32 @@ non-empty one, 18 times over the two bands. The band digest before and after is
 identical, so whatever it writes is elsewhere. Eight entries in a game called
 Seven Cities of Gold is suggestive and nothing more.
 
+**The mirror's table fixup.** `$1D42` rewrites the position tables when the map is
+mirrored, through two small routines whose arithmetic is worth writing down
+because neither is what the mask's own mirror does. `$1C2A` turns a column into
+`($80 - x) + $80`, which is **256 - x** — one more than the `255 - x` the bit
+reversal gives, and enough on its own to put a landmass a cell off. `$1C3D` turns
+a row into `($C8 - row) + 7`, which is **207 - row**: the tables hold rows
+relative to a band, so flipping the map flips an entry between the two tables and
+mirrors it within 208 rows rather than 400.
+
+Both are verified against captured tables — `(166,94)` northern comes back as
+`(90,113)` southern, `(89,55)` southern as `(167,152)` northern. What is *not*
+worked out is the rest of `$1D42`: it stages entries through a scratch buffer at
+`$9100`, re-sorts them between the tables, and rewrites `$63`/`$64` from byte
+offsets into entry counts. Without that part two of five entries come out right.
+`LandMassStage` records the tables as `$1B5F` files them, pre-mirror, and says so.
+
 **`$2E32`, the terrain generator, is read but not ported.** It is a series of full
 band sweeps, and the first three are: every plain cell through `$2C3A`; every
 cell holding `4` or `5` through `$2CDB`; and then plain to forest on a draw
 against a threshold — `$96` for band 0, `$36` for band 1. The row each sweep
 starts at is `0` for band 0 and `$10` or `$0E` for band 1, which is the sixteen-row
-overlap being skipped rather than done twice. More sweeps follow `$2EBC`. At 1,750
-addresses it is the biggest phase in the pipeline and the next real piece of work.
+overlap being skipped rather than done twice. More sweeps follow `$2EBC`, and from `$2ED2` it walks the **landmass** tables at
+`$0300`/`$033C` — three-byte `(row, column, radius)` entries — drawing mountain
+ranges of `random(2 * radius) + 15` cells for anything smaller than a continent.
+So it needs those tables, which needs `$1D42`'s fixup, which is the piece above.
+At 1,750 addresses it is the biggest phase in the pipeline.
 
 ### `$2AE9` reads the island tables
 

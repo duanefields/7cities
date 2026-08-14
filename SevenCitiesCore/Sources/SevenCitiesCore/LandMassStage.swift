@@ -22,6 +22,20 @@
 /// seed and configuration pairs.
 public enum LandMassStage {
 
+    /// One entry in a landmass position table (`$1B5F`).
+    ///
+    /// `$0300` holds the northern half and `$033C` the southern, each as
+    /// `(row, column, radius)` triples — the southern one storing `row - 192` so
+    /// it fits a byte. A continent tall enough to reach into both is filed
+    /// **twice**, once in each, which is how a phase working on one band can see
+    /// a landmass whose centre is in the other.
+    public struct Landmass: Sendable, Equatable {
+        public let column: UInt8
+        public let row: UInt8
+        public let radius: UInt8
+        public let southern: Bool
+    }
+
     /// One of the second wave's radius-3 islands (`$2867` and `$2874`).
     ///
     /// `southern` is which of the two tables it went into: `$03B4` for rows at or
@@ -118,6 +132,10 @@ public enum LandMassStage {
         /// `$1BF9` files them into `$0378` and `$0382`, split at row 215 rather
         /// than 219, and `$2D23` is what reads them back.
         public let satellites: [Island]
+        /// Every landmass the command table placed, as `$1B5F` files them —
+        /// **before** the mirror. `$1D42`'s fixup is not implemented, so these are
+        /// in pre-mirror coordinates and `$2E32` cannot use them yet.
+        public let landmasses: [Landmass]
         /// Why the stage stopped before the command table ran out. `nil` means it
         /// finished, which it now does for every configuration it accepts.
         public let stoppedBecause: String?
@@ -134,6 +152,31 @@ public enum LandMassStage {
         var steps: [Step] = []
         var sites: SiteSelection.Result?
         var satellites: [Island] = []
+        var landmasses: [Landmass] = []
+
+        /// `$1B5F`: file a landmass into one table or the other, or both.
+        func filed(column: UInt8, row: UInt16, radius: UInt8) -> [Landmass] {
+            func north(_ value: UInt16) -> Landmass {
+                Landmass(column: column, row: UInt8(truncatingIfNeeded: value),
+                         radius: radius, southern: false)
+            }
+            func south(_ value: UInt16) -> Landmass {
+                Landmass(column: column, row: UInt8(truncatingIfNeeded: value),
+                         radius: radius, southern: true)
+            }
+            guard radius >= 0x46 else {
+                // $1B65: anything small goes in one table or the other.
+                return row < 0xC8 ? [north(row)] : [south(row &- 0xC0)]
+            }
+            // $1B75: a continent can straddle the two bands and is filed twice.
+            if row < 0xC0 {
+                let reach = UInt16(row) + 0x46
+                return reach >= 0xCF ? [north(row), south(0)] : [north(row)]
+            }
+            var out = [south(row &- 0xC0)]
+            if row >= 0x46 && row &- 0x46 < 0xC0 { out.append(north(row &- 0x46)) }
+            return out
+        }
         // `$0200`, the satellite seed pool. `$1666` rebuilds it for each
         // continent, but the second wave inherits whatever the last rebuild left
         // and spends from it across every island.
@@ -200,6 +243,7 @@ public enum LandMassStage {
                               biasX: biasX, biasY: biasY,
                               rng: &rng, mask: &mask, steps: &steps,
                               filed: { satellites.append($0) })
+                    landmasses += filed(column: x, row: y, radius: radius)
                     break
                 }
             }
@@ -217,6 +261,14 @@ public enum LandMassStage {
                 // coordinates. The second wave's islands are filed afterwards and
                 // need no such thing, which is why they were right before this
                 // was — and why a satellite marked a box of open sea.
+                // The landmass tables are **not** fixed up here, and that is a
+                // known gap. `$1D42` transforms them through `$1C2A` and `$1C3D`
+                // — column to `256 - column`, row to `207 - row`, both verified
+                // against captured tables — but it also re-sorts the entries
+                // between the two tables and rewrites `$63`/`$64` from byte
+                // offsets into counts, and that part is not read yet. Measured
+                // against the original, two of five entries come out right
+                // without it. See NOTES.md.
                 satellites = satellites.map { satellite in
                     let column = horizontal ? 255 &- satellite.column : satellite.column
                     let row = vertical ? UInt16(LandMask.height - 1) &- satellite.row
@@ -236,7 +288,8 @@ public enum LandMassStage {
         let scattered = try secondWave(config: config, rng: &rng, mask: &mask,
                                        pool: &pool, steps: &steps)
         return Run(mask: mask, steps: steps, sites: sites, islands: scattered,
-                   satellites: satellites, stoppedBecause: nil)
+                   satellites: satellites, landmasses: landmasses,
+                   stoppedBecause: nil)
     }
 
     /// The second wave (`$280A`-`$2894`).
