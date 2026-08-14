@@ -130,12 +130,26 @@ engineering record; this holds the work.
       routing tables at `$329C`, `$333C`'s chooser, `$33B7`'s aim, `$3300`'s
       recorded step and `$363B`'s straight run — the forward half of the walk.
 
-      Still to read and port: `$33EF`, which walks the record *backwards*
-      overwriting cells with plain and forest, so a river that cannot finish is
-      erased rather than left; `$348D`, which asks whether a cell is already in
-      the record; `$34F3`, the lake-mark test; `$3531`, which finds the river
-      mouth and files it at `$E2F1`; and the three entries themselves, including
-      `$36CC`, `$3E53`, `$42C6` and `$4006`/`$4014`, which are not read at all.
+      **`$380D` is ported and 6,563 of its band's 6,658 writes are exact**,
+      fifty-one river mouths included, which exercises and verifies `$32CC`,
+      `$333C`, `$33B7`, `$3300`, `$33EF` and `$3531` along with it.
+
+      What is left of it is the **finish**. When the walk finds open water ahead
+      it does not stop, it goes to `$3959` — `$369F` runs it the last few cells
+      into the sea, `$36CC` files the source at `$E681`/`$E6D1`/`$E721` (or, if
+      the tile is a `$4`, updates an entry already there), and `$3E53` throws a
+      swamp down ten to twenty-nine rows away through `$3D97`, which is gated by
+      `$1021`'s latitude test and a probability that falls off with distance
+      from the tropics. That path is 32 cells of `$0E` in the first band and
+      none of it is ported, so the port's last river runs on past where the
+      original ends it.
+
+      Then the other two entries: `$3961`, which walks the satellite tables and
+      calls `$4014` to measure the land either side before starting, and
+      `$3EAD`, which patches five bytes into `$3AA5` and five into `$36A2`
+      before it begins — so it is the same engine again with two of its routines
+      rewritten. `$348D` (is this cell already in the record) and `$42C6` are
+      not read yet.
 
       **Grade it with `tools/pipeline_trace.py`**, which records every write of
       every phase tagged with the river that made it. Band 0 of seed `$1234`
