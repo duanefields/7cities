@@ -125,4 +125,150 @@ extension TerrainPhases {
             return
         }
     }
+
+    /// `$486F`: the strip walk, which places all the rest.
+    ///
+    /// The same sixteen-by-sixteen strips `$3EAD` uses, but walked **downward**
+    /// for the first band — `$0C` starts at `$CF` and is decremented — and
+    /// upward for the second. Each strip is quartered and the quarters are taken
+    /// bottom-right, bottom-left, top-right, top-left, which is `$0E` counting
+    /// down from three.
+    ///
+    /// A quarter qualifies on twenty land cells out of its sixty-four and on
+    /// finding no village already in it. Then a draw has to beat the band's
+    /// threshold, and the threshold is **recomputed after every strip** by
+    /// `$49BB` from what is left of the budget against what is left of the
+    /// eligible ground — so a band that spends its villages early makes the rest
+    /// harder to place, and one that has ground to spare makes them easier.
+    ///
+    /// At most three villages a strip (`$6A`), and a strip that placed none at
+    /// all but had three eligible quarters gets one more try across its whole
+    /// width at `$4965`.
+    ///
+    /// **Not finished.** It reproduces the original's first five villages and
+    /// then drifts, and the reason is measured rather than guessed: `$49A1`
+    /// calls `$4AAB` after every strip, and `$4AAB` is not the pure bookkeeping
+    /// it looks like. It surveys the strip's terrain into `$87` onward and sets
+    /// region bits in `$EB00`, and then — for any strip that held land at all —
+    /// **takes a draw**, and on roughly one in ten goes on to place something
+    /// through `$4B91`. One draw a strip is enough to put everything after it
+    /// out of step. See TODO.md.
+    static func placeAcrossStrips(budget: inout VillageBudget.Budget,
+                                  eligible: inout (north: Int, south: Int),
+                                  in band: inout TerrainBand,
+                                  into villages: inout [Village],
+                                  rng: inout WorldMakerRNG, secondBand: Bool) {
+        var strip = secondBand ? 0x10 : 0xCF                  // $4865
+
+        func remaining() -> UInt8 {
+            secondBand ? budget.villages.south : budget.villages.north
+        }
+        func spend() {
+            if secondBand { budget.villages.south &-= 1 }
+            else { budget.villages.north &-= 1 }
+        }
+        func threshold() -> UInt8 {
+            secondBand ? budget.threshold.south : budget.threshold.north
+        }
+
+        while true {
+            let top = UInt8(strip & 0xF0)
+            let left = UInt8((strip & 0x0F) * 16)             // $4CCB
+            // $4873: the four quarters, in the order `$0E` walks them.
+            let quarters = [(top &+ 8, left &+ 8), (top &+ 8, left),
+                            (top, left &+ 8), (top, left)]
+
+            var placedHere = 0                                // $6A
+            var qualified = 0                                 // $0F
+            for (quarterTop, quarterLeft) in quarters {
+                // $48AD: land in this quarter, and no village already in it.
+                var land = 0
+                var blocked = false
+                scan: for y in Int(quarterTop)...Int(quarterTop) + 7 {
+                    var x = quarterLeft
+                    while true {
+                        let nibble = band[x, y]
+                        if nibble == 0x0F { blocked = true; break scan }
+                        if nibble >= 0x0B { land += 1 }
+                        if x == quarterLeft &+ 7 { break }
+                        x &+= 1
+                        if x == 0 { break }
+                    }
+                }
+                if blocked || land < 0x14 { continue }        // $48EC
+
+                qualified += 1                                // $48F5
+                // $4900: the quarter is spent whether or not it takes a village.
+                if secondBand { eligible.south -= 1 } else { eligible.north -= 1 }
+
+                guard rng.next() > threshold() else { continue }   // $490D
+                guard remaining() != 0 else { return }        // $4917
+                guard placedHere < 3 else { continue }        // $491B
+
+                var tries: UInt8 = 0
+                while true {                                  // $4925
+                    let row = rng.nextByte(from: quarterTop,
+                                           below: quarterTop &+ 7)
+                    if row & 1 != 0 { continue }              // $4931
+                    let right = quarterLeft &+ 7
+                    let column = rng.nextByte(from: quarterLeft,
+                                              below: right == 0xFF ? right
+                                                                   : right &+ 1)
+                    if villageFits(column: column, row: Int(row), in: band) {
+                        place(column: column, row: Int(row), kind: 0,
+                              in: &band, into: &villages, secondBand: secondBand)
+                        placedHere += 1                       // $433E
+                        spend()
+                        break
+                    }
+                    tries &+= 1
+                    if tries == 0 { break }                   // $4943
+                }
+            }
+
+            // $4958: nothing placed here, but the ground was there — one more
+            // go, across the strip rather than inside a quarter.
+            if placedHere == 0 && qualified >= 3 && remaining() != 0 {
+                var tries: UInt8 = 0
+                while true {                                  // $4976
+                    let row = rng.nextByte(from: top &+ 4,
+                                           below: top &+ 15 &+ 2)
+                    if row & 1 != 0 { continue }
+                    let column = rng.nextByte(from: left &+ 3,
+                                              below: left &+ 15 &- 2)
+                    if villageFits(column: column, row: Int(row), in: band) {
+                        place(column: column, row: Int(row), kind: 0,
+                              in: &band, into: &villages, secondBand: secondBand)
+                        spend()
+                        break
+                    }
+                    tries &+= 1
+                    if tries == 0 { break }                   // $499D
+                }
+            }
+
+            // $49BB: and the threshold moves with what is left.
+            let left_ = secondBand ? eligible.south : eligible.north
+            let scaled = VillageBudget.rounded(Int(remaining()) * 10, over: left_)
+            let value: UInt8
+            if scaled == 0 {
+                value = 0xFF                                  // $49D8
+            } else {
+                let product = VillageBudget.rounded(
+                    Int(UInt8(truncatingIfNeeded: scaled)) * 255, over: 10)
+                value = UInt8(truncatingIfNeeded: product) ^ 0xFF
+            }
+            if secondBand { budget.threshold.south = value }
+            else { budget.threshold.north = value }
+
+            // $49A4: down for the first band, up for the second.
+            if secondBand {
+                strip += 1
+                if strip >= 0xD0 { return }
+            } else {
+                strip -= 1
+                if strip < 0 { return }
+            }
+        }
+    }
 }

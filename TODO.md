@@ -173,12 +173,19 @@ engineering record; this holds the work.
       chose and the one thrown at random after them, the first three villages
       on the map, at (126,176), (214,32) and the draw that follows.
 
-      What is left is `$486F`'s walk over the strips, which places the other
-      hundred and twenty-odd, and its helpers: `$42CD` (which picks a village's
-      kind), `$4AAB`'s region bookkeeping, which does not touch the band, and
-      `$49F2`'s tail. The structure is in NOTES.md — sixteen-by-sixteen strips
-      walked downward for the first band and upward for the second, quartered,
-      with a quadrant needing twenty land cells and a draw against `$6E,X`.
+      `$486F`'s walk over the strips is **written and not yet right**: it
+      reproduces the first five villages and then drifts. The cause is measured.
+      `$49A1` calls `$4AAB` after every strip, and `$4AAB` is not the pure
+      bookkeeping it looks like — it surveys the strip into `$87` onward and
+      `$EB00`, and then, for any strip that held land, takes a draw at `$4B7F`
+      and on roughly one in ten goes on to place something through `$4B91`.
+      Measured: the generator advances exactly one step per strip from `$CE`
+      down, and not at all for `$CF`, which is the strip that held nothing.
+
+      So the next step is `$4AAB` — specifically `$4B77` onward, and whatever
+      `$4BBB` puts down. `$42CD`, which picks a village's *kind*, takes no draws
+      at all and does not touch the band, so it can wait: the map does not
+      depend on it.
 - [ ] **Port `$2C14`, the band writer.** 419 addresses, and it is not only a
       writer: it puts 213 cells down in the first band and 65 in the second.
 - [ ] **Assemble the second band.** Everything above is graded on band 0 only,
