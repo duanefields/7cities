@@ -2616,6 +2616,20 @@ histogram at each phase entry says what the phase before it did:
 | `$4CF2` | nothing in the histogram                            | unknown                          |
 | `$2C14` | —                                                   | writes the band out              |
 
+### `$2AE9` reads the island tables
+
+`$2B4E` and `$2B60` patch the operand of `$2B6B` to `$038C` or `$03B4` — the two position tables the
+second wave filled — choosing between them on the sign of `$10`, and `$67`/`$68` are the counts. It
+walks the chosen table two bytes at a time into `$22`/`$23`, and at each position `$2B86` tests the
+nibble already there: where it finds `$0B`, plain, it writes **`$03`**.
+
+So that answers what reads `$038C` and `$03B4`. What it does *not* yet answer is what `$03` means,
+because it does not survive: the finished map has none of it at all, while the band still holds 213
+cells of it as late as `$2C14`. Something between there and the disk takes it away — most likely the
+second `$2D23`, which is parameterized to undo what the first one laid down. `$03` looks like
+scaffolding the terrain generator stands on rather than terrain, which would also explain the
+fourteen stray cells of it in the top-right corner of the historical map disk.
+
 `$2D23` is the interesting one: it runs **twice**, and `$0E32`-`$0E4A` and `$0E58`-`$0E66` patch three
 bytes inside it before each call — `$2D70`, `$2D74` and `$2DA6` go from `$00`/`$0F`/`$A2` to
 `$0F`/`$00`/`$60`. So it is one routine parameterized to lay a marker down and then take it away

@@ -37,7 +37,8 @@ engineering record; this holds the work.
       ported.** Below row 219 an island is filed into `$038C` as `(row, column)`;
       at or above, into `$03B4` as `(row - 192, column)`. `$03DC` keeps the last
       column filed, and `$2894` halves both indices to turn a byte offset into a
-      count. What *reads* them is still unknown.
+      count. **`$2AE9` is what reads them** — it walks the chosen table and
+      writes nibble `$03` wherever it finds plain.
 - [x] ~~**Trace the coastline outline.**~~ **Done, exactly.** All three fills —
       satellite, island and continent — reproduce every mask write the original
       made, in order, to the end of the fill: 23, 106 and 871 writes, the last
@@ -155,8 +156,11 @@ engineering record; this holds the work.
 
 ## Unknowns still in the map data
 
-- [ ] Nibble `3` — 14 cells, all in the top-right corner. Edge or metadata,
-      unidentified. The terrain table calls index 3 `SHIP`.
+- [ ] Nibble `3` — 14 cells, all in the top-right corner of the historical
+      disk, and **none at all** on a freshly generated one. `$2AE9` writes it at
+      each of the second wave's islands and something before the band reaches
+      disk takes it away again, so it is scaffolding rather than terrain. What
+      stands on it is the open question; the second `$2D23` is the suspect.
 - [x] ~~How the raw map nibble maps to the game's terrain enum.~~ The evidence
       now says it is the identity. Under that assumption the dispatch table at
       `$5529` lines up entry-for-entry with the enum at `$1566`, and **97.7% of
