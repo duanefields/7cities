@@ -247,6 +247,42 @@ extension TerrainPhases {
                 }
             }
 
+            // $49A1: `$4AAB` surveys the strip. None of what it records goes
+            // on the band — the counts go to `$87` onward and the positions to
+            // `$E600` — but it *draws*, and that is enough to matter. One draw
+            // for any strip that held ground at all, and on a low one it hunts
+            // for a spot to file, two draws a try.
+            var surveyed = false                              // $53
+            for (quarterTop, quarterLeft) in quarters {
+                for y in Int(quarterTop)...Int(quarterTop) + 7 {
+                    var x = quarterLeft
+                    while true {
+                        if band[x, y] >= 3 { surveyed = true }  // $4B07
+                        if x == quarterLeft &+ 7 { break }
+                        x &+= 1
+                        if x == 0 { break }
+                    }
+                }
+            }
+            if surveyed {                                     // $4B77
+                let spread = secondBand ? budget.spread.south : budget.spread.north
+                if rng.next() < 0x1A && spread != 0 {         // $4B82
+                    var tries: UInt8 = 0
+                    while true {
+                        let dy = rng.nextByte(from: 1, below: 0x0F)
+                        let dx = rng.nextByte(from: 1, below: 0x0F)
+                        let nibble = band[left &+ dx, Int(top) + Int(dy)]
+                        if nibble != 0x0F && nibble >= 3 {    // $4BAD
+                            if secondBand { budget.spread.south &-= 1 }
+                            else { budget.spread.north &-= 1 } // $4BE7
+                            break
+                        }
+                        tries &+= 1
+                        if tries == 0 { break }               // $4BB7
+                    }
+                }
+            }
+
             // $49BB: and the threshold moves with what is left.
             let left_ = secondBand ? eligible.south : eligible.north
             let scaled = VillageBudget.rounded(Int(remaining()) * 10, over: left_)

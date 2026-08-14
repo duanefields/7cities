@@ -182,10 +182,24 @@ engineering record; this holds the work.
       Measured: the generator advances exactly one step per strip from `$CE`
       down, and not at all for `$CF`, which is the strip that held nothing.
 
-      So the next step is `$4AAB` — specifically `$4B77` onward, and whatever
-      `$4BBB` puts down. `$42CD`, which picks a village's *kind*, takes no draws
-      at all and does not touch the band, so it can wait: the map does not
-      depend on it.
+      `$4AAB`'s draws are now in — one per strip that held ground, plus two a
+      try on the one-in-ten that goes hunting — and it does **not** write to the
+      band: `$4BBB` files into `$E600`/`$E614`/`$E628` and nothing else. The
+      port still diverges at the sixth village, in strip `$CD`, which means
+      something in the quarter loop is still a draw out. Instrument the port and
+      the interpreter at the draw level for that one strip; that is the
+      technique that has found every one of these.
+
+      **And `$47DF` has a fourth section nobody had noticed.** Measured over a
+      whole band: 127 villages placed, of which 2 are the sites and the random
+      one, 119 come from `$4949` (the strip quarters and the strip-wide retry),
+      and the remaining 6 come from `$49F2` — which walks the *landmass* tables
+      after the strips are done and calls `$42CD` from `$4A48` and `$4AA3`. The
+      budget `$6C` runs to exactly 0 over the first 121, so `$49F2`'s six are
+      placed outside it.
+
+      `$42CD`, which picks a village's *kind*, takes no draws at all and does
+      not touch the band, so the map does not depend on it.
 - [ ] **Port `$2C14`, the band writer.** 419 addresses, and it is not only a
       writer: it puts 213 cells down in the first band and 65 in the second.
 - [ ] **Assemble the second band.** Everything above is graded on band 0 only,
