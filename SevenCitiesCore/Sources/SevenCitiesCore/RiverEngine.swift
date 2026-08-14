@@ -72,9 +72,21 @@ public struct RiverEngine: Sendable {
     /// `$5D` and `$5E`, the direction chosen and the tile it writes.
     var chosen: UInt8 = 0
     public internal(set) var tile: UInt8 = 0
-    /// `$5F`, how strongly the walk holds its heading. `$32FC`'s operand, so the
-    /// caller sets it: `$AA` from `$38C8` and `$B4` from `$38F3`.
+    /// `$5F`, how strongly the walk holds its heading, as `$32CC` copied it out
+    /// of `$32FC` at the start of this walk.
     var persistence: UInt8 = 0xAA
+
+    /// `$32FC` and `$33F0` themselves — two *operands*, patched in place and
+    /// left patched. They outlive a river, a phase and a band.
+    ///
+    /// The order is the trap. `$38BB` calls `$32CC`, which copies `$32FC` into
+    /// `$5F`, and only *then* do `$38C3` and `$38C8` write `$0A` and `$AA` into
+    /// the two operands — so a `$380D` river runs with whatever the last one
+    /// left, not with what the lines just above it appear to set. Band 0's last
+    /// river finishes and `$38F3` leaves `$B4` behind; band 0's `$3961` and
+    /// `$3EAD` inherit it, and so does band 1's first `$380D`.
+    public var patchedPersistence: UInt8 = 0xAA
+    public var patchedAllowance: UInt8 = 0x06
     /// `$14`/`$15`, where the water is, and `$16`/`$17`, where it is going.
     public internal(set) var column: UInt8 = 0
     public internal(set) var row: Int = 0
@@ -122,10 +134,10 @@ public struct RiverEngine: Sendable {
     /// the operands of `$3450` and `$348A`, which is how the engine knows who to
     /// hand back to; here the caller keeps hold of the walk instead, which is
     /// the same thing said in a language that has values.
-    public mutating func start(heading: UInt8, persistence: UInt8 = 0xAA) {
+    public mutating func start(heading: UInt8) {
         self.heading = heading
         self.last = heading
-        self.persistence = persistence
+        self.persistence = patchedPersistence                 // $32FB
         bend = 0
         length = 0
         index = 0xFF

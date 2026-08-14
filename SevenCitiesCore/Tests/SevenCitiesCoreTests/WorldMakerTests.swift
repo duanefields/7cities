@@ -56,6 +56,40 @@ func firstBandMatchesTheOriginal() throws {
 
 /// The same thing said the other way round: the band *before* `$2C14` runs is
 /// what the fixture recorded, and that is the digest worth pinning.
+@Test("Both bands reach the original's, and so does the generator")
+func bothBandsMatchTheOriginal() throws {
+    struct Reference: Decodable {
+        struct Phase: Decodable { let phase: String, rng: Int, sha256: String }
+        struct Band: Decodable { let phases: [Phase] }
+        struct Run: Decodable { let seed: Int, config: Int; let bands: [Band] }
+        let runs: [Run]
+    }
+    let url = try #require(
+        Bundle.module.url(forResource: "pipeline_reference", withExtension: "json",
+                          subdirectory: "Fixtures"))
+    let reference = try JSONDecoder().decode(Reference.self,
+                                             from: Data(contentsOf: url))
+    for entry in reference.runs {
+        let run = try LandMassStage.run(config: entry.config,
+                                        seed: UInt16(entry.seed))
+        let label = "seed \(String(format: "%04X", entry.seed)) config \(entry.config)"
+        var rng = WorldMakerRNG(seed: UInt16(entry.bands[0].phases[0].rng))
+        let world = WorldMaker.world(of: run, rng: &rng)
+
+        // The generator at the end of everything, which is the strictest single
+        // check there is: every draw of every phase of both bands, in order.
+        let last = try #require(entry.bands[1].phases.first { $0.phase == "4CF2" })
+        #expect(Int(rng.state) == last.rng,
+                "\(label): the generator ended somewhere the original did not")
+        #expect(world.first.villages.count == 127,
+                "\(label): \(world.first.villages.count) villages in the first band")
+        #expect(world.second.villages.count == 127,
+                "\(label): \(world.second.villages.count) villages in the second")
+        #expect(world.rows.count == LandMask.height)
+        #expect(world.rows[0].count == 256)
+    }
+}
+
 @Test("The pipeline reaches the original's band before its last phase")
 func bandBeforeTheLastPhaseMatches() throws {
     struct Reference: Decodable {

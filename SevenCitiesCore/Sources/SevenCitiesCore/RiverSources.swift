@@ -71,7 +71,10 @@ extension TerrainPhases {
             if !unmarked(area, in: band) { continue }         // $38A6
 
             // $38BB: east, and one step to get going.
-            engine.start(heading: 2, persistence: 0xAA)
+            engine.start(heading: 2)                          // $32CC
+            // $38C3 and $38C8, *after* `$32CC` has already read the old values.
+            engine.patchedAllowance = 0x0A
+            engine.patchedPersistence = 0xAA
             engine.column = column
             engine.row = row
             engine.run(1, in: &band, rng: &rng)               // $4006
@@ -137,8 +140,8 @@ extension TerrainPhases {
             if !give && !engine.clearOfLakes(in: band) { give = true } // $394B
 
             if give {
-                if engine.erase(allowance: 0x0A, stop: stop, in: &band,
-                                rng: &rng) == .exhausted {
+                if engine.erase(allowance: engine.patchedAllowance, stop: stop,
+                                in: &band, rng: &rng) == .exhausted {
                     return false                              // $3450
                 }
                 continue                                      // $348A into $38CD
@@ -201,6 +204,10 @@ extension TerrainPhases {
                                source: (column: UInt8, row: Int),
                                in band: inout TerrainBand,
                                rng: inout WorldMakerRNG, secondBand: Bool) {
+        // $38EE and $38F3: the finish leaves both operands changed for whatever
+        // runs next, and nothing puts them back.
+        engine.patchedAllowance = 0x06
+        engine.patchedPersistence = 0xB4
         carry(&engine, direction: direction, until: 3, in: &band, rng: &rng)
         engine.fileSource(from: source.column, source.row, secondBand: secondBand)
 

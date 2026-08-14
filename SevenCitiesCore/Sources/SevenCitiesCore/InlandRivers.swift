@@ -68,7 +68,7 @@ extension TerrainPhases {
             }
             guard heading != 0xFF else { continue }           // $3F86 BMI
 
-            engine.start(heading: heading, persistence: 0xB4) // $3F8D
+            engine.start(heading: heading)                    // $3F8D
             engine.column = column
             engine.row = row
             engine.run(1, in: &band, rng: &rng)               // $4006

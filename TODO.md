@@ -205,10 +205,16 @@ engineering record; this holds the work.
       That is the 213 cells, and it answers what `$03` was for — scaffolding the
       middle phases stand on, put back at the end. Nothing in it touches the
       disk, so the phase table's old description was wrong.
-- [ ] **Assemble the second band.** Everything above is graded on band 0 only,
-      because band 1 starts at row 192 with sixteen rows of terrain band 0
-      generated and cannot be built until `$2C14` is. That is the last thing
-      between a phase-by-phase port and a whole map.
+- [x] ~~**Assemble the second band.**~~ **Done.** Both bands reproduce the
+      original's, and the generator ends where the original's ends — which is
+      every draw of every phase of both bands, in order. `WorldMaker.world(of:)`
+      is the whole pipeline.
+
+      The seam works the way the disk makes it work: `$0C9B` unpacks all four
+      hundred rows and writes them out, `$0F0C` reads a band back at the top of
+      each `$0E20` and `$0F47` writes it out at the bottom — so by the time the
+      second band is read, the sixteen rows it shares with the first have been
+      overwritten by the first band's *finished* terrain.
 - [ ] **Replace `WorldGenerator` in the viewer** with the real pipeline. This is
       the point of all of it.
 - [ ] **Re-check `wm_trace.py`'s phase snapshots.** It waits for checkpoints by

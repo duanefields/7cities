@@ -2912,6 +2912,27 @@ agreeing proves the *walk* is right and says nothing about what the walk filed
 away while it ran. Grading a second configuration is what caught it, and it was
 free — the trace tool merges runs.
 
+### Two operands that outlive everything
+
+`$32FC` and `$33F0` are the operands of `LDA #$AA` and `LDA #$06`, and they are
+patched in place and left patched. They survive a river, a phase and a band.
+
+The order at `$38BB` is the trap. `$32CC` is called *first* and copies `$32FC`
+into `$5F`; only then do `$38C3` and `$38C8` write `$0A` and `$AA` into the two
+operands. So a `$380D` river runs with whatever the **last** one left, not with
+what the two lines sitting right above it appear to set. Band 0's last river
+finishes, `$38F3` leaves `$B4` behind, and band 0's `$3961` and `$3EAD` inherit
+it — and so does band 1's first `$380D`.
+
+That is why band 0 came out exact with the persistence hard-coded to `$AA` and
+band 1 diverged on the fifth write of its first river. The first band never
+needs the carried value; the second band needs nothing else.
+
+Worth stating as a rule, because this is the fourth of these: **in this program,
+an immediate operand is a variable until proven otherwise.** `$443F`, `$3662`,
+`$4B83`, `$32FC`, `$33F0`, `$2D70`, `$2D74`, `$13D3`, `$141C`, `$3AA5`, `$36A2`
+— reading any of them as a constant has cost time.
+
 ### `$47DF` is what reads `$77`-`$81`
 
 That was an open question in TODO.md since `$44EF` was ported: the mirror's

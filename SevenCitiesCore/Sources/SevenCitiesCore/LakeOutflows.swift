@@ -80,7 +80,7 @@ extension TerrainPhases {
             }
 
             // $3CD5: a third setup, whose exits are "next mouth" and "carry on".
-            engine.start(heading: heading, persistence: 0xB4)
+            engine.start(heading: heading)                    // $3661
             engine.column = mouth.column
             engine.row = row
             engine.run(3, in: &band, rng: &rng)                   // $3CE6
@@ -152,8 +152,9 @@ extension TerrainPhases {
             }
 
             if give {
-                if engine.erase(allowance: 0x06, stop: engine.stopIndex,
-                                in: &band, rng: &rng) == .exhausted { return }
+                if engine.erase(allowance: engine.patchedAllowance,
+                                stop: engine.stopIndex, in: &band,
+                                rng: &rng) == .exhausted { return }
                 continue
             }
 
@@ -236,7 +237,7 @@ extension TerrainPhases {
             heading = UInt8(index)
         }
 
-        engine.start(heading: heading & 3, persistence: 0xB4)
+        engine.start(heading: heading & 3)
         engine.column = mark.column
         engine.row = mark.row
 
@@ -393,8 +394,8 @@ extension TerrainPhases {
             }
 
             if give {
-                if engine.erase(allowance: 0x06, stop: stop, in: &band,
-                                rng: &rng) == .exhausted {
+                if engine.erase(allowance: engine.patchedAllowance, stop: stop,
+                                in: &band, rng: &rng) == .exhausted {
                     return
                 }
                 continue
