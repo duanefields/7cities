@@ -41,8 +41,10 @@ func debugRangeWrites() throws {
     TerrainPhases.forestSweep(in: &band, rng: &rng, secondBand: false)
 
     band.journal = []
+    var rivers = RiverEngine()
+    rivers.beginBand()
     let segments = TerrainPhases.ranges(run.landmasses, in: &band, rng: &rng,
-                                        secondBand: false)
+                                        secondBand: false, rivers: &rivers)
     let journal = try #require(band.journal)
 
     var out: [[String: Any]] = []

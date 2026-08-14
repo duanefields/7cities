@@ -84,8 +84,10 @@ func rangesMatchOriginal() throws {
         try #require(Int(rng.state) == reference.sweptRng, "\(label): sweep draws")
 
         band.journal = []
+        var rivers = RiverEngine()
+        rivers.beginBand()
         let segments = TerrainPhases.ranges(stage.landmasses, in: &band, rng: &rng,
-                                            secondBand: false)
+                                            secondBand: false, rivers: &rivers)
         let journal = try #require(band.journal)
 
         // Everything up to the first stage the port does not have. After that

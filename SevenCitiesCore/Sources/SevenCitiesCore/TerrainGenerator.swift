@@ -27,11 +27,13 @@ extension TerrainPhases {
     public static func terrain(_ landmasses: [LandMassStage.Landmass],
                                in band: inout TerrainBand,
                                rng: inout WorldMakerRNG,
+                               rivers: inout RiverEngine,
                                secondBand: Bool) {
         coastSweep(in: &band, rng: &rng, secondBand: secondBand)
         shelfSweep(in: &band, secondBand: secondBand)
         forestSweep(in: &band, rng: &rng, secondBand: secondBand)
-        ranges(landmasses, in: &band, rng: &rng, secondBand: secondBand)
+        ranges(landmasses, in: &band, rng: &rng, secondBand: secondBand,
+               rivers: &rivers)
     }
 
     // MARK: - The first sweep
@@ -197,14 +199,16 @@ extension TerrainPhases {
     @discardableResult
     public static func ranges(_ landmasses: [LandMassStage.Landmass],
                               in band: inout TerrainBand, rng: inout WorldMakerRNG,
-                              secondBand: Bool) -> [Segment] {
+                              secondBand: Bool,
+                              rivers: inout RiverEngine) -> [Segment] {
         // $5E survives from one landmass to the next — it is zero page, and
         // nothing in $2F8C initializes it. See ``Spine`` for when that shows.
         var west: UInt8 = 0
         var segments: [Segment] = []
         for mass in landmasses where mass.southern == secondBand {
             if mass.radius >= 0x46 {                          // $2F04
-                segments += spine(mass, in: &band, rng: &rng, west: &west)
+                segments += spine(mass, in: &band, rng: &rng, west: &west,
+                                  rivers: &rivers, secondBand: secondBand)
             } else {
                 armRange(mass, in: &band, rng: &rng, secondBand: secondBand)
                 if let count = band.journal?.count {
@@ -218,7 +222,7 @@ extension TerrainPhases {
     /// Which drawer made a run of writes, matching the names
     /// `tools/range_trace.py` tags the original's with.
     public enum Stage: String, Sendable {
-        case arms, spine, spur, clearing
+        case arms, spine, spur, clearing, sources
     }
 
     /// Where one stage's writes end in ``TerrainBand/journal``, so a port that
@@ -354,8 +358,9 @@ extension TerrainPhases {
     /// row halfway across and draws again. So the ends stagger into each other.
     private static func spine(_ mass: LandMassStage.Landmass,
                               in band: inout TerrainBand,
-                              rng: inout WorldMakerRNG,
-                              west: inout UInt8) -> [Segment] {
+                              rng: inout WorldMakerRNG, west: inout UInt8,
+                              rivers: inout RiverEngine,
+                              secondBand: Bool) -> [Segment] {
         var walk = Spine()
         var segments: [Segment] = []
         func mark(_ stage: Stage) {
@@ -421,6 +426,11 @@ extension TerrainPhases {
         mark(.spur)
         clearing(&walk, of: mass, in: &band, rng: &rng)       // $31E6
         mark(.clearing)
+        sourceRiver(from: Range(column: mass.column, top: walk.top,
+                                bottom: walk.bottom),
+                    in: &band, rng: &rng, engine: &rivers,
+                    secondBand: secondBand)                   // $380D
+        mark(.sources)
         return segments
     }
 

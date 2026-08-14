@@ -61,25 +61,25 @@ public struct RiverEngine: Sendable {
     /// `$39`, the direction the walk holds to between turns.
     var heading: UInt8 = 0
     /// `$3A`, the direction the last step actually took.
-    var last: UInt8 = 0
+    public internal(set) var last: UInt8 = 0
     /// `$3B`, which way the river is bending.
     var bend: UInt8 = 0
     /// `$3C`, how far it has come — counted up while drawing, down while erasing.
     var length: UInt8 = 0
     /// `$46`, the index of the current step, and `$2B`, set until it first wraps.
-    var index: UInt8 = 0xFF
+    public internal(set) var index: UInt8 = 0xFF
     var wrapped: UInt8 = 0xFF
     /// `$5D` and `$5E`, the direction chosen and the tile it writes.
     var chosen: UInt8 = 0
-    var tile: UInt8 = 0
+    public internal(set) var tile: UInt8 = 0
     /// `$5F`, how strongly the walk holds its heading. `$32FC`'s operand, so the
     /// caller sets it: `$AA` from `$38C8` and `$B4` from `$38F3`.
     var persistence: UInt8 = 0xAA
     /// `$14`/`$15`, where the water is, and `$16`/`$17`, where it is going.
-    var column: UInt8 = 0
-    var row: Int = 0
-    var nextColumn: UInt8 = 0
-    var nextRow: Int = 0
+    public internal(set) var column: UInt8 = 0
+    public internal(set) var row: Int = 0
+    public internal(set) var nextColumn: UInt8 = 0
+    public internal(set) var nextRow: Int = 0
 
     /// `$E000` and `$E2F1`. Both are ring buffers of `recordLimit` entries.
     public var record: [Step] = []
@@ -89,16 +89,54 @@ public struct RiverEngine: Sendable {
 
     // MARK: - Setup
 
-    /// `$32CC`: start a walk, and tell the engine who to hand back to.
+    public init() {}
+
+    /// `$32CC`: start a walk.
     ///
-    /// The original writes the caller's two addresses into `$3450` and `$348A`.
-    /// Here the caller is a value instead, which is the same thing said in a
-    /// language that has them.
-    public init(heading: UInt8, persistence: UInt8 = 0xAA) {
+    /// The record and the mouth table survive it — they are memory, and `$56` is
+    /// only cleared once a band by `$0E40` — but everything about the walk
+    /// itself is reset. The original also writes the caller's two addresses into
+    /// the operands of `$3450` and `$348A`, which is how the engine knows who to
+    /// hand back to; here the caller keeps hold of the walk instead, which is
+    /// the same thing said in a language that has values.
+    public mutating func start(heading: UInt8, persistence: UInt8 = 0xAA) {
         self.heading = heading
         self.last = heading
         self.persistence = persistence
+        bend = 0
+        length = 0
+        index = 0xFF
+        wrapped = 0xFF
     }
+
+    /// `$0E40`: the mouth table is cleared once a band, not once a river.
+    public mutating func beginBand() {
+        mouths.removeAll()
+        mouthBytes = 0
+    }
+
+    /// `$34F3`: is there a lake mark within eight cells of where the walk is
+    /// about to step?
+    ///
+    /// The marks are the `$0F` that `$2D23` laid around each lake, and a river
+    /// is not allowed to run into one. Returns false when a mark is found, which
+    /// is the carry the original clears.
+    func clearOfLakes(in band: TerrainBand) -> Bool {
+        let area = TerrainPhases.box(around: nextColumn,
+                                     UInt8(truncatingIfNeeded: nextRow),
+                                     radius: 8)
+        return TerrainPhases.unmarked(area, in: band)
+    }
+
+    /// `$3688`: the three directions that are not a reversal of the last one.
+    ///
+    /// `$32BC` holds them, four to a row with `$FF` where the reversal would be,
+    /// so `last * 4` plus nought, one and two are the three a walk may look
+    /// along.
+    static let lookahead: [UInt8] = [0, 2, 4, 0xFF,
+                                     2, 0, 6, 0xFF,
+                                     4, 0, 6, 0xFF,
+                                     6, 2, 4, 0xFF]
 
     // MARK: - Walking
 
