@@ -475,9 +475,21 @@ extension CoastlineWalker {
         s.heading = 0
         s.step = 0xFF
 
+        // The walk's own budget, and it is not the generator's: `$16E4` and
+        // `$16E9` can cycle propose → unwind → recover → propose without drawing
+        // at all — `$17A8` and `$24FD` only read the state — so a coastline that
+        // never closes spins in silence. Two million steps is a couple of
+        // hundred times what the largest continent has ever needed and a tenth
+        // of a second to reach.
         var guardCount = 0
-        outline: while guardCount < 200_000 {
+        func budgetSpent() -> Bool {
             guardCount += 1
+            if guardCount > 2_000_000 { s.rng.declareStuck() }
+            return s.rng.isStuck
+        }
+
+        outline: while true {
+            if budgetSpent() { return .exhausted }
 
             // $15AD: the edge flag latches once the candidate reaches x == 2.
             if !edgeFlag && s.candidate.dx == 2 { edgeFlag = true }
@@ -575,7 +587,12 @@ extension CoastlineWalker {
             // iteration duplicates the cell, which is exactly how the island
             // diverged at plot 9: the original spent two iterations standing
             // still at (8,7) before moving to (9,7).
+            // `$16E4` and `$16E9` both come back here rather than to the top of
+            // the walk, so an unwind that keeps failing re-proposes forever. It
+            // shares the budget above rather than counting on its own, because
+            // the cycle spans both loops.
             proposal: while true {
+                if budgetSpent() { return .exhausted }
                 let horizontalBase = s.heading >> 1
                 let verticalBase: UInt8 = (s.heading == 0 || s.heading == 3) ? 0 : 1
                 // $2507: the slot this search started from, for the ring-full
@@ -627,6 +644,8 @@ extension CoastlineWalker {
                 var attempts = 2
 
                 while true {
+                    if budgetSpent() { return .exhausted }
+
                     if propose(&s, direction: direction,
                                horizontalBase: horizontalBase,
                                verticalBase: verticalBase, edgeGuard: edgeFlag),
@@ -642,7 +661,15 @@ extension CoastlineWalker {
                     // what a straightforward reading misses, and it is why the
                     // island's deep unwind stopped one step short.
                     attempts += 1
+                    // `$16EC`'s ring-full guard compares against `startSlot`,
+                    // which is `s.step + 1` as a byte — so a search that began
+                    // on the last slot has a start slot of 201, a value `s.step`
+                    // never takes, and the unwind can walk the ring for ever
+                    // without recognizing it. That is a real hole in the
+                    // original, not a transcription slip, and it is why this
+                    // loop is counted too.
                     while attempts >= 10 {                  // $260F CMP #$0A
+                        if budgetSpent() { return .exhausted }
                         switch unwind(&s, ring: ring, tried: &tried,
                                       ringWrapped: ringWrapped, in: &mask,
                                       erase: erase, startSlot: startSlot) {
@@ -663,7 +690,9 @@ extension CoastlineWalker {
                     // $2619: pick a direction not yet tried. The invariant above
                     // guarantees at least one free slot whenever this is reached.
                     var pick = s.rng.nextModulo(9)
-                    while tried[Int(pick) % 9] != 0 { pick = s.rng.nextModulo(9) }
+                    while tried[Int(pick) % 9] != 0 && !s.rng.isStuck {
+                        pick = s.rng.nextModulo(9)
+                    }
                     direction = pick
                     tried[Int(pick) % 9] &+= 1
                 }
@@ -696,7 +725,13 @@ extension CoastlineWalker {
                        tried: inout [UInt8], ringWrapped: Bool,
                        in mask: inout LandMask,
                        erase: (UInt8, Int) -> Void, startSlot: UInt8) -> Unwound {
-        while true {
+        // One pass of the ring at most. `$16EC`'s ring-full guard is a byte
+        // compare against `s.step + 1`, so a search that started on the last
+        // slot looks for 201 — a value the slot counter never takes — and the
+        // unwind can walk the ring forever without ever recognizing that it has
+        // come all the way round. Walking past the ring is revisiting records
+        // already restored, which is what `.abandon` means.
+        for _ in 0..<ringCapacity {
             // $16D3: back at the first slot without the ring ever having wrapped
             // means every step taken has been undone. `$50` is zero throughout the
             // outline trace — it is the flood fill's flag — so the choice is on the
@@ -725,6 +760,7 @@ extension CoastlineWalker {
             // $1722: revalidate, and unwind again if it refuses.
             if isCandidateClear(&s, in: mask) { return .restored }
         }
+        return .abandon
     }
 
     /// Leaves the first continent and starts the partner (`$17C8`).
@@ -753,17 +789,28 @@ extension CoastlineWalker {
         var remaining = s.rng.nextModulo(s.workingRadius >> 3) &+ 5
         var drawn = (x: UInt8(0), y: 0)
 
-        while true {
+        // Neither of these two loops draws, so the generator's watchdog cannot
+        // see them: `$17F2` steps a wrapping column and `$1816` adds rows until
+        // the clearance test passes. A row of unbroken land would lap the map in
+        // the first and a coast that never opens out would run the map's height
+        // twice over in the second. See ``WorldMakerRNG/declareStuck()``.
+        var finished = false
+        for _ in 0..<512 {
             // $17E4: down a row, then left until there is water here and to the
             // left. Both tests are in the row the resolve just addressed.
             s.offset.dy &+= 1
-            while true {
+            var lapped = true
+            for _ in 0..<256 {
                 drawn = cell(offset: s.offset, heading: s.heading,
                              centerX: s.centerX, centerY: s.centerY)
                 if !mask.isLand(x: drawn.x, y: drawn.y)
-                    && !mask.isLand(x: drawn.x &- 1, y: drawn.y) { break }
+                    && !mask.isLand(x: drawn.x &- 1, y: drawn.y) {
+                    lapped = false
+                    break
+                }
                 s.offset.dx &-= 1                           // $17F2
             }
+            if lapped { break }
             mask.setLand(x: drawn.x, y: drawn.y)            // $17FF
             plot(drawn.x, drawn.y)
 
@@ -779,9 +826,10 @@ extension CoastlineWalker {
                 probe &-= 1
                 clear -= 1
             }
-            if clear == 0 { break }
+            if clear == 0 { finished = true; break }
             remaining = 1                                   // $1816 INC $02
         }
+        if !finished { s.rng.declareStuck() }
 
         // $1825: the partner's centre is where the isthmus ended, a radius
         // further down, and the first continent's centre becomes a wall the

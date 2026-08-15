@@ -293,14 +293,20 @@ public enum SiteSelection {
     /// Two draws in the *opposite* order to `$247B`: the first supplies the high
     /// byte through its sign, the second the low byte, redrawn until it comes up
     /// even. Out of band, both are thrown away.
+    ///
+    /// The draw only ever produces an even row below 512, so a band holding none
+    /// of those is a redraw with no answer — an **inverted** band above all,
+    /// which `settle` hands it whenever its walk wraps past the band's start.
+    /// That is a hang in the original. See ``WorldMakerRNG/limit``.
     static func drawRow(in band: Band, rng: inout WorldMakerRNG) -> UInt16 {
-        while true {
+        while !rng.isStuck {
             let high: UInt8 = rng.next() >= 0x80 ? 1 : 0         // $439D
             var low: UInt8
-            repeat { low = rng.next() } while low & 1 != 0       // $43D0
+            repeat { low = rng.next() } while low & 1 != 0 && !rng.isStuck
             let row = UInt16(high) << 8 | UInt16(low)
             if row >= band.start && row < band.end { return row }
         }
+        return band.start
     }
 
     /// Draws a position inside a band (`$4373`).
@@ -313,7 +319,9 @@ public enum SiteSelection {
     private static func draw(in band: Band, mask: LandMask,
                              rng: inout WorldMakerRNG)
         throws -> (column: UInt8, row: UInt16, run: (left: UInt8, right: UInt8)) {
-        while true {
+        // A band with no row wide enough to hold a site is a redraw with no
+        // answer, the same way `drawRow` has none for an empty band.
+        while !rng.isStuck {
             let row = drawRow(in: band, rng: &rng)
 
             // $43EE: the first land in the row, then the first water past it.
@@ -325,6 +333,7 @@ public enum SiteSelection {
             let column = rng.nextByte(from: run.left &+ 9, below: run.right &- 9)
             return (column, row, run)
         }
+        throw WorldMakerRNG.Stuck(draws: rng.draws)
     }
 
     /// The first run of land in a row: its first cell, and the first water past it.

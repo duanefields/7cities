@@ -18,6 +18,12 @@ public enum InteriorFill {
         /// `$1906 JMP $2473` kills the raster interrupt and restarts the whole
         /// land-mass phase from `$20A3`, discarding every landmass placed so far.
         case restarted
+        /// A horizontal scan went right around the map without finding what it
+        /// was looking for. **The original has no such outcome** — `$194E` and
+        /// `$1961` step a wrapping column with no stop of their own, so a row of
+        /// unbroken land or unbroken water spins them forever. This is the
+        /// watchdog, not the 6502. See ``WorldMakerRNG/limit``.
+        case lapped
     }
 
     /// A pushed scanline seed: the three bytes `$1929` files away, which are the
@@ -66,13 +72,23 @@ public enum InteriorFill {
         // landmass is water — the outline is a ring and nothing has filled it —
         // so in practice this does nothing at all, and it is here for the case
         // where a landmass overlaps one already drawn.
-        while mask.isLand(x: column, y: row) { column &-= 1 }
+        var laps = 0
+        while mask.isLand(x: column, y: row) {
+            column &-= 1
+            laps += 1
+            if laps == 256 { return .lapped }
+        }
 
         while true {
             // $1961: right to the first land, then back one onto the water beside
             // it. After a pop this re-finds the run's right edge, which may have
             // moved if another scanline filled part of it in the meantime.
-            while !mask.isLand(x: column, y: row) { column &+= 1 }
+            laps = 0
+            while !mask.isLand(x: column, y: row) {
+                column &+= 1
+                laps += 1
+                if laps == 256 { return .lapped }
+            }
             column &-= 1
 
             // $1976: fill leftward while the cells are water. Two ways out, and

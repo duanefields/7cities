@@ -176,6 +176,19 @@ func worldFromASeed() throws {
     let other = try WorldMaker.world(config: 0, seed: 0xBEEF)
     #expect(world.first.terrain != other.first.terrain,
             "two seeds gave the same world")
+
+    // The watchdog's ceiling has to stay out of reach of a world that finishes.
+    // If it were reachable it would be part of what a seed generates rather
+    // than a backstop against a seed that generates nothing. The margin here is
+    // deliberately loose: the most expensive world in the whole input space
+    // costs 13,175,820 draws, an order of magnitude more than these two, so a
+    // tight bound would be measuring the seed rather than the ceiling. See
+    // WatchdogTests.
+    #expect(max(world.draws, other.draws) < WorldMakerRNG.defaultLimit / 4,
+            """
+            a world cost \(max(world.draws, other.draws)) draws against a \
+            ceiling of \(WorldMakerRNG.defaultLimit)
+            """)
 }
 
 

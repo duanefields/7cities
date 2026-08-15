@@ -306,13 +306,14 @@ extension TerrainPhases {
                                   rng: inout WorldMakerRNG) -> (UInt8, Int) {
         let north = direction == 0 || direction == 3
         let limit = (north ? up : down) &+ 1                 // $1009
-        while true {
+        while !rng.isStuck {
             let dy = rng.nextModulo(limit)
             let dx = rng.nextModulo(limit)
             let x = direction < 2 ? column &- dx : column &+ dx
             let y = north ? Int(row) - Int(dy) : Int(row) + Int(dy)
             if band[x, y] >= 3 { return (x, y) }
         }
+        return (column, Int(row))                            // stuck: the centre
     }
 
     // MARK: - The spine
@@ -567,8 +568,12 @@ extension TerrainPhases {
     private static func settle(_ walk: inout Spine, of mass: LandMassStage.Landmass,
                                mean: UInt8, floor: UInt8,
                                rng: inout WorldMakerRNG) {
+        // A landmass whose half-radius is no bigger than the floor can never
+        // draw one, and the original would ask forever. See ``WorldMakerRNG/limit``.
         var back: UInt8
-        repeat { back = rng.nextModulo(mass.radius >> 1) } while back < floor
+        repeat {
+            back = rng.nextModulo(mass.radius >> 1)
+        } while back < floor && !rng.isStuck
         // $31B0: above the center, but never off the top of the band.
         walk.row = mass.row >= back ? Int(mass.row - back) : 2
         let bottom = walk.row + Int(mass.radius)
@@ -617,7 +622,9 @@ extension TerrainPhases {
         guard rng.next() < 0x80 else { return }
 
         var east: UInt8
-        repeat { east = rng.nextModulo(mass.radius >> 1) } while east < 9
+        repeat {
+            east = rng.nextModulo(mass.radius >> 1)
+        } while east < 9 && !rng.isStuck                      // as in `settle`
         walk.column = east &+ mass.column &+ 1                // $314D's carry
         settle(&walk, of: mass, mean: 5, floor: 5, rng: &rng)
 
@@ -690,9 +697,16 @@ extension TerrainPhases {
     }
 
     /// `$3268`: forest back to plain, across one row of the clearing.
+    ///
+    /// The one loop in the World Maker that can spin **without drawing**, so the
+    /// generator's watchdog cannot see it: `$3283` compares a wrapping column
+    /// against `$53`, and a limit of `$FF` is a comparison no column can win. A
+    /// row with no forest left on it would then lap forever in silence. The lap
+    /// bound below is that case and only that case — with any smaller limit the
+    /// run stops long before 256 columns.
     private static func clear(_ walk: inout Spine, in band: inout TerrainBand,
                               rng: inout WorldMakerRNG) {
-        while true {
+        for _ in 0..<256 {
             if band[walk.column, walk.row] == 0x0C,
                rng.next() >= walk.thinning {
                 band[walk.column, walk.row] = 0x0B
@@ -700,5 +714,6 @@ extension TerrainPhases {
             walk.column &+= 1
             if walk.column > walk.limit { return }            // $3283
         }
+        rng.declareStuck()
     }
 }

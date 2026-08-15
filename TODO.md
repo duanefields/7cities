@@ -227,12 +227,54 @@ engineering record; this holds the work.
       because the port's seed is the generator's state *after* that choice — so
       the two are separate inputs rather than one.
 
-      Still worth doing: **a watchdog.** Several routines are rejection samplers
-      with no iteration bound — `$0FF8` redraws until it lands on land, `$3D97`
-      tries up to 256 times a cell, `$4A37` retries until a village fits. They
-      terminate on every seed and configuration measured, but the viewer now
-      generates from a random seed on a menu click, so "measured" is no longer
-      the same as "all of them".
+- [x] ~~**Add a watchdog.**~~ **Done, and the thing it was insurance against
+      turned out to be the common case.** The suspicion was right — several
+      routines are rejection samplers with no iteration bound — but the estimate
+      of how often they bite was wrong by orders of magnitude. Swept over the
+      whole input space — every seed from 1 to 65,535 in all three
+      configurations, 196,605 worlds — **37,000 of them do not produce a map**.
+      That is 18.8%: 28,508 that never terminate and 8,492 that hit `$2473`'s
+      restart, which the port throws rather than loops. Nine seeds had been
+      measured before; nine is not a sample.
+
+      `WorldMakerRNG` now counts draws and every unbounded loop gives up when
+      the count passes `limit`; `WorldMaker.world(config:seed:)` throws
+      `WorldMakerRNG.Stuck`. The viewer tries eight seeds a click, which puts
+      an empty click at about one in two million.
+
+      **Counting draws was not enough on its own, and that is the finding worth
+      keeping.** Six loops can spin without ever touching the generator, so no
+      counter on it can see them: `$194E` and `$1961` (the flood fill's row
+      scans), `$17F2` and `$1816` (the isthmus), `$3268` (the treeline),
+      `$369F` (the river carry) and `$4021` (the land runs) all step a
+      **wrapping** column with no stop of their own, and `$16D1`'s unwind can
+      walk the undo ring forever. Each of those now bounds itself at one lap and
+      reports through `declareStuck()`. Three rounds of "fix the sampler, sweep
+      again, find another site by stack sampling" — `sample <pid>` on a stalled
+      run named the routine every time, faster than reading ever would have.
+
+      **`$16EC` is a real hole in the original**, not a transcription slip. The
+      ring-full guard compares the slot counter against `startSlot`, which is
+      `s.step + 1` **as a byte** — so a search that begins on the last slot of
+      the 201-entry ring looks for slot 201, a value the counter never takes,
+      and the unwind can circle the ring without ever recognizing that it has
+      come all the way round.
+
+      **The draw counter turned out not to be the mechanism that fires.** The
+      whole input space was swept twice, at twenty million and at fifty million,
+      and the two agree exactly — 37,000 failures each, split the same six ways,
+      the same worst finishing world. A third run with the ceiling at two
+      billion, which is off for all purposes, agrees as well. The self-bounding
+      loops catch every one first, and not a single world anywhere was rescued
+      by extra room. What the extra room does cost
+      is time, because a run going nowhere spends the whole budget before
+      anything notices — two billion took **eight times as long to give up** as
+      twenty million. So the ceiling sits between: fifty million, nearly four
+      times the worst world that finishes (13,175,820 draws, seed `$5D28`
+      configuration 1), and about a second to reach.
+
+      All 80 tests still pass unchanged, which is the check that matters: the
+      watchdog changed no map.
 - [ ] **Re-check `wm_trace.py`'s phase snapshots.** It waits for checkpoints by
       polling `vice_ping` for "paused", which fires for unrelated reasons — the
       same bug that misread three runs of `wm_config.py`. Its snapshots may have

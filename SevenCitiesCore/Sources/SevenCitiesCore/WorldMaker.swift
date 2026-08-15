@@ -32,6 +32,9 @@ public enum WorldMaker {
     public struct World: Sendable {
         public var first: Band
         public var second: Band
+        /// How many times the generator was advanced to build it — the number
+        /// the watchdog's ceiling is set against. See ``WorldMakerRNG/limit``.
+        public var draws = 0
         /// The 400-row map, with the overlap taken from the second band — which
         /// is the copy the original leaves on the disk, since `$0F47` writes the
         /// second band over the sixteen rows the first one wrote there.
@@ -52,10 +55,24 @@ public enum WorldMaker {
     /// The land-mass phase and then the pipeline, which is everything the World
     /// Maker does. Measured at about forty milliseconds in a release build, so
     /// there is no reason for a caller to cache one.
-    public static func world(config: Int, seed: UInt16) throws -> World {
-        let run = try LandMassStage.run(config: config, seed: seed)
+    ///
+    /// Throws ``WorldMakerRNG/Stuck`` if the run blew `drawLimit`. That is the
+    /// watchdog, and it is here rather than inside a phase because a stuck run
+    /// has no partial result worth keeping: the loops give up where they stand
+    /// and everything after them is drawn from a generator that is out of step.
+    /// A caller that wants a world anyway should ask again with another seed.
+    public static func world(config: Int, seed: UInt16,
+                             drawLimit: Int = WorldMakerRNG.defaultLimit)
+        throws -> World {
+        let run = try LandMassStage.run(config: config, seed: seed,
+                                        drawLimit: drawLimit)
         var rng = run.generator
-        return world(of: run, rng: &rng)
+        let world = world(of: run, rng: &rng)
+        guard !rng.isStuck else {
+            throw WorldMakerRNG.Stuck(config: config, seed: seed,
+                                      draws: rng.draws)
+        }
+        return world
     }
 
     /// `$0DB5` and `$0DC3`: the whole pipeline, both bands.
@@ -70,7 +87,7 @@ public enum WorldMaker {
         var eligible = VillageBudget.eligibleQuadrants(in: run.mask)
         let second = secondBand(of: run, after: first, eligible: &eligible,
                                 rivers: first.rivers, rng: &rng)
-        return World(first: first, second: second)
+        return World(first: first, second: second, draws: rng.draws)
     }
 
     /// `$0E20` for the **first** band.

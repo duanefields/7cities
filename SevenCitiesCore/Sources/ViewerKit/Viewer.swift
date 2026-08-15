@@ -197,23 +197,41 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
         reload()
     }
 
+    /// How many seeds a single menu click will try before giving up.
+    ///
+    /// Not defensive padding — measured. About a fifth of all (seed,
+    /// configuration) pairs do not produce a world: some restart the land-mass
+    /// phase the way `$2473` does, and the rest run a sampler that has no
+    /// answer and are stopped by the watchdog. Neither is a failure of the
+    /// port; the original does the same and simply keeps going. Eight tries
+    /// puts the odds of a click coming up empty at about one in two million.
+    private static let generateAttempts = 8
+
     @objc private func generateWorld() {
-        // Two inputs, not one. `seed` is the generator's state where the
-        // land-mass phase picks it up, and the configuration is what `$2146`
-        // chose from a draw *before* that — which the port does not model, so
-        // it is drawn here the same way: a byte over ninety.
-        let seed = UInt16.random(in: 1...UInt16.max)
-        let config = Int(UInt8.random(in: 0...255)) / 90
-        do {
-            let world = try WorldMaker.world(config: config, seed: seed)
-            generated = WorldMap(world)
-            mapChoice = .generated(seed: seed, config: config)
-            reload()
-        } catch {
-            NSSound.beep()
-            FileHandle.standardError.write(
-                Data("could not generate a world: \(error)\n".utf8))
+        var lastError: Error?
+        for _ in 0..<Self.generateAttempts {
+            // Two inputs, not one. `seed` is the generator's state where the
+            // land-mass phase picks it up, and the configuration is what `$2146`
+            // chose from a draw *before* that — which the port does not model, so
+            // it is drawn here the same way: a byte over ninety.
+            let seed = UInt16.random(in: 1...UInt16.max)
+            let config = Int(UInt8.random(in: 0...255)) / 90
+            do {
+                let world = try WorldMaker.world(config: config, seed: seed)
+                generated = WorldMap(world)
+                mapChoice = .generated(seed: seed, config: config)
+                reload()
+                return
+            } catch {
+                lastError = error
+            }
         }
+        NSSound.beep()
+        FileHandle.standardError.write(Data("""
+            could not generate a world in \(Self.generateAttempts) tries; \
+            the last one said: \(lastError.map { "\($0)" } ?? "nothing")
+
+            """.utf8))
     }
 
     /// The C64 emits composite video, so every palette is a model of it and

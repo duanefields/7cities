@@ -31,7 +31,9 @@ extension TerrainPhases {
         guard range.bottom >= range.top,
               range.bottom &- range.top >= 0x32 else { return } // $3822
 
-        while true {
+        // `$3450` sends a river that unwound to nothing back to the top of this
+        // loop, so a range that can source none at all retries forever.
+        while !rng.isStuck {
             // $3826: a row somewhere in the middle twenty rows of the range.
             guard range.bottom >= 0x14 else { return }
             let lower = range.top &+ 0x14                     // $3830's carry
@@ -102,7 +104,7 @@ extension TerrainPhases {
     private static func walk(_ engine: inout RiverEngine,
                              in band: inout TerrainBand,
                              rng: inout WorldMakerRNG, secondBand: Bool) -> Bool {
-        while true {
+        while !rng.isStuck {
             let stop = engine.index &+ 1                      // $38CD
             engine.stopIndex = stop
             engine.choose(rng: &rng)                          // $38D2
@@ -150,6 +152,7 @@ extension TerrainPhases {
             engine.take(in: &band)                            // $3950
             _ = engine.fileMouth(in: &band, sourcesFull: false) // $3953
         }
+        return true                                           // stuck: no retry
     }
 
     /// `$3903`: look along the three directions that are not a reversal, seven
@@ -225,6 +228,13 @@ extension TerrainPhases {
     }
 
     /// `$369F`: keep stepping the one way until the cell ahead is water.
+    ///
+    /// The heading never changes, so this is a straight line: a vertical one
+    /// leaves the band inside 208 steps and reads 0, which is under every
+    /// threshold, but a horizontal one wraps at column 255 and would lap a row
+    /// of unbroken land forever. It does not draw while it does that — `$33B7`
+    /// only redraws when the aim fails, and the aim here cannot — so the lap
+    /// bound has to say so itself. See ``WorldMakerRNG/declareStuck()``.
     private static func carry(_ engine: inout RiverEngine, direction: UInt8,
                               until threshold: UInt8,
                               in band: inout TerrainBand,
@@ -234,12 +244,13 @@ extension TerrainPhases {
         // worked out, but records this direction and its tile.
         engine.chosen = heading
         engine.tile = RiverEngine.tiles[Int(heading) * 4 + Int(engine.last)] ?? 0
-        while true {
+        for _ in 0..<256 {
             engine.take(in: &band)                            // $36B4
             engine.chosen = heading                           // $36B7
             engine.aim(rng: &rng)
             if band[engine.nextColumn, engine.nextRow] < threshold { return }
         }
+        rng.declareStuck()
     }
 
     /// `$3E8B`: a swamp four to seven cells to one side of the river's end.

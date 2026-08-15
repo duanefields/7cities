@@ -109,7 +109,7 @@ extension TerrainPhases {
         }
 
         // $4823: one more, anywhere the draw lands.
-        while true {
+        while !rng.isStuck {
             let row = Int(rng.nextByte(from: 0x08, below: 0xCD) & 0xFC)
             let column = rng.nextByte(from: 0x10, below: 0xF0) & 0xFE
             let nibble = band[column, row]
@@ -212,7 +212,9 @@ extension TerrainPhases {
                 guard placedHere < 3 else { continue }        // $491B
 
                 var tries: UInt8 = 0
-                while true {                                  // $4925
+                // `$4931`'s odd-row retry skips the counter, so this loop is
+                // bounded only by the draws it makes. See ``WorldMakerRNG/limit``.
+                while !rng.isStuck {                          // $4925
                     let row = rng.nextByte(from: quarterTop,
                                            below: quarterTop &+ 7)
                     if row & 1 != 0 { continue }              // $4931
@@ -236,7 +238,7 @@ extension TerrainPhases {
             // go, across the strip rather than inside a quarter.
             if placedHere == 0 && qualified >= 3 && remaining() != 0 {
                 var tries: UInt8 = 0
-                while true {                                  // $4976
+                while !rng.isStuck {                          // $4976
                     let row = rng.nextByte(from: top &+ 4,
                                            below: top &+ 15 &+ 2)
                     if row & 1 != 0 { continue }
@@ -276,7 +278,7 @@ extension TerrainPhases {
                 let spread = secondBand ? budget.spread.south : budget.spread.north
                 if rng.next() < surveyThreshold && spread != 0 {  // $4B82
                     var tries: UInt8 = 0
-                    while true {
+                    while !rng.isStuck {
                         let dy = rng.nextByte(from: 1, below: 0x0F)
                         let dx = rng.nextByte(from: 1, below: 0x0F)
                         let nibble = band[left &+ dx, Int(top) + Int(dy)]
@@ -361,12 +363,14 @@ extension TerrainPhases {
             // spot it drew would not take one. `$4A48` falls through to the
             // next entry rather than looping, so a landmass gets exactly one
             // however much room it has.
-            place: while true {
+            // `$4A37` is the third of the unbounded samplers: neither loop has
+            // a try count, so a landmass with no room left would ask forever.
+            place: while !rng.isStuck {
                 let area = box(around: mass.column,
                                UInt8(truncatingIfNeeded: row),
                                radius: mass.radius)
                 guard villagesIn(area, of: band) < 3 else { break }  // $4A33
-                while true {
+                while !rng.isStuck {
                     let y = rng.nextByte(from: area.top, below: area.bottom)
                     if y & 1 != 0 { continue }                // $4A3C
                     let x = rng.nextByte(from: area.left, below: area.right)
@@ -387,7 +391,7 @@ extension TerrainPhases {
             let area = box(around: island.column,
                            UInt8(truncatingIfNeeded: row), radius: 5)
             guard villagesIn(area, of: band) == 0 else { continue }  // $4A86
-            while true {
+            while !rng.isStuck {
                 let y = rng.nextByte(from: area.top, below: area.bottom)
                 if y & 1 != 0 { continue }                    // $4A8D
                 let x = rng.nextByte(from: area.left, below: area.right)

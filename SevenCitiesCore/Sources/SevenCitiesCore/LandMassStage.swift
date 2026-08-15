@@ -153,8 +153,10 @@ public enum LandMassStage {
     /// All three configurations, to the end. `seed` is the generator's state at
     /// `$212A` — *after* `$2146` has drawn the configuration — which is why the
     /// two are separate arguments rather than one.
-    public static func run(config: Int, seed: UInt16) throws -> Run {
+    public static func run(config: Int, seed: UInt16,
+                           drawLimit: Int = WorldMakerRNG.defaultLimit) throws -> Run {
         var rng = WorldMakerRNG(seed: seed)
+        rng.limit = drawLimit
         var mask = LandMask()
         var steps: [Step] = []
         var sites: SiteSelection.Result?
@@ -330,6 +332,12 @@ public enum LandMassStage {
         // scatters small islands over whatever is left.
         let scattered = try secondWave(config: config, rng: &rng, mask: &mask,
                                        pool: &pool, steps: &steps)
+        // The watchdog, reported where it happened rather than three phases
+        // later: a stuck run leaves a mask nothing downstream should read.
+        guard !rng.isStuck else {
+            throw WorldMakerRNG.Stuck(config: config, seed: seed,
+                                      draws: rng.draws)
+        }
         return Run(mask: mask, steps: steps, sites: sites, islands: scattered,
                    satellites: satellites, landmasses: landmasses,
                    stoppedBecause: nil, generator: rng)

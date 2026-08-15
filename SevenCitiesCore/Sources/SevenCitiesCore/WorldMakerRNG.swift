@@ -26,6 +26,101 @@ public struct WorldMakerRNG: Sendable {
     /// The current register state as a single 16-bit value.
     public var state: UInt16 { UInt16(high) << 8 | UInt16(low) }
 
+    /// How many times the register has been advanced.
+    ///
+    /// This is the watchdog, and it lives here because most of what can hang the
+    /// World Maker is a rejection sampler: `$0FF8` redraws until its throw lands
+    /// on land, `$22B4` redraws until the byte is in range, `$4373` until an
+    /// even row falls inside a band, `$4A37` until a village fits. One counter
+    /// on the generator sees every one of them, including any nobody has
+    /// enumerated, because none of them can spin without drawing.
+    ///
+    /// **It does not see everything.** A handful of scans step a *wrapping*
+    /// column with nothing to stop them and take no draw at all — `$194E`,
+    /// `$1961`, `$17F2`, `$3268`, `$369F`, `$4021` — and `$16D1`'s unwind can
+    /// walk the undo ring forever without drawing either. Those bound themselves
+    /// and report through ``declareStuck()``. Counting draws was the first
+    /// design and it was not enough on its own; that is worth knowing before
+    /// anyone simplifies this back down to one mechanism.
+    public private(set) var draws = 0
+
+    /// The number of draws past which the run is declared stuck.
+    ///
+    /// A ceiling, not a schedule. It sits far enough above the worst real world
+    /// that no terminating seed can reach it, so it cannot change what any seed
+    /// generates — it only decides how long a *non*-terminating one is allowed
+    /// to run before somebody notices. See ``defaultLimit``.
+    public var limit = WorldMakerRNG.defaultLimit
+
+    /// The default ceiling: nearly four times the worst world in the input space.
+    ///
+    /// Swept over every seed from 1 to 65,535 in all three configurations, the
+    /// most expensive world that *finishes* costs 13,175,820 draws — seed
+    /// `$5D28`, configuration 1 — against a median in the low millions. A
+    /// ceiling a legitimate world could reach would not be a watchdog; it would
+    /// be part of what a seed generates, so this one is set clear of the tail
+    /// rather than snugly above it.
+    ///
+    /// **Where the number stops mattering.** In practice this is not the
+    /// mechanism that fires. Run over 6,900 worlds with the ceiling at two
+    /// billion — off, for all purposes — the outcome is identical to running
+    /// them at twenty million, down to the same worst draw count and the same
+    /// failures: every run that does not finish is stopped first by a loop that
+    /// bounds itself and calls ``declareStuck()``. Not one world was rescued by
+    /// the extra room. What the extra room *does* cost is time, since a run that
+    /// is going nowhere spends the whole budget before anything notices — two
+    /// billion took eight times as long to give up as twenty million did.
+    ///
+    /// So this sits between the two: margin enough that no world yet measured
+    /// could reach it, and small enough that giving up takes about a second.
+    /// This counter is the net for the sampler nobody has enumerated.
+    public static let defaultLimit = 50_000_000
+
+    /// Thrown when a run draws past its ``limit``.
+    ///
+    /// It means a rejection sampler found no acceptable candidate and would
+    /// have gone on asking forever — a hang, not a bad map. There is no partial
+    /// result worth keeping, so the whole world is discarded.
+    public struct Stuck: Error, CustomStringConvertible, Sendable {
+        /// Which world it was, where the caller knew — the entry point does,
+        /// a routine deep inside a phase does not.
+        public var config: Int?
+        public var seed: UInt16?
+        public var draws: Int
+
+        public init(config: Int? = nil, seed: UInt16? = nil, draws: Int) {
+            self.config = config
+            self.seed = seed
+            self.draws = draws
+        }
+
+        public var description: String {
+            let which = seed.map {
+                " on seed \(String(format: "$%04X", $0))"
+                    + (config.map { " configuration \($0)" } ?? "")
+            } ?? ""
+            return "the World Maker got stuck\(which) after \(draws) draws"
+        }
+    }
+
+    /// Whether this run has drawn past its ``limit``, or been declared stuck.
+    ///
+    /// Every unbounded loop in the pipeline tests this and gives up when it is
+    /// true. The values they leave behind are garbage; the caller that set the
+    /// limit is expected to throw the whole world away rather than use it.
+    public var isStuck: Bool { declaredStuck || draws > limit }
+
+    private var declaredStuck = false
+
+    /// Declare the run stuck without waiting for the draw count to say so.
+    ///
+    /// For the loops ``draws`` cannot see. Each of them bounds itself at the
+    /// point where it would be repeating work it has already done — one lap of a
+    /// wrapping column, one pass of the undo ring — and then says so here, so
+    /// that a world it spoiled is discarded rather than quietly handed back a
+    /// shape short. A bound reached is not a result; it is a hang caught.
+    public mutating func declareStuck() { declaredStuck = true }
+
     /// Creates a generator seeded with a 16-bit value.
     ///
     /// The original seeded this by reading the SID's oscillator twice, giving
@@ -51,6 +146,7 @@ public struct WorldMakerRNG: Sendable {
 
     /// Advances the register eight steps and returns the next value.
     public mutating func next() -> UInt8 {
+        draws += 1
         for _ in 0..<8 {
             // CLC / LDA $CD / ROL A x4 / AND #$02 / STA $CE
             var rotated = high
@@ -106,10 +202,11 @@ extension WorldMakerRNG {
     /// reachable path into a crash.
     public mutating func nextByte(from lower: UInt8, below upper: UInt8) -> UInt8 {
         guard lower < upper else { return lower }
-        while true {
+        while !isStuck {
             let value = next()
             if value >= lower && value < upper { return value }
         }
+        return lower
     }
 
     /// A byte reduced modulo `limit` (`$0ACB`).
@@ -142,19 +239,21 @@ extension WorldMakerRNG {
     /// need. A rejected candidate re-draws both.
     ///
     /// The original only short-circuits when the bounds are exactly equal, so an
-    /// inverted range spins forever. That hazard is preserved rather than
-    /// papered over — every caller derives its bounds from a landmass radius and
-    /// cannot invert them — but it is a hang, not merely a wrong answer, so a
-    /// new caller must not pass one.
+    /// inverted range spins forever. That hazard is preserved rather than papered
+    /// over — every caller derives its bounds from a landmass radius and cannot
+    /// invert them — but it is a hang rather than merely a wrong answer, so a new
+    /// caller must not pass one. The watchdog turns the hang into a thrown
+    /// ``WorldMakerRNG/Stuck``; it does not make the call correct.
     public mutating func nextWord(from lower: UInt16, below upper: UInt16) -> UInt16 {
         // $247F / $2487: equal bounds return the lower bound unsampled.
         if lower == upper { return lower }
-        while true {
+        while !isStuck {
             let low = next()
             let high: UInt8 = next() < 0x80 ? 1 : 0
             let value = UInt16(high) << 8 | UInt16(low)
             if value >= lower && value < upper { return value }
         }
+        return lower
     }
 
     /// A value scattered around `mean` (`$0B16`).

@@ -253,7 +253,7 @@ public struct RiverEngine: Sendable {
     /// `$333C` falls straight into `$33B7`, so a refusal is a loop rather than a
     /// call — and the choosing it does on the way round costs draws.
     mutating func aim(rng: inout WorldMakerRNG) {
-        while !aim() { choose(rng: &rng) }
+        while !aim() && !rng.isStuck { choose(rng: &rng) }
     }
 
     /// `$363B`: `count` steps, each one starting from the held heading.
@@ -311,7 +311,9 @@ public struct RiverEngine: Sendable {
     mutating func erase(allowance: UInt8, stop: UInt8, in band: inout TerrainBand,
                         rng: inout WorldMakerRNG) -> Unwind {
         var remaining = allowance
-        while true {
+        // `$347B` re-grants the allowance over open water, so the walk back is
+        // bounded by the record rather than by the count.
+        while !rng.isStuck {
             // $33F3: a mouth here is a mouth no longer.
             if band[column, row] == 0x04 && mouthBytes != 0 {
                 mouthBytes &-= 3
@@ -341,6 +343,7 @@ public struct RiverEngine: Sendable {
             if band[column, row] == 0x04 { remaining = 1; continue }
             return .stopped
         }
+        return .exhausted
     }
 
     // MARK: - Mouths

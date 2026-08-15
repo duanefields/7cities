@@ -900,6 +900,85 @@ Two things it cannot do, both learned by running into them:
   instructions that compute the value makes the result independent of timing, and a read-back of
   the patched bytes verifies it took.
 
+### The World Maker does not always finish
+
+Swept over its whole input space — every seed from 1 to 65,535 in all three configurations,
+196,605 worlds — **37,000 produce no map at all**. That is 18.8%, and it splits two ways:
+
+- **8,492 hit `$2473`**, the restart the original performs when a scan runs off a row or `$1900`'s
+  bounds check fails. The original kills its raster interrupt and runs the entire land-mass phase
+  again from `$20A3`; the port throws instead, deliberately, so that a silent restart cannot hide.
+- **28,508 never terminate.** These are the ones that matter, and the fixtures could not have shown
+  them: nine seed and configuration pairs were measured while the port was being built, and all
+  nine finish.
+
+The most expensive world that *does* finish costs **13,175,820 draws** (seed `$5D28`,
+configuration 1), against a median in the low millions. The tail is long.
+
+#### What spins, and why a draw counter is not enough on its own
+
+Most of what can hang is a **rejection sampler with no iteration bound**: `$0FF8` redraws until its
+throw lands on something that is not open water, `$22B4` until the byte falls in range, `$4373`
+until an even row falls inside a band, `$4A37` until a village fits. Every one of those consumes a
+draw per attempt, so one counter on the generator sees all of them — including any nobody has
+enumerated. That was the first design, and it is `WorldMakerRNG.draws` against `limit`.
+
+It missed a whole second class. These spin **without ever touching the generator**, so no counter on
+it can see them:
+
+| routine | what it does forever |
+| :------ | :------------------- |
+| `$194E`, `$1961` | the flood fill's row scans step a wrapping column; a row of unbroken land or unbroken water laps the map |
+| `$17F2`, `$1816` | the isthmus steps left until it finds water, and adds rows until ten cells stand clear |
+| `$3268` | the treeline compares a wrapping column against `$53`; a limit of `$FF` is a comparison no column can win |
+| `$369F` | the river carry walks one heading until the cell ahead is water |
+| `$4021` | the land runs measure east and west with no stop but the wrap |
+| `$16D1` | the unwind walks the undo ring — see below |
+
+Each of those now stops itself at the point where it would be repeating work it has already done —
+one lap of a wrapping column, one pass of the ring — and reports through `declareStuck()`. A bound
+reached is not a result; it is a hang caught, and the world is discarded.
+
+#### `$16EC` is a hole in the original
+
+The ring-full guard in `$16D1` compares the slot counter `$46` against the slot the search started
+from, which `$2507` computes as `$46 + 1` **as a byte**. The undo ring holds 201 entries, so `$46`
+runs 0 to 200. A search that begins on the last slot therefore looks for slot 201 — a value the
+counter never takes — and the unwind can circle the ring indefinitely without ever recognizing that
+it has come all the way round. This is not a transcription slip; it is what the 6502 does.
+
+#### The method: sample the stack, do not read the code
+
+Three of these were found the same way, and it took minutes each where reading would have taken
+hours. Run the sweep, wait for it to stall, and `sample <pid>` the stalled process: the call graph
+names the routine outright. The first site was `SiteSelection.drawRow`, the second the coastline
+walker's proposal loop, the third `$16D1` itself — and the third was invisible from the caller,
+because the loop that never returned was one frame further down than the guard that was supposed to
+stop it.
+
+The corollary is the useful part: **a fix that does not make the sweep get further is not a fix.**
+Each round of "guard the sampler, sweep again, sample the new stall" removed one class and exposed
+the next. Reasoning about which loops could spin produced a list that was right about the samplers
+and completely missed the wrapping scans.
+
+#### Where the ceiling is set, and why the number barely matters
+
+Fifty million draws, nearly four times the worst world that finishes. The interesting part is how
+little the exact value does. The whole input space was swept twice, at twenty million and at fifty
+million, and the two runs agree **exactly** — 37,000 failures each, split the same six ways, the
+same worst finishing world at 13,175,820 draws. A third run over 6,900 worlds with the ceiling at
+two billion, which is off for all purposes, agrees too. Not one world anywhere was rescued by extra
+room: every run that does not finish is stopped first by a loop that bounds itself.
+
+What the extra room does cost is time, because a run going nowhere spends its whole budget before
+anything notices: two billion took **eight times as long to give up** as twenty million did, for the
+same answers. So the ceiling is chosen for margin against the long tail of worlds that do finish,
+not because it changes any outcome measured, and it is kept low enough that giving up takes about a
+second.
+
+The viewer draws a fresh seed on every "Generate World", so it tries eight of them before giving up.
+At 18.8% that puts an empty click at about one in two million.
+
 ## Driving VICE (hard-won, reusable)
 
 - **Keys can stick down, and poison everything afterwards.** `vice_keyboard_matrix` with

@@ -123,7 +123,7 @@ extension TerrainPhases {
                                from mouth: RiverEngine.Mouth,
                                in band: inout TerrainBand,
                                rng: inout WorldMakerRNG, secondBand: Bool) {
-        while true {
+        while !rng.isStuck {
             engine.stopIndex = engine.index &+ 1                  // $3CEB
             engine.choose(rng: &rng)
             engine.aim(rng: &rng)
@@ -277,7 +277,11 @@ extension TerrainPhases {
             var distance: UInt8 = 0
             var x = mark.column
             var y = mark.row
-            while true {
+            // One lap and no more. The horizontal runs have no stop of their
+            // own, so a row of unbroken land would circle the map forever —
+            // which is the same answer as running out of it, and `$FF` is
+            // already how this says so.
+            for _ in 0..<256 {
                 let nibble = band[x, y]
                 if nibble == 0x03 { return 0xFF }             // $4024 CMP $BB
                 if nibble < 0x0B { return distance }
@@ -286,6 +290,7 @@ extension TerrainPhases {
                 y += dy
                 if limit(UInt8(truncatingIfNeeded: y)) { return 0xFF }
             }
+            return 0xFF
         }
         // $4021 and $4045 have no bound at all beyond the wrap; the vertical
         // pair stop at row 2 or $11 going up and row $CD going down.
@@ -316,7 +321,7 @@ extension TerrainPhases {
                              in band: inout TerrainBand,
                              rng: inout WorldMakerRNG, secondBand: Bool,
                              rules: Rules = Rules()) {
-        while true {
+        while !rng.isStuck {
             let stop = engine.index &+ 1                      // $3A83
             engine.stopIndex = stop
             engine.choose(rng: &rng)                          // $3A88
@@ -457,17 +462,20 @@ extension TerrainPhases {
     }
 
     /// `$369F` again, with the threshold the caller wants.
+    ///
+    /// Same lap bound as ``RiverSources``' copy, and for the same reason.
     private static func carry(_ engine: inout RiverEngine, until threshold: UInt8,
                               in band: inout TerrainBand,
                               rng: inout WorldMakerRNG) {
         let heading = engine.chosen
         engine.tile = RiverEngine.tiles[Int(heading) * 4 + Int(engine.last)] ?? 0
-        while true {
+        for _ in 0..<256 {
             engine.take(in: &band)
             engine.chosen = heading
             engine.aim(rng: &rng)
             if band[engine.nextColumn, engine.nextRow] < threshold { return }
         }
+        rng.declareStuck()
     }
 
     /// `$3AA5`: file the river and put the swamps down.
