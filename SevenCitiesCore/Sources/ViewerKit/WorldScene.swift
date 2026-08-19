@@ -210,7 +210,7 @@ final class WorldScene: SKScene {
         // The sea has no stored art to vary — the original draws it flat and
         // stipples it — so its variants are ours, one per wave phase.
         if terrain.isWater {
-            return "\(terrain)#w\(SeaArt.variant(x: x, y: y))"
+            return "\(terrain)#\(SeaArt.variantKey(x: x, y: y))"
         }
         return "\(terrain)#\(o.variant(for: terrain, x: x, y: y))"
     }
@@ -279,24 +279,27 @@ final class WorldScene: SKScene {
 
     private func buildTileMap() {
         var groups: [String: SKTileGroup] = [:]
-        // The sea first: flat water that twinkles, since there is no wave art to
-        // load. Animated tile definitions, so SpriteKit runs the cycle and
-        // nothing has to be redrawn per frame.
+        // The sea first, since there is no wave art to load: flat water with a
+        // speck stippled onto about one tile in eight. Fixed to the world, not
+        // animated — see `SeaArt`.
         if style == .original, originals != nil {
             let water = OriginalTiles.c64[0x0E]
             let speck = OriginalTiles.c64[0x07]
             let scale = OriginalTiles.defaultScale
+            // Every distinct appearance the stipple can take: bare water, and
+            // water with its speck at each of the 8 x 16 pixel-pair positions.
+            // Built once; which one a tile uses is decided by its map position.
+            var appearances: [String: (x: Int, y: Int)?] = ["bare": nil]
+            for sx in 0..<8 {
+                for sy in 0..<16 { appearances["s\(sx)_\(sy)"] = (x: sx, y: sy) }
+            }
             for terrain in Terrain.allCases where terrain.isWater {
-                for v in 0..<SeaArt.variants {
-                    let frames = SeaArt.cycle(variant: v, water: water,
-                                              speck: speck, scale: scale)
-                    guard !frames.isEmpty else { continue }
-                    let key = "\(terrain)#w\(v)"
-                    let definition = SKTileDefinition(textures: frames,
-                                                      size: CGSize(width: TileArt.size,
-                                                                   height: TileArt.size),
-                                                      timePerFrame: 0.55)
-                    let group = SKTileGroup(tileDefinition: definition)
+                for (name, at) in appearances {
+                    guard let texture = SeaArt.tile(speckAt: at, water: water,
+                                                    speck: speck, scale: scale)
+                    else { continue }
+                    let key = "\(terrain)#\(name)"
+                    let group = SKTileGroup(tileDefinition: SKTileDefinition(texture: texture))
                     group.name = key
                     groups[key] = group
                 }

@@ -86,20 +86,38 @@ enum MarkerArt {
 /// instead one **pixel-pair** zeroed inside an otherwise-uniform water byte, so
 /// it draws in `$D021`: measured `$54`, `$51` and `$45` against `$55`. On one
 /// captured frame 17 of the 144 terrain glyphs carried exactly one speck and the
-/// other 127 were bare, and diffing both charset buffers across a voyage shows
-/// those bytes moving, so the specks travel.
+/// other 127 were bare — about one tile in eight.
 ///
 /// A pair is two pixels wide and one tall, and `$D021` in the map region is
 /// yellow — measured at 176 pixels of it against 8,800 of water.
+///
+/// ## The specks do not animate
+///
+/// They are fixed to the world, not to the screen: sampling the charset while
+/// the ship was stationary gave the same 17 specks in the same places across six
+/// samples over three seconds. An earlier version of this had them twinkling,
+/// from misreading a diff taken across twenty *moves* — that showed the stipple
+/// changing only because the view had scrolled a different piece of sea under
+/// it. So the speck a tile carries is a pure function of its map position and
+/// nothing else, and the sea appears to move only because you do.
 enum SeaArt {
 
-    /// How many distinct wave tiles to build. Each gets its speck in a different
-    /// place and starts at a different point in the cycle, so the sea twinkles
-    /// rather than blinking in unison.
-    static let variants = 8
-    /// Frames in one tile's cycle. Only one carries a speck, which is what keeps
-    /// the sea mostly bare the way the original's is.
-    static let frames = 6
+    /// Where a tile's speck sits, or `nil` for the seven tiles in eight that
+    /// carry none. A pure function of the map position, so the sea is painted on
+    /// the world rather than on the screen.
+    static func speck(x: Int, y: Int) -> (x: Int, y: Int)? {
+        var h = (x &* 73_856_093) ^ (y &* 19_349_663)
+        h = (h ^ (h >> 13)) &* 1_274_126_177
+        h = abs(h ^ (h >> 16))
+        guard h % 8 == 0 else { return nil }          // ~1 tile in 8, as measured
+        return (x: (h / 8) % 8, y: (h / 64) % 16)
+    }
+
+    /// The key for a tile's appearance: bare water, or water with its speck.
+    static func variantKey(x: Int, y: Int) -> String {
+        guard let s = speck(x: x, y: y) else { return "bare" }
+        return "s\(s.x)_\(s.y)"
+    }
 
     /// One 16x16 tile: flat water, optionally with a single two-by-one speck.
     static func tile(speckAt: (x: Int, y: Int)?, water: NSColor, speck: NSColor,
@@ -122,24 +140,5 @@ enum SeaArt {
         let texture = SKTexture(cgImage: image)
         texture.filteringMode = .nearest
         return texture
-    }
-
-    /// The frames of one wave variant: bare water except for a single frame.
-    static func cycle(variant: Int, water: NSColor, speck: NSColor,
-                      scale: Int) -> [SKTexture] {
-        let bare = tile(speckAt: nil, water: water, speck: speck, scale: scale)
-        // Spread the specks over the tile and the cycle so no two variants
-        // twinkle together.
-        let at = (x: (variant * 3) % 8, y: (variant * 5 + 1) % 16)
-        let lit = tile(speckAt: at, water: water, speck: speck, scale: scale)
-        return (0..<frames).map { $0 == variant % frames ? (lit ?? bare) : bare }
-            .compactMap { $0 }
-    }
-
-    /// Which variant a position uses. Deterministic, so the sea does not change
-    /// its pattern when the view is rebuilt.
-    static func variant(x: Int, y: Int) -> Int {
-        let n = (x &* 7) &+ (y &* 13)
-        return ((n % variants) + variants) % variants
     }
 }
