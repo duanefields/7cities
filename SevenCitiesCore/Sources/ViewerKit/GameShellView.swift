@@ -202,9 +202,14 @@ final class GameShellView: NSView {
         drawPanel(leftPanel, centeredOn: leftCenter, originRow: originRow)
         drawPanel(rightPanel, centeredOn: rightCenter, originRow: originRow)
 
+        // Left-aligned to the viewport's left edge, not centered. The original
+        // starts both of these at column 14, which is exactly where its map grid
+        // begins — so the two labels line up with each other and with the frame.
+        // Centering them independently makes SPEED and DEPTH ragged, since they
+        // are different lengths.
         let below = originRow + gridCells.high + 2
         for (i, line) in bottomLines.enumerated() {
-            draw(line, centeredOn: cols / 2, row: below + i, color: textColor)
+            draw(line, at: originCol, row: below + i, color: textColor)
         }
     }
 
