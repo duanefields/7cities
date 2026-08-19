@@ -383,26 +383,41 @@ engineering record; this holds the work.
 
 ## The game itself — none of this is started
 
-- [ ] **Find where Spain puts you.** Still open, and harder than expected.
-      `WorldMap.shipStart()` reasons rather than measures.
+- [ ] **Find where Spain puts you.** Still open. Two sessions of memory
+      archaeology have narrowed it a lot without closing it.
 
-      **The expedition's map position is not a plain coordinate in RAM.** Diffed
-      `$0000`-`$BFFF` (48 KB) across twenty confirmed westward moves: not one
-      byte changed by 20, by 10, or by any consistent amount, and no 16-bit
-      little-endian pair moved by a plausible step either. `$86`/`$87`, which
-      `$58B8` reads map bytes through, held at `$B600` throughout. Candidates
-      found in a narrower 4 KB diff (`$0027`, `$0036`) were disproved — they did
-      not move across the twenty steps.
+      **The expedition's position is not a coordinate that counts.** Diffed the
+      whole 64 KB (`$0000`-`$FFFF` as RAM) across twenty confirmed single-tile
+      westward moves and then ten northward: no byte and no 16-bit pair moves by
+      the step count, or by any consistent multiple, on both axes. Candidates
+      that survive one axis die on the other — `$0032` moved +10 on twenty west
+      and held still going north, but 135->145 cannot be a column in a 128-byte
+      row; the four bytes at `$E22E`-`$E234` move in lockstep, so they are one
+      quantity mirrored, not coordinates.
 
-      Worth trying next: `$C000`-`$FFFF`, which has not been diffed; and the idea
-      that the position is held as a **disk track/sector plus offset** rather
-      than as x/y, since the game streams map regions off the map disk as it
-      scrolls. That would explain the absence of any coordinate that counts.
+      **The reason is that the map is streamed in pages.** `$8C` = 145 and
+      `$256C` = 96 held constant across moves, so whatever they describe is
+      quantized — it changes when the ship leaves a page, not when it takes a
+      step. That is consistent with the game reading map regions off the disk as
+      it scrolls, and it explains the complete absence of anything per-step.
 
-      Note that **joystick input does not reach the game through vice-mcp** —
-      neither `vice_joystick_tap` nor a held `vice_joystick_set`, on either port.
-      So any movement has to be driven by hand at the emulator, which is what
-      `boot_demo.py` built the demo path to avoid.
+      **What does work is matching terrain.** The buffer at `$B600` holds **one
+      tile per byte** (not nibble-packed like the disk), and a 40-tile run of it
+      is unique enough to find in the decoded 256x400 world by plain string
+      search. That fixed a position at (134,145) with no memory archaeology at
+      all, and is the technique to build on. `local/` has a working locator.
+
+      **But `$B600` is not the display buffer.** The visible 6x6 window, read off
+      the composed charset (water above, land in the lower left), matches nowhere
+      in that page — and the page's row breaks only fit a 48-tile stride
+      *relative to one anchor*, not absolutely. So `$B600` is some other region,
+      probably what is being streamed ahead of the ship. Finding the buffer the
+      view is actually composed from is the next step, and `$3107`/`$58B8` are
+      where to read for it.
+
+      Also recorded because it cost time: **joystick input does not reach the
+      game through vice-mcp**, tapped or held, on either port, so movement has to
+      be driven by hand at the emulator.
 
 - [x] ~~**Settle whether the expedition marker is a hardware sprite.**~~ **Yes.**
       Captured at sea: `$D015` = `03`, so sprites 0 and 1, both at the same
