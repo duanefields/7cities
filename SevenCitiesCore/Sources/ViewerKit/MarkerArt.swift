@@ -80,8 +80,12 @@ enum MarkerArt {
         // Inward, toward the ring's center. Pattern rows count downward the same
         // way map rows do, so this is simply the negated step.
         let ix = -dx, iy = -dy
-        for k in 0...3 { plot(c + ix * k, c + iy * k) }
-        // The short bar, perpendicular to the stem, at the outer end.
+        // The stem runs from one cell *outside* the bar to three inside it. That
+        // stub on the outer side is what makes it a cross rather than a T — with
+        // the bar at the very tip it reads as one, which is what the first
+        // version drew.
+        for k in -1...3 { plot(c + ix * k, c + iy * k) }
+        // The short bar, perpendicular, crossing the stem rather than capping it.
         for s in [-1, 1] { plot(c - iy * s, c + ix * s) }
         return g.map { String($0) }
     }
