@@ -51,13 +51,16 @@ final class WorldScene: SKScene {
     var fogEnabled = true {
         didSet {
             fogNode?.isHidden = !fogEnabled
-            if fogEnabled { updateFog() }
+            if fogEnabled { updateFog(full: true) }
             refreshStatus()
         }
     }
     /// Reused between updates: one RGBA byte per map cell. Rebuilt on every step,
     /// so it is not worth reallocating 400 KB each time.
     private var fogPixels: [UInt8] = []
+    /// Where the eye was when the fog was last painted, so the next paint can
+    /// touch only what that move could have changed.
+    private var paintedEye: (x: Int, y: Int)?
     /// Loose enough that the window shows well past the sight radius.
     ///
     /// This was 3.0, at which a viewport shows about five and a half tiles —
@@ -335,7 +338,19 @@ final class WorldScene: SKScene {
         updateFog()
     }
 
-    private func updateFog() {
+    /// Repaint the fog texture.
+    ///
+    /// A step changes the alpha of very few cells: only those that fell in or out
+    /// of the sight radius, which is a block around where the eye was and one
+    /// around where it now is. Everything else is exactly as it was already
+    /// painted. Repainting all 102,400 every step cost more than the move itself
+    /// and was part of what made moving feel jerky, so by default only those two
+    /// windows are touched.
+    ///
+    /// `full` forces the whole map, which is needed the first time and after the
+    /// fog has been hidden — while hidden the state keeps advancing, so the two
+    /// windows would no longer describe everything that changed.
+    private func updateFog(full: Bool = false) {
         // Skipped while hidden — but `fog` itself has already been updated by the
         // caller, so nothing is lost by not drawing it, and switching the fog
         // back on rebuilds from state that stayed current.
@@ -348,21 +363,38 @@ final class WorldScene: SKScene {
         // *top* row. Flipping as well mirrored the fog — the lit circle appeared
         // two hundred rows from the expedition, and everything you could see was
         // black.
-        for y in 0..<h {
-            for x in 0..<w {
-                let alpha: UInt8 = switch fog.visibility(x: x, y: y) {
-                case .unseen: Self.unseenAlpha
-                case .remembered: Self.rememberedAlpha
-                case .visible: 0
+        func paint(_ xs: ClosedRange<Int>, _ ys: ClosedRange<Int>) {
+            for y in ys {
+                for x in xs {
+                    let alpha: UInt8 = switch fog.visibility(x: x, y: y) {
+                    case .unseen: Self.unseenAlpha
+                    case .remembered: Self.rememberedAlpha
+                    case .visible: 0
+                    }
+                    // Black, premultiplied, so only the alpha carries anything.
+                    let i = (y * w + x) * 4
+                    fogPixels[i] = 0
+                    fogPixels[i + 1] = 0
+                    fogPixels[i + 2] = 0
+                    fogPixels[i + 3] = alpha
                 }
-                // Black, premultiplied, so only the alpha carries anything.
-                let i = (y * w + x) * 4
-                fogPixels[i] = 0
-                fogPixels[i + 1] = 0
-                fogPixels[i + 2] = 0
-                fogPixels[i + 3] = alpha
             }
         }
+        // The sight radius plus one, since the cell just outside the old block is
+        // the one that has to darken.
+        func window(around eye: (x: Int, y: Int)) -> (ClosedRange<Int>, ClosedRange<Int>) {
+            let r = FogOfWar.sightRadius + 1
+            return (max(0, eye.x - r)...min(w - 1, eye.x + r),
+                    max(0, eye.y - r)...min(h - 1, eye.y + r))
+        }
+
+        if full || paintedEye == nil {
+            paint(0...(w - 1), 0...(h - 1))
+        } else {
+            if let was = paintedEye { let (xs, ys) = window(around: was); paint(xs, ys) }
+            if let now = fog.eye { let (xs, ys) = window(around: now); paint(xs, ys) }
+        }
+        paintedEye = fog.eye
         // The image is made inside the exclusive-access closure and everything
         // else outside it. Touching `fogPixels` again while that access is held
         // is an exclusivity violation and traps at runtime — which it did.
@@ -382,15 +414,24 @@ final class WorldScene: SKScene {
                               height: CGFloat(h) * TileArt.size)
     }
 
+    /// The camera and the ship move together, in one step, with no tween.
+    ///
+    /// They used to disagree: the ship's position was set outright while the
+    /// camera was given an 0.08s `move(to:)`. For that eighth of a second the
+    /// ship slid across the world instead of the world sliding under the ship,
+    /// which is the ghosting you see while moving — and it is worst exactly
+    /// where the tiles are biggest, because the same tween covers more pixels.
+    /// Snapping both is also what the original does: it scrolls the map by whole
+    /// tiles, never between them.
+    ///
+    /// `animated` is kept in the signature because the call sites read better
+    /// for it, but there is deliberately nothing left to animate.
     private func centreOnExplorer(animated: Bool) {
         let p = worldPoint(position2D.x, position2D.y)
         explorer.position = p
+        cam.removeAllActions()
         guard follow else { return }
-        if animated {
-            cam.run(.move(to: p, duration: 0.08))
-        } else {
-            cam.position = p
-        }
+        cam.position = p
     }
 
     /// Two short lines, because they have to fit under the classic aperture —

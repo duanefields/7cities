@@ -334,9 +334,23 @@ engineering record; this holds the work.
       slots, each with exactly the 4 bytes of headroom that `x & 3` needs, so
       `T[x & 1] + T[y & 1]` picks a slot and `x & 3` shifts within it. Twelve
       whole, distinct peaks. See NOTES.md for why it was wrongly rejected twice.
-- [ ] **Animate water.** Entries `$0`/`$1`/`$2` point at RAM buffers driven by
-      the `EOR #$55` pass at `$4057`, which swaps multicolor pixel pairs. Worth
-      reproducing for fidelity.
+- [ ] **The ocean has no waves, and that is not just the animation.** Entries
+      `$0`/`$1`/`$2` point at RAM buffers driven by the `EOR #$55` pass at
+      `$4057`, which swaps multicolor pixel pairs. Because those pointers are
+      below `TerrainTiles`' `< $9000` cutoff there is nothing in `game` to read,
+      so all three water depths extract as `animated: true` with a single **flat
+      fill** — and the viewer draws the sea as a solid blue field. The original
+      has white specks across it. So this is a fidelity gap visible *at rest*,
+      before any animation question arises, and it is the most conspicuous thing
+      still wrong with the exploration view.
+
+      The bitmaps exist in RAM at `$94B0` (deep and shallow) and `$94D8`
+      (medium), so **capturing them from a running game under VICE is the whole
+      job** — `vice_memory_read` over those two buffers while the exploration
+      screen is up. Do it in the same sitting as the start position and the
+      sprite question below; all three want the game running and nothing else.
+      Whether the three depths differ in pattern or only in color is unknown and
+      the capture answers it.
 - [x] ~~**Identify the exploration view's composition step.**~~ Solved and
       ported. The view is a 12x12 grid of unique character codes over 6x6 map
       tiles (`$3107`), the charset is double-buffered and rewritten per frame
@@ -359,6 +373,25 @@ engineering record; this holds the work.
 
 ## The game itself — none of this is started
 
+- [ ] **Find where Spain puts you, and how far it is to land.** `WorldMap.shipStart()`
+      currently reasons rather than measures: eastern edge, mid-latitude, three
+      tiles clear of the first water. The original sails you west out of a Spain
+      that is off the map entirely, so the real start is almost certainly a fixed
+      constant. Reading it off the running game settles the latitude and — the
+      number that actually matters — how much open ocean stands between the start
+      and landfall, which decides whether the opening minute is discovery or
+      tedium. Under VICE: boot, get through outfitting, and read the expedition's
+      map position out of memory once the exploration screen is up.
+- [ ] **Settle whether the expedition marker is a hardware sprite, and whether it
+      animates.** Evidence that it is: the VICE capture of the exploration screen
+      holds exactly 24 pixels of `(175,60,88)`, a color outside the screen's
+      four-color terrain palette, sitting dead center of the 12x12 grid at cols
+      19-20, row 10. A fifth color there is what a VIC-II sprite gives you, since
+      sprites carry their own color register. If so, animation is a pointer cycle
+      rather than something to invent — which is the cheap way a 1984 C64 game
+      would animate sails or a walking party, and would explain why there is a
+      static ship tile *and* a separate on-screen marker. `vice_sprite_inspect`
+      plus watching the sprite pointers at the end of the video matrix answers it.
 - [ ] **The discovery screen.** The summary the original shows over a lavender
       ground: the explored part of the world drawn small on the left, and a brown
       panel reporting LAND, RIVERS, NATIVES, MINES and SPECIAL as percentages
