@@ -165,11 +165,14 @@ final class WorldScene: SKScene {
         // Sizes from the hardware expansion: 8x7 doubled is 16x14, about one map
         // tile across.
         ring.texture = MarkerArt.texture(MarkerArt.ring, color: OriginalTiles.c64[0x01])
-        ring.size = CGSize(width: TileArt.size, height: TileArt.size * 14 / 16)
-        // The pip's shape depends on the heading, so its texture is built when
-        // the heading changes rather than once. Sized so a pattern pixel is the
-        // same size as one of the ring's.
-        bearingPip.size = CGSize(width: TileArt.size * 7 / 8, height: TileArt.size * 7 / 8)
+        // 7x7 doubled by the hardware expansion is 14x14, against a 16-pixel
+        // tile. Square, so the pip's pattern pixels are the same size.
+        ring.size = CGSize(width: TileArt.size * 7 / 8, height: TileArt.size * 7 / 8)
+        // The needle's shape depends on the heading, so its texture is built
+        // when the heading changes rather than once. Its pattern is 9 wide
+        // against the ring's 7, and a pattern pixel has to be the same size in
+        // both or the two do not sit together.
+        bearingPip.size = CGSize(width: TileArt.size * 9 / 8, height: TileArt.size * 9 / 8)
         bearingPip.zPosition = 1
         for node in [ring, bearingPip] { explorer.addChild(node) }
 
@@ -512,7 +515,11 @@ final class WorldScene: SKScene {
         // is the same sprite with the same pointer and the same seven bytes.
         // No bearing while stopped: sprite 0's bitmap is simply empty until the
         // expedition is under way.
-        bearingPip.isHidden = heading == nil
+        // The needle shows only while the expedition is actually under way. The
+        // original simply leaves sprite 0's bitmap empty when it is not moving,
+        // and a step is instantaneous here, so it is shown on each step and
+        // taken away again shortly after the last one.
+        bearingPip.removeAllActions()
         if let heading {
             bearingPip.texture = MarkerArt.texture(
                 MarkerArt.pip(dx: heading.dx, dy: heading.dy),
@@ -520,6 +527,13 @@ final class WorldScene: SKScene {
             let r = ring.size.width / 2
             let o = MarkerArt.pipOffset(dx: heading.dx, dy: heading.dy)
             bearingPip.position = CGPoint(x: o.x * r, y: o.y * r)
+            bearingPip.isHidden = false
+            bearingPip.run(.sequence([
+                .wait(forDuration: 0.4),
+                .run { [weak bearingPip] in bearingPip?.isHidden = true },
+            ]))
+        } else {
+            bearingPip.isHidden = true
         }
         anchoredShip.isHidden = !ashore
         if ashore {

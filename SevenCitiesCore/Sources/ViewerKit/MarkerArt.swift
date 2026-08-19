@@ -42,48 +42,58 @@ enum MarkerArt {
     /// sprites are hardware-expanded in x and y (`$D01D` = `$D017` = `03`), so it
     /// draws at 16x14 — about one map tile across. An earlier version was 11x11
     /// with single-pixel edges and read thin and spindly beside the original.
+    /// Seven wide, not eight. The sprite byte is eight bits but the shape sits in
+    /// columns 0-6 with the last blank, so a pattern padded to eight puts the
+    /// ring half a pixel left of its node's center while the pip sits exactly on
+    /// it — and the needle then reads off-axis, most visibly due north. Trimmed
+    /// to seven, both are 7x7 and concentric.
     static let ring = [
-        "..###...",
-        ".##.##..",
-        "##...##.",
-        "#.....#.",
-        "##...##.",
-        ".##.##..",
-        "..###...",
+        "..###..",
+        ".##.##.",
+        "##...##",
+        "#.....#",
+        "##...##",
+        ".##.##.",
+        "..###..",
     ]
 
-    /// The bearing: a small **cross with one long arm**, pointing inward.
+    /// The bearing: a needle sitting on the rim, its stem running inward.
     ///
     /// Sprite 0, three or four bytes, rewritten in place rather than swapped by
     /// pointer, and drawn in `$D027` = `$2` red against the ring's `$D028` = `$1`
-    /// white. It sits on the rim toward the heading, and is simply absent while
-    /// the expedition is stopped.
+    /// white. It is absent entirely while the expedition is not moving.
     ///
-    /// It is not a symmetric plus. One arm runs longer, back toward the middle of
-    /// the ring, so the whole mark reads as a needle rather than a crosshair —
-    /// which is what the captured bytes show: a short cross with its stem
-    /// doubled on one side, and the stem turning with the heading.
+    /// Not a symmetric plus: one arm runs longer, back toward the middle of the
+    /// ring, so the mark reads as a needle rather than a crosshair. Built
+    /// geometrically rather than as eight hand-drawn patterns, because the
+    /// diagonals have to work too — a plus with a diagonal tail drawn by hand
+    /// looked wrong in every one of them. The stem runs inward from the rim and
+    /// the short bar crosses it perpendicular at the outer end, so all eight
+    /// directions come out of the same construction.
     static func pip(dx: Int, dy: Int) -> [String] {
-        let n = 7, c = 3
+        let n = 9, c = 4
         var g = Array(repeating: Array(repeating: Character("."), count: n), count: n)
-        g[c][c] = "#"
-        g[c - 1][c] = "#"; g[c + 1][c] = "#"
-        g[c][c - 1] = "#"; g[c][c + 1] = "#"
-        // The long arm, running back toward the ring's center. Pattern rows count
-        // downward, the same way map rows do, so this is simply the negated step.
-        for k in 2...3 {
-            let row = c - dy * k, col = c - dx * k
-            if (0..<n).contains(row), (0..<n).contains(col) { g[row][col] = "#" }
+        func plot(_ col: Int, _ row: Int) {
+            guard (0..<n).contains(col), (0..<n).contains(row) else { return }
+            g[row][col] = "#"
         }
+        // Inward, toward the ring's center. Pattern rows count downward the same
+        // way map rows do, so this is simply the negated step.
+        let ix = -dx, iy = -dy
+        for k in 0...3 { plot(c + ix * k, c + iy * k) }
+        // The short bar, perpendicular to the stem, at the outer end.
+        for s in [-1, 1] { plot(c - iy * s, c + ix * s) }
         return g.map { String($0) }
     }
 
-    /// Where the pip sits for a step, as a fraction of the ring's radius. Modest,
-    /// because on screen it rides on the ring rather than out past it, and the
-    /// diagonals are pulled in so it stays on the rim.
+    /// Where the needle sits, as a fraction of the ring's radius: on the rim.
+    ///
+    /// The diamond's rim is closer to the middle along a diagonal than along an
+    /// axis — its corners reach the radius, its flats do not — so the diagonals
+    /// take a smaller step in each axis or the needle floats off the ring.
     static func pipOffset(dx: Int, dy: Int) -> CGPoint {
         let diagonal = dx != 0 && dy != 0
-        let k: CGFloat = diagonal ? 0.34 : 0.48
+        let k: CGFloat = diagonal ? 0.42 : 0.8
         // SpriteKit's y runs up; a step "north" is -1 in map rows.
         return CGPoint(x: CGFloat(dx) * k, y: CGFloat(-dy) * k)
     }
