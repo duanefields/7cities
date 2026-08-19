@@ -227,54 +227,46 @@ engineering record; this holds the work.
       because the port's seed is the generator's state *after* that choice — so
       the two are separate inputs rather than one.
 
-- [x] ~~**Add a watchdog.**~~ **Done, and the thing it was insurance against
-      turned out to be the common case.** The suspicion was right — several
-      routines are rejection samplers with no iteration bound — but the estimate
-      of how often they bite was wrong by orders of magnitude. Swept over the
-      whole input space — every seed from 1 to 65,535 in all three
-      configurations, 196,605 worlds — **37,000 of them do not produce a map**.
-      That is 18.8%: 28,508 that never terminate and 8,492 that hit `$2473`'s
-      restart, which the port throws rather than loops. Nine seeds had been
-      measured before; nine is not a sample.
+- [x] ~~**Add a watchdog, and work out why it was firing.**~~ **Done, and the
+      answer was two things, not one.** `WorldMakerRNG` counts draws, every
+      unbounded loop gives up past `limit`, and `WorldMaker.world` throws
+      `WorldMakerRNG.Stuck`.
 
-      `WorldMakerRNG` now counts draws and every unbounded loop gives up when
-      the count passes `limit`; `WorldMaker.world(config:seed:)` throws
-      `WorldMakerRNG.Stuck`. The viewer tries eight seeds a click, which puts
-      an empty click at about one in two million.
+      **The stir is modelled now**, which was the bigger finding. `$2406` adds
+      live SID noise to the LFSR on every raster interrupt; freezing it is what
+      makes a seed mean something, and it costs 18.8% of the input space. See
+      NOTES.md. `WorldMaker.randomWorld()` is the game's behaviour — stirred, and
+      it takes no seed, because on hardware there is no such thing.
+      `world(config:seed:)` stays frozen and is what every test and fixture uses.
 
-      **Counting draws was not enough on its own, and that is the finding worth
-      keeping.** Six loops can spin without ever touching the generator, so no
-      counter on it can see them: `$194E` and `$1961` (the flood fill's row
-      scans), `$17F2` and `$1816` (the isthmus), `$3268` (the treeline),
-      `$369F` (the river carry) and `$4021` (the land runs) all step a
-      **wrapping** column with no stop of their own, and `$16D1`'s unwind can
-      walk the undo ring forever. Each of those now bounds itself at one lap and
-      reports through `declareStuck()`. Three rounds of "fix the sampler, sweep
-      again, find another site by stack sampling" — `sample <pid>` on a stalled
-      run named the routine every time, faster than reading ever would have.
+      **The World Maker also has genuine infinite loops**, which the stir cannot
+      reach: run the 6502 *with* its stir intact and two worlds in ninety still
+      never finish. Four sites found and repaired locally — `$380D`, the three
+      river walks, `$3268` and `$4373` — each bounded well past anything real, so
+      no world that completes is altered. All 80 tests pass unchanged.
 
-      **`$16EC` is a real hole in the original**, not a transcription slip. The
-      ring-full guard compares the slot counter against `startSlot`, which is
-      `s.step + 1` **as a byte** — so a search that begins on the last slot of
-      the 201-entry ring looks for slot 201, a value the counter never takes,
-      and the unwind can circle the ring without ever recognizing that it has
-      come all the way round.
+      | path | before | after |
+      | :--- | :----- | :---- |
+      | deterministic (`world(config:seed:)`) | 18.8% | 0.87% |
+      | stirred, single attempt | 18.8% | ~0.5% |
+      | `randomWorld()` with its backstop | — | **0 in 60,000** |
 
-      **The draw counter turned out not to be the mechanism that fires.** The
-      whole input space was swept twice, at twenty million and at fifty million,
-      and the two agree exactly — 37,000 failures each, split the same six ways,
-      the same worst finishing world. A third run with the ceiling at two
-      billion, which is off for all purposes, agrees as well. The self-bounding
-      loops catch every one first, and not a single world anywhere was rescued
-      by extra room. What the extra room does cost
-      is time, because a run going nowhere spends the whole budget before
-      anything notices — two billion took **eight times as long to give up** as
-      twenty million. So the ceiling sits between: fifty million, nearly four
-      times the worst world that finishes (13,175,820 draws, seed `$5D28`
-      configuration 1), and about a second to reach.
-
-      All 80 tests still pass unchanged, which is the check that matters: the
-      watchdog changed no map.
+      `$2473` now restarts the phase the way the original does instead of
+      throwing, which was simply wrong before.
+- [ ] **Decide how far to chase the residual.** Each round of stack-sampling a
+      stalled run found another unbounded loop, with diminishing returns: 18.8%
+      to 2.02% to 0.87% deterministic. The shipping path is already zero in
+      60,000 thanks to the retry, so this is now about the *reproducible* path —
+      `world(config:seed:)` still has no answer for about one seed in 115. Worth
+      another round or two of the same technique if a caller ever needs a
+      guaranteed world from a given seed.
+- [ ] **Widen the pipeline fixture beyond one world.** `pipeline_reference.json`
+      covers exactly `$1234`:0 — one seed, one configuration, both bands. That is
+      the *entire* end-to-end verification of the terrain, river and village
+      phases; `landmass_reference.json` and `village_reference.json` cover earlier
+      or narrower layers. Capturing two or three more worlds with
+      `tools/pipeline_trace.py` would make "the port reproduces the original
+      exactly" a claim about the phases rather than about one seed.
 - [ ] **Re-check `wm_trace.py`'s phase snapshots.** It waits for checkpoints by
       polling `vice_ping` for "paused", which fires for unrelated reasons — the
       same bug that misread three runs of `wm_config.py`. Its snapshots may have

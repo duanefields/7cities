@@ -35,6 +35,14 @@ public enum WorldMaker {
         /// How many times the generator was advanced to build it — the number
         /// the watchdog's ceiling is set against. See ``WorldMakerRNG/limit``.
         public var draws = 0
+        /// Which of the three worlds `$2146` chose.
+        public var config = 0
+        /// The seed this came from, when that means anything.
+        ///
+        /// `nil` for a stirred world, because a stirred world is not a function
+        /// of its seed — the same sixteen bits give a different map every time,
+        /// exactly as on hardware. See ``randomWorld()``.
+        public var seed: UInt16?
         /// The 400-row map, with the overlap taken from the second band — which
         /// is the copy the original leaves on the disk, since `$0F47` writes the
         /// second band over the sixteen rows the first one wrote there.
@@ -62,17 +70,62 @@ public enum WorldMaker {
     /// and everything after them is drawn from a generator that is out of step.
     /// A caller that wants a world anyway should ask again with another seed.
     public static func world(config: Int, seed: UInt16,
-                             drawLimit: Int = WorldMakerRNG.defaultLimit)
+                             drawLimit: Int = WorldMakerRNG.defaultLimit,
+                             stirInterval: Int = 0)
         throws -> World {
         let run = try LandMassStage.run(config: config, seed: seed,
-                                        drawLimit: drawLimit)
+                                        drawLimit: drawLimit,
+                                        stirInterval: stirInterval)
         var rng = run.generator
+        rng.stirInterval = stirInterval
         let world = world(of: run, rng: &rng)
         guard !rng.isStuck else {
             throw WorldMakerRNG.Stuck(config: config, seed: seed,
-                                      draws: rng.draws)
+                                      draws: rng.draws,
+                                      reason: rng.stuckReason)
         }
-        return world
+        var stamped = world
+        stamped.config = config
+        stamped.seed = stirInterval > 0 ? nil : seed
+        return stamped
+    }
+
+    /// A world the way the game makes one: seeded from the machine and stirred
+    /// throughout.
+    ///
+    /// This is the honest entry point, and it takes no seed because on real
+    /// hardware there is no such thing. `$20CB` reads the SID's oscillator twice
+    /// for the register and `$2406` keeps feeding it noise on every raster
+    /// interrupt, so a world is far more random than the sixteen bits it started
+    /// from and no two are ever alike. ``world(config:seed:drawLimit:stirInterval:)``
+    /// is the port's invention — a frozen register, so that a world can be
+    /// reproduced and graded against the original.
+    ///
+    /// The difference is not academic. Frozen, about one `(seed, configuration)`
+    /// pair in five contains a rejection sampler that can never be satisfied and
+    /// no world comes out. Stirred, the sampler is handed new bits within a frame
+    /// and walks out, which is why the original cannot hang and why this does not
+    /// need a retry loop around it.
+    ///
+    /// The configuration is drawn the way `$2146` draws it, a byte over ninety.
+    public static func randomWorld() throws -> World {
+        // Belt and braces. The two loops that hang have been repaired where they
+        // hang, but "we found two" is not "there are two", and the watchdog can
+        // only report a stall — it cannot know whether the map was nearly done.
+        // Throwing away a world and building another costs about fifty
+        // milliseconds and is invisible; there is nothing to preserve, because a
+        // stopped run has no partial result worth keeping.
+        var last: Error?
+        for _ in 0..<8 {
+            do {
+                return try world(config: Int(UInt8.random(in: 0...255)) / 90,
+                                 seed: UInt16.random(in: 1...UInt16.max),
+                                 stirInterval: WorldMakerRNG.hardwareStirInterval)
+            } catch {
+                last = error
+            }
+        }
+        throw last ?? WorldMakerRNG.Stuck(draws: 0)
     }
 
     /// `$0DB5` and `$0DC3`: the whole pipeline, both bands.

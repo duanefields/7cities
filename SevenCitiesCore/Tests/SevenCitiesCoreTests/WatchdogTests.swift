@@ -10,9 +10,12 @@ import Testing
 /// bound — `$0FF8` redraws until its throw lands on land, `$22B4` until the byte
 /// is in range, `$4A37` until a village fits — and a handful of its scans step a
 /// *wrapping* column with nothing to stop them. On a seed where the map cannot
-/// satisfy one of those, the original runs forever. Measured over the whole input
-/// space, that is not a corner case: about one (seed, configuration) pair in five
-/// never finishes.
+/// satisfy one of those, a *deterministic* run asks for ever. Measured over the
+/// whole input space that is about one (seed, configuration) pair in five — which
+/// says nothing about the game. The original stirs its generator with live SID
+/// noise on every raster interrupt, so those samplers always get new bits and
+/// always escape; the port drops the stir so a seed reproduces, and inherits the
+/// hang. See NOTES.md.
 ///
 /// So the port counts draws, and every unbounded loop gives up when the count
 /// passes ``WorldMakerRNG/limit``. What is tested here is that it fires and that

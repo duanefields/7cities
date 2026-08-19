@@ -299,7 +299,14 @@ public enum SiteSelection {
     /// which `settle` hands it whenever its walk wraps past the band's start.
     /// That is a hang in the original. See ``WorldMakerRNG/limit``.
     static func drawRow(in band: Band, rng: inout WorldMakerRNG) -> UInt16 {
+        // Only even rows below 512 can come out of it, so the band holds at most
+        // 256 answers. A thousand throws is four times over having tried them
+        // all; past that the band holds none and the caller's own bound takes
+        // over.
+        var tries = 0
         while !rng.isStuck {
+            tries += 1
+            if tries > 1024 { return band.start }
             let high: UInt8 = rng.next() >= 0x80 ? 1 : 0         // $439D
             var low: UInt8
             repeat { low = rng.next() } while low & 1 != 0 && !rng.isStuck
@@ -320,8 +327,19 @@ public enum SiteSelection {
                              rng: inout WorldMakerRNG)
         throws -> (column: UInt8, row: UInt16, run: (left: UInt8, right: UInt8)) {
         // A band with no row wide enough to hold a site is a redraw with no
-        // answer, the same way `drawRow` has none for an empty band.
+        // answer, and `$4373` has no bound on it — the fourth of the World
+        // Maker's hangs. The row space is at most 256 even rows, so a thousand
+        // throws means no row in this band will ever carry a thirty-cell run of
+        // land.
+        //
+        // `$2473` is the recovery the original already has for a phase that
+        // cannot continue, and it is the honest one here: the *mask* is what is
+        // unusable, so the land-mass phase runs again and builds a different one.
+        // Skipping the site is not an option — `$462C` needs the primary.
+        var attempts = 0
         while !rng.isStuck {
+            attempts += 1
+            if attempts > 1024 { throw Restart() }
             let row = drawRow(in: band, rng: &rng)
 
             // $43EE: the first land in the row, then the first water past it.

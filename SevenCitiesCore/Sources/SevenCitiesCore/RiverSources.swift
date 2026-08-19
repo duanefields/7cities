@@ -32,8 +32,25 @@ extension TerrainPhases {
               range.bottom &- range.top >= 0x32 else { return } // $3822
 
         // `$3450` sends a river that unwound to nothing back to the top of this
-        // loop, so a range that can source none at all retries forever.
+        // loop, and `$38A6` does the same for a source too close to a lake. The
+        // original has no bound on either, so a range where **no** row is
+        // acceptable retries for ever — and this is one of the two places the
+        // World Maker genuinely hangs, on a C64 as much as here. Confirmed by
+        // running the 6502 with its entropy stir intact: two worlds in ninety
+        // never finished, at 1.2 billion instructions and a quarter of a million
+        // stirs. Fresh randomness cannot help, because what fails is the *map* —
+        // every row is within eleven cells of a lake — and a new draw only picks
+        // a different row from the same losing set.
+        //
+        // So this gives up on the range instead of on the world. The row comes
+        // from a span of at most 208, so a thousand attempts is five times over
+        // having tried every row there is; reaching it means no row will ever do.
+        // The landmass loses one river, which is a smaller lie than discarding a
+        // finished map. See NOTES.md.
+        var attempts = 0
         while !rng.isStuck {
+            attempts += 1
+            if attempts > 1024 { return }
             // $3826: a row somewhere in the middle twenty rows of the range.
             guard range.bottom >= 0x14 else { return }
             let lower = range.top &+ 0x14                     // $3830's carry
@@ -104,7 +121,12 @@ extension TerrainPhases {
     private static func walk(_ engine: inout RiverEngine,
                              in band: inout TerrainBand,
                              rng: inout WorldMakerRNG, secondBand: Bool) -> Bool {
+        var turns = 0
         while !rng.isStuck {
+            turns += 1
+            // Abandoned rather than finished, so `$380D`'s retry counts it and
+            // eventually gives up on the range instead of cycling here for ever.
+            if turns > RiverEngine.walkTurnLimit { return false }
             let stop = engine.index &+ 1                      // $38CD
             engine.stopIndex = stop
             engine.choose(rng: &rng)                          // $38D2
@@ -250,7 +272,7 @@ extension TerrainPhases {
             engine.aim(rng: &rng)
             if band[engine.nextColumn, engine.nextRow] < threshold { return }
         }
-        rng.declareStuck()
+        rng.declareStuck("$369F carry")
     }
 
     /// `$3E8B`: a swamp four to seven cells to one side of the river's end.

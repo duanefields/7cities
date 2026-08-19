@@ -60,8 +60,11 @@ public enum LandMassStage {
 
     /// The scans in `$28AB` run off the end of a row, and `$1900`'s bounds check
     /// fails. Both reach `$2473`, which kills the raster interrupt and restarts
-    /// the entire phase from `$20A3`. Thrown rather than looped, because a port
-    /// that silently restarted would hide the fact that it happened.
+    /// the entire phase from `$20A3`.
+    ///
+    /// Thrown from where it happens and caught by ``run(config:seed:drawLimit:stirInterval:)``,
+    /// which restarts the phase the way the original does. It never escapes to a
+    /// caller.
     public struct Restart: Error, Sendable {}
 
     /// Configuration 1 pairs its continent, and the partner is built by a second
@@ -153,10 +156,38 @@ public enum LandMassStage {
     /// All three configurations, to the end. `seed` is the generator's state at
     /// `$212A` — *after* `$2146` has drawn the configuration — which is why the
     /// two are separate arguments rather than one.
+    /// `$2473` is a **restart, not a failure**. When a scan runs off a row or
+    /// `$1900`'s bounds check fails, the original kills its raster interrupt and
+    /// re-enters the phase at `$20A3`, discarding every landmass placed so far
+    /// and building the world again — from wherever the generator now stands, not
+    /// from a fresh seed. This does the same. An earlier version threw instead,
+    /// which surfaced the restart honestly while the phase was being read but is
+    /// simply wrong behaviour: it turned 4.3% of the input space into a failure
+    /// the original does not have.
     public static func run(config: Int, seed: UInt16,
-                           drawLimit: Int = WorldMakerRNG.defaultLimit) throws -> Run {
+                           drawLimit: Int = WorldMakerRNG.defaultLimit,
+                           stirInterval: Int = 0) throws -> Run {
         var rng = WorldMakerRNG(seed: seed)
         rng.limit = drawLimit
+        rng.stirInterval = stirInterval
+        while true {
+            do {
+                return try attempt(config: config, seed: seed, rng: &rng)
+            } catch is Restart {
+            } catch is SiteSelection.Restart {
+            }
+            // Each restart runs the generator on, so the next attempt is a
+            // different world rather than the same one again — the watchdog is
+            // what stops a frozen register restarting for ever.
+            if rng.isStuck {
+                throw WorldMakerRNG.Stuck(config: config, seed: seed,
+                                          draws: rng.draws)
+            }
+        }
+    }
+
+    private static func attempt(config: Int, seed: UInt16,
+                                rng: inout WorldMakerRNG) throws -> Run {
         var mask = LandMask()
         var steps: [Step] = []
         var sites: SiteSelection.Result?
@@ -336,7 +367,8 @@ public enum LandMassStage {
         // later: a stuck run leaves a mask nothing downstream should read.
         guard !rng.isStuck else {
             throw WorldMakerRNG.Stuck(config: config, seed: seed,
-                                      draws: rng.draws)
+                                      draws: rng.draws,
+                                      reason: rng.stuckReason)
         }
         return Run(mask: mask, steps: steps, sites: sites, islands: scattered,
                    satellites: satellites, landmasses: landmasses,

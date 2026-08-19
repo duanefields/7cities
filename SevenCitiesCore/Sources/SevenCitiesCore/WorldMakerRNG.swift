@@ -12,9 +12,10 @@
 ///
 /// The original additionally stirred `$CD` with live SID noise (`$D41B`) from
 /// its raster interrupt handler, which made any particular world impossible to
-/// reproduce even on real hardware. That stirring is intentionally *not*
-/// reproduced here: seeding is explicit, so a given seed always yields the same
-/// world.
+/// reproduce even on real hardware. That stirring **is** reproduced here, and it
+/// is optional: see ``stirInterval``. Off, a seed yields one fixed world and the
+/// port can be graded against the original; on, the World Maker behaves like the
+/// game, where a world is far more random than the sixteen bits it started from.
 public struct WorldMakerRNG: Sendable {
 
     /// High byte of the shift register (`$CD` in the original).
@@ -48,8 +49,8 @@ public struct WorldMakerRNG: Sendable {
     ///
     /// A ceiling, not a schedule. It sits far enough above the worst real world
     /// that no terminating seed can reach it, so it cannot change what any seed
-    /// generates — it only decides how long a *non*-terminating one is allowed
-    /// to run before somebody notices. See ``defaultLimit``.
+    /// generates — it only decides how long a run that is going nowhere may take
+    /// before somebody notices. See ``defaultLimit`` and ``Stuck``.
     public var limit = WorldMakerRNG.defaultLimit
 
     /// The default ceiling: nearly four times the worst world in the input space.
@@ -78,20 +79,33 @@ public struct WorldMakerRNG: Sendable {
 
     /// Thrown when a run draws past its ``limit``.
     ///
-    /// It means a rejection sampler found no acceptable candidate and would
-    /// have gone on asking forever — a hang, not a bad map. There is no partial
-    /// result worth keeping, so the whole world is discarded.
+    /// It means a rejection sampler found no acceptable candidate and would have
+    /// gone on asking forever — a hang, not a bad map. There is no partial result
+    /// worth keeping, so the whole world is discarded.
+    ///
+    /// **This cannot happen on a C64.** `$2406`, in the raster IRQ, adds live SID
+    /// noise to `$CD` on every interrupt, so a sampler with no answer from the
+    /// current register gets fresh entropy within a frame and walks out. The port
+    /// drops that stir so a seed reproduces, which is what turns "asks again with
+    /// new bits" into "asks the same question for ever". Roughly one (seed,
+    /// configuration) pair in five has no *deterministic* world; every one of them
+    /// builds a map on hardware. See NOTES.md.
     public struct Stuck: Error, CustomStringConvertible, Sendable {
         /// Which world it was, where the caller knew — the entry point does,
         /// a routine deep inside a phase does not.
         public var config: Int?
         public var seed: UInt16?
         public var draws: Int
+        /// Which self-bounding loop gave up, or `nil` when the draw ceiling was
+        /// what stopped it.
+        public var reason: String?
 
-        public init(config: Int? = nil, seed: UInt16? = nil, draws: Int) {
+        public init(config: Int? = nil, seed: UInt16? = nil, draws: Int,
+                    reason: String? = nil) {
             self.config = config
             self.seed = seed
             self.draws = draws
+            self.reason = reason
         }
 
         public var description: String {
@@ -119,7 +133,59 @@ public struct WorldMakerRNG: Sendable {
     /// wrapping column, one pass of the undo ring — and then says so here, so
     /// that a world it spoiled is discarded rather than quietly handed back a
     /// shape short. A bound reached is not a result; it is a hang caught.
-    public mutating func declareStuck() { declaredStuck = true }
+    public mutating func declareStuck(_ reason: StaticString = #function) {
+        declaredStuck = true
+        if stuckReason == nil { stuckReason = "\(reason)" }
+    }
+
+    /// Which self-bounding loop gave up, when one did. Diagnostic only — the
+    /// draw ceiling leaves this `nil`.
+    public private(set) var stuckReason: String?
+
+    // MARK: - The stir
+
+    /// How many draws apart the raster interrupt lands, or 0 for a frozen
+    /// register.
+    ///
+    /// `$2406`, inside the IRQ handler at `$23FC`, is
+    /// `LDA $D41B / ADC $CD / STA $CD`: a byte of live SID oscillator noise
+    /// added into the register's **high byte, on every interrupt**. It is why no
+    /// two worlds were ever alike on real hardware, and — much less obviously —
+    /// why the original cannot hang. A rejection sampler with no answer from the
+    /// current register does not sit there asking; within a frame it has been
+    /// handed new bits and it walks out.
+    ///
+    /// Zero is the *port's* invention, not the game's. It makes a world a pure
+    /// function of `(seed, config)`, which is the only reason any of this could
+    /// be checked against the original at all — `tools/wm_deterministic.py` NOPs
+    /// exactly this instruction to capture the fixtures. It also costs: with the
+    /// register frozen, about one (seed, configuration) pair in five contains a
+    /// sampler that can never be satisfied. See NOTES.md.
+    ///
+    /// So: **0 for anything that must reproduce**, and ``hardwareStirInterval``
+    /// for anything that wants to behave like the game.
+    public var stirInterval = 0
+
+    /// One raster interrupt's worth of draws, which is what the game stirs at.
+    ///
+    /// Derived rather than picked: the World Maker runs 219 interpreter steps
+    /// per draw measured over seed `$1234` configuration 0 (1,612,709 draws
+    /// across 353,513,921 steps), and a PAL frame is about 5,000 steps of this
+    /// code. That puts one interrupt at a little over twenty draws.
+    public static let hardwareStirInterval = 23
+
+    /// How many times the register has been stirred.
+    public private(set) var stirs = 0
+
+    /// `$2406`, standing in for the SID.
+    ///
+    /// The original's entropy is oscillator 3's noise output. There is no SID
+    /// here, so this takes the system's randomness, which is the faithful
+    /// analogue: the point was never *which* bits, only that they keep arriving.
+    private mutating func stir() {
+        high = high &+ UInt8.random(in: 0...255)
+        stirs += 1
+    }
 
     /// Creates a generator seeded with a 16-bit value.
     ///
@@ -147,6 +213,7 @@ public struct WorldMakerRNG: Sendable {
     /// Advances the register eight steps and returns the next value.
     public mutating func next() -> UInt8 {
         draws += 1
+        if stirInterval > 0, draws % stirInterval == 0 { stir() }
         for _ in 0..<8 {
             // CLC / LDA $CD / ROL A x4 / AND #$02 / STA $CE
             var rotated = high

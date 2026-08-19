@@ -900,20 +900,60 @@ Two things it cannot do, both learned by running into them:
   instructions that compute the value makes the result independent of timing, and a read-back of
   the patched bytes verifies it took.
 
-### The World Maker does not always finish
+### The World Maker hangs — mostly because we froze it, but not only
 
-Swept over its whole input space — every seed from 1 to 65,535 in all three configurations,
-196,605 worlds — **37,000 produce no map at all**. That is 18.8%, and it splits two ways:
+**Read this before believing any failure rate quoted for world generation.** There are two separate
+causes and they were conflated twice on the way to understanding them.
 
-- **8,492 hit `$2473`**, the restart the original performs when a scan runs off a row or `$1900`'s
-  bounds check fails. The original kills its raster interrupt and runs the entire land-mass phase
-  again from `$20A3`; the port throws instead, deliberately, so that a silent restart cannot hide.
-- **28,508 never terminate.** These are the ones that matter, and the fixtures could not have shown
-  them: nine seed and configuration pairs were measured while the port was being built, and all
-  nine finish.
+#### Cause one: determinism, which is ours
 
-The most expensive world that *does* finish costs **13,175,820 draws** (seed `$5D28`,
-configuration 1), against a median in the low millions. The tail is long.
+`$2406`, inside the raster IRQ handler at `$23FC`, is `LDA $D41B / ADC $CD / STA $CD`: fresh SID
+oscillator noise added into the LFSR's **high byte on every interrupt**, tens of times a second. That
+is why no world was ever reproducible on hardware — and why most of the rejection samplers cannot
+hang there. One with no answer from the current register does not sit asking; within a frame it has
+new bits and walks out.
+
+`tools/wm_deterministic.py` NOPs that so a seed reproduces and the port can be graded at all, and the
+port inherits the choice. Frozen, **18.8% of the input space produces no map** (37,000 of 196,605:
+28,508 non-terminating, 8,492 hitting `$2473`). That number says nothing about the game.
+
+Measured, because the first version of this section asserted the opposite: put the stir back at about
+one interrupt per frame and every case that hung finishes with a full 414-sector map — `$0001`:1
+across four noise streams, `$1234`:1 and `$1234`:2 — where de-stirred they are still spinning after
+1.5 billion steps against a largest-known-good run of 353M.
+
+#### Cause two: the World Maker really does have infinite loops
+
+And this is where the second wrong claim was made. "The original never fails" was the obvious
+conclusion from the above, and it is false. Run the 6502 **with the stir intact** across ninety
+worlds — the nine snapshots times ten noise streams — and **two never finish**, at 1.2 billion
+instructions and 240,000 stirs apiece. Entropy cannot rescue them because what fails is not the
+register but the *map*: the loops' exit conditions test the terrain, and a new draw only picks a
+different losing candidate from the same losing set.
+
+Four such sites were found, each by sampling a stalled process rather than by reading:
+
+| site | what cannot be satisfied | what the port now does |
+| :--- | :----------------------- | :--------------------- |
+| `$380D` | no row of a mountain range is clear of lake marks within 11 cells, and `$38A6`/`$3450` retry from a new row for ever | give up on the range after 1024 rows — the span is ~208, so that is five times over trying them all. One landmass loses one river |
+| `$38CD`, `$3A83`, `$3CEB` | a river can neither finish nor unwind to nothing, so it proposes and unwinds for ever | abandon the river after 50,000 turns; the longest real one writes 1,941 cells |
+| `$3268` | `$3232` clamps `$53` to `$FF` (`BCC $3234 / LDA #$FF` — checked in the listing, the port is faithful) and `CPX $53 / BCC` is then a test no column can win | stop the run after one lap, which has visited every column anyway |
+| `$4373` | no row in the band carries a 30-cell run of land, and the draw retries for ever | after 1024 throws against a ~256-row space, take `$2473` — the restart the original already has — and build a different mask |
+
+Every repair fires **only** where the original would have hung, so no world that completes is
+changed: all 80 tests pass unchanged, fixture included.
+
+#### Where that leaves the rates
+
+| path | before | after |
+| :--- | :----- | :---- |
+| deterministic, stir off (`world(config:seed:)`) | 18.8% | 0.87% |
+| stirred, single attempt | 18.8% | ~0.5% |
+| **`randomWorld()`, the shipping path** | — | **0 in 60,000** |
+
+`randomWorld()` keeps a retry as a backstop, because "four sites found" is not "four sites exist" —
+each round of hunting turned up another, with diminishing returns. Discarding a world costs ~50ms and
+is invisible; a hang is not.
 
 #### What spins, and why a draw counter is not enough on its own
 
@@ -936,8 +976,10 @@ it can see them:
 | `$16D1` | the unwind walks the undo ring — see below |
 
 Each of those now stops itself at the point where it would be repeating work it has already done —
-one lap of a wrapping column, one pass of the ring — and reports through `declareStuck()`. A bound
-reached is not a result; it is a hang caught, and the world is discarded.
+one lap of a wrapping column, one pass of the ring — and reports through `declareStuck()`.
+
+Note what these are on hardware: not bugs. The stir means none of them can spin, so Ozark had no
+reason to bound them, and bounding them would have cost bytes.
 
 #### `$16EC` is a hole in the original
 
@@ -945,39 +987,43 @@ The ring-full guard in `$16D1` compares the slot counter `$46` against the slot 
 from, which `$2507` computes as `$46 + 1` **as a byte**. The undo ring holds 201 entries, so `$46`
 runs 0 to 200. A search that begins on the last slot therefore looks for slot 201 — a value the
 counter never takes — and the unwind can circle the ring indefinitely without ever recognizing that
-it has come all the way round. This is not a transcription slip; it is what the 6502 does.
+it has come all the way round. On hardware the stir gets it out; frozen, it does not.
 
-#### The method: sample the stack, do not read the code
+#### The method, and two ways it went wrong
 
-Three of these were found the same way, and it took minutes each where reading would have taken
-hours. Run the sweep, wait for it to stall, and `sample <pid>` the stalled process: the call graph
-names the routine outright. The first site was `SiteSelection.drawRow`, the second the coastline
-walker's proposal loop, the third `$16D1` itself — and the third was invisible from the caller,
-because the loop that never returned was one frame further down than the guard that was supposed to
-stop it.
+Three sites were found by running the sweep, waiting for it to stall, and `sample <pid>`-ing the
+stalled process: the call graph names the routine outright, in minutes each. The third was invisible
+from the caller, because the loop that never returned sat one frame below the guard meant to stop it.
+The corollary: **a fix that does not make the sweep get further is not a fix.**
 
-The corollary is the useful part: **a fix that does not make the sweep get further is not a fix.**
-Each round of "guard the sampler, sweep again, sample the new stall" removed one class and exposed
-the next. Reasoning about which loops could spin produced a list that was right about the samplers
-and completely missed the wrapping scans.
+Two mistakes are worth recording because both produced confident wrong numbers.
+
+- **A step budget cannot tell a hang from a slow world.** A 400M budget looked generous until
+  `$1234`:0 finished at 353M, which meant two cases were reported as hangs on no evidence. Calibrate
+  a budget against the slowest *known-good* run before reading anything into it.
+- **Comparing the port's draw count against the interpreter's needs a verified window.** An ad-hoc
+  `run_until` around `$2E32` said the original spent 17,422 draws where the port spent 81,180, which
+  looked like a 4.7x divergence. Walking the LFSR from the state `pipeline_reference.json` records at
+  that phase's entry lands on the next phase's recorded state after exactly 81,180 advances: the port
+  was right and the window was wrong. **Check a new measurement against a committed fixture before
+  drawing a conclusion from it.**
 
 #### Where the ceiling is set, and why the number barely matters
 
 Fifty million draws, nearly four times the worst world that finishes. The interesting part is how
 little the exact value does. The whole input space was swept twice, at twenty million and at fifty
-million, and the two runs agree **exactly** — 37,000 failures each, split the same six ways, the
-same worst finishing world at 13,175,820 draws. A third run over 6,900 worlds with the ceiling at
-two billion, which is off for all purposes, agrees too. Not one world anywhere was rescued by extra
-room: every run that does not finish is stopped first by a loop that bounds itself.
+million, and the two runs agree exactly: the same 37,000 failures split the same six ways, and the
+same worst finishing world at 13,175,820 draws. A third run over 6,900 worlds with the ceiling at two
+billion, which is off for all purposes, agrees too. Not one world anywhere was rescued by extra room:
+every run that does not finish is stopped first by a loop that bounds itself.
 
-What the extra room does cost is time, because a run going nowhere spends its whole budget before
+What extra room does cost is time, because a run going nowhere spends its whole budget before
 anything notices: two billion took **eight times as long to give up** as twenty million did, for the
-same answers. So the ceiling is chosen for margin against the long tail of worlds that do finish,
-not because it changes any outcome measured, and it is kept low enough that giving up takes about a
-second.
+same answers. So the ceiling is chosen for margin against the long tail of worlds that do finish, and
+kept low enough that giving up takes about a second.
 
-The viewer draws a fresh seed on every "Generate World", so it tries eight of them before giving up.
-At 18.8% that puts an empty click at about one in two million.
+The viewer draws a fresh seed on every "Generate World" and tries eight of them, which at 18.8% puts
+an empty click at about one in two million.
 
 ## Driving VICE (hard-won, reusable)
 

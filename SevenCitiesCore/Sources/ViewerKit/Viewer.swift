@@ -14,13 +14,16 @@ import UniformTypeIdentifiers
 public enum MapChoice {
     case historical
     /// `config` is which of the World Maker's three worlds `$2146` chose.
-    case generated(seed: UInt16, config: Int)
+    /// `seed` is `nil` for a world generated the way the game does it, where a
+    /// seed identifies nothing — see `WorldMaker.randomWorld()`.
+    case generated(seed: UInt16?, config: Int)
 
     public var title: String {
         switch self {
         case .historical: "Classic (North & South America)"
         case .generated(let s, let c):
-            "Generated World — seed $\(String(format: "%04X", s)), world \(c + 1)"
+            s.map { "Generated World — seed $\(String(format: "%04X", $0)), world \(c + 1)" }
+                ?? "Generated World — world \(c + 1)"
         }
     }
 }
@@ -197,41 +200,22 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
         reload()
     }
 
-    /// How many seeds a single menu click will try before giving up.
-    ///
-    /// Not defensive padding — measured. About a fifth of all (seed,
-    /// configuration) pairs do not produce a world: some restart the land-mass
-    /// phase the way `$2473` does, and the rest run a sampler that has no
-    /// answer and are stopped by the watchdog. Neither is a failure of the
-    /// port; the original does the same and simply keeps going. Eight tries
-    /// puts the odds of a click coming up empty at about one in two million.
-    private static let generateAttempts = 8
-
     @objc private func generateWorld() {
-        var lastError: Error?
-        for _ in 0..<Self.generateAttempts {
-            // Two inputs, not one. `seed` is the generator's state where the
-            // land-mass phase picks it up, and the configuration is what `$2146`
-            // chose from a draw *before* that — which the port does not model, so
-            // it is drawn here the same way: a byte over ninety.
-            let seed = UInt16.random(in: 1...UInt16.max)
-            let config = Int(UInt8.random(in: 0...255)) / 90
-            do {
-                let world = try WorldMaker.world(config: config, seed: seed)
-                generated = WorldMap(world)
-                mapChoice = .generated(seed: seed, config: config)
-                reload()
-                return
-            } catch {
-                lastError = error
-            }
+        // The game's own behaviour: seeded from the machine and stirred by the
+        // raster interrupt throughout, so this is a fresh world every time and
+        // not a function of any seed. There is no retry loop because there is
+        // nothing to retry — the stir is what stops a rejection sampler getting
+        // stuck, which is why the original never failed to build a world either.
+        do {
+            let world = try WorldMaker.randomWorld()
+            generated = WorldMap(world)
+            mapChoice = .generated(seed: world.seed, config: world.config)
+            reload()
+        } catch {
+            NSSound.beep()
+            FileHandle.standardError.write(
+                Data("could not generate a world: \(error)\n".utf8))
         }
-        NSSound.beep()
-        FileHandle.standardError.write(Data("""
-            could not generate a world in \(Self.generateAttempts) tries; \
-            the last one said: \(lastError.map { "\($0)" } ?? "nothing")
-
-            """.utf8))
     }
 
     /// The C64 emits composite video, so every palette is a model of it and

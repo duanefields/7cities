@@ -93,6 +93,21 @@ public struct RiverEngine: Sendable {
     public internal(set) var nextColumn: UInt8 = 0
     public internal(set) var nextRow: Int = 0
 
+    /// How many propose-or-unwind turns one river gets before it is abandoned.
+    ///
+    /// The walks at `$38CD`, `$3A83` and `$3CEB` all have the same shape: take a
+    /// step, or fail and unwind, and go round again. None of them has a bound,
+    /// so a river that can neither finish nor unwind to nothing cycles for ever
+    /// — the third of the World Maker's genuine hangs, and one the entropy stir
+    /// cannot reach, because what fails is the shape of the land rather than the
+    /// register.
+    ///
+    /// The longest river the original draws writes 1,941 cells, so fifty
+    /// thousand turns is some twenty-five times over anything real. Reaching it
+    /// means the river is not going to finish, and the caller simply moves on to
+    /// the next lake or strip: one watercourse is lost, and the map is not.
+    static let walkTurnLimit = 50_000
+
     /// A river as `$3755` files it: two entries, one for each end.
     ///
     /// `$E681` holds the column, `$E6D1`/`$E721` the row as sixteen bits with

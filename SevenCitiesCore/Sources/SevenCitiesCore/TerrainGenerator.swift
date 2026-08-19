@@ -714,6 +714,11 @@ extension TerrainPhases {
             walk.column &+= 1
             if walk.column > walk.limit { return }            // $3283
         }
-        rng.declareStuck()
+        // A full lap without the comparison ever coming true, which happens
+        // exactly when `$3232` clamped `$53` to `$FF` — the listing really does
+        // clamp (`BCC $3234 / LDA #$FF`), so no column can win `CPX $53 / BCC`
+        // and the original spins here for ever. One lap has visited every column
+        // in the row, which is all this row of the clearing was ever going to
+        // do, so it stops rather than taking the world down with it.
     }
 }

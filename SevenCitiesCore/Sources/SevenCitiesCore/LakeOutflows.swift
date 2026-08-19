@@ -123,7 +123,10 @@ extension TerrainPhases {
                                from mouth: RiverEngine.Mouth,
                                in band: inout TerrainBand,
                                rng: inout WorldMakerRNG, secondBand: Bool) {
+        var turns = 0
         while !rng.isStuck {
+            turns += 1
+            if turns > RiverEngine.walkTurnLimit { return }
             engine.stopIndex = engine.index &+ 1                  // $3CEB
             engine.choose(rng: &rng)
             engine.aim(rng: &rng)
@@ -321,7 +324,10 @@ extension TerrainPhases {
                              in band: inout TerrainBand,
                              rng: inout WorldMakerRNG, secondBand: Bool,
                              rules: Rules = Rules()) {
+        var turns = 0
         while !rng.isStuck {
+            turns += 1
+            if turns > RiverEngine.walkTurnLimit { return }
             let stop = engine.index &+ 1                      // $3A83
             engine.stopIndex = stop
             engine.choose(rng: &rng)                          // $3A88
@@ -475,7 +481,7 @@ extension TerrainPhases {
             engine.aim(rng: &rng)
             if band[engine.nextColumn, engine.nextRow] < threshold { return }
         }
-        rng.declareStuck()
+        rng.declareStuck("$369F carry (lake)")
     }
 
     /// `$3AA5`: file the river and put the swamps down.

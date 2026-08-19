@@ -484,7 +484,7 @@ extension CoastlineWalker {
         var guardCount = 0
         func budgetSpent() -> Bool {
             guardCount += 1
-            if guardCount > 2_000_000 { s.rng.declareStuck() }
+            if guardCount > 2_000_000 { s.rng.declareStuck("walker") }
             return s.rng.isStuck
         }
 
@@ -829,7 +829,7 @@ extension CoastlineWalker {
             if clear == 0 { finished = true; break }
             remaining = 1                                   // $1816 INC $02
         }
-        if !finished { s.rng.declareStuck() }
+        if !finished { s.rng.declareStuck("walker") }
 
         // $1825: the partner's centre is where the isthmus ended, a radius
         // further down, and the first continent's centre becomes a wall the
