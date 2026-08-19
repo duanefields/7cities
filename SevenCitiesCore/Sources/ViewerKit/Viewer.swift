@@ -40,6 +40,8 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
     private var tileStyle: TileStyle = .original        // default: in-game tiles
     private var originals: OriginalTiles?
     private var container: NSView!
+    private var shell: GameShellView!
+    private var font: GameFont?
     /// Non-nil while the New Game screen is up, which is also how the rest of
     /// this knows a session has not started yet.
     private var newGameView: NewGameView?
@@ -62,14 +64,34 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
         container = NSView(frame: frame)
         container.autoresizingMask = [.width, .height]
 
-        skView = SKView(frame: frame)
-        skView.autoresizingMask = [.width, .height]
+        font = GameFont.load(in: assetDirectory)
+        shell = GameShellView(font: font)
+        shell.autoresizingMask = [.width, .height]
+        container.addSubview(shell)
+
+        // The map sits in the hole the shell leaves, as a child of the shell
+        // rather than a sibling. The shell is flipped and the container is not,
+        // so a viewport rect handed across that boundary would need its y
+        // mirrored — and the first version of this got that wrong. Inside the
+        // shell there is only one coordinate space and no conversion to forget.
+        skView = SKView(frame: .zero)
         skView.ignoresSiblingOrder = true
-        container.addSubview(skView)
+        shell.addSubview(skView)
+
+        // Wire the callback before giving the shell a size, or the first layout
+        // — the only one that runs if the window is never resized — reports to
+        // nobody and the map view keeps whatever frame it was born with.
+        shell.onViewportChange = { [weak self] rect in self?.skView.frame = rect }
+        shell.frame = frame
+        skView.frame = shell.viewportRect
 
         // The HUD is an AppKit view pinned to the top-left, so it keeps a
         // constant size and position no matter how far the map is zoomed.
+        // Kept, but never shown: the shell draws status in the game's own font
+        // now. Removing it outright would have meant touching every path that
+        // still refers to it, for no gain.
         hud = NSTextField(labelWithString: "")
+        hud.isHidden = true
         hud.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .semibold)
         hud.textColor = .white
         hud.backgroundColor = NSColor.black.withAlphaComponent(0.55)
@@ -178,6 +200,7 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
             let report = try AssetExtractor.extract(images: panel.urls, to: destination)
             assetDirectory = destination
             originals = nil                 // force a reload from the new assets
+            font = GameFont.load(in: destination)
             if report.historicalMap != nil { mapChoice = .historical }
             if newGameView != nil { showNewGame() } else { reload() }
             let alert = NSAlert()
@@ -206,7 +229,7 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
     private func showNewGame() {
         newGameView?.removeFromSuperview()
         skView.isHidden = true
-        hud.isHidden = true
+        shell.isHidden = true
         window.title = "Seven Cities of Gold"
 
         let haveClassic = FileManager.default.fileExists(
@@ -231,12 +254,29 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
         window.makeFirstResponder(view)
     }
 
+    /// Break the scene's one status line into the two the original has under
+    /// the viewport.
+    ///
+    /// `WorldScene` emits a single line wide enough for a 1100-point window,
+    /// which is far wider than the frame it now has to sit under — centered, it
+    /// ran off both edges. The fields are separated by runs of spaces, so they
+    /// can be split back apart and dealt half each.
+    static func statusLines(_ text: String) -> [String] {
+        let fields = text.components(separatedBy: "   ")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        guard fields.count > 1 else { return [text] }
+        let half = (fields.count + 1) / 2
+        return [fields[..<half].joined(separator: "  "),
+                fields[half...].joined(separator: "  ")]
+    }
+
     /// Take the New Game screen down and show the world it picked.
     private func startSession() {
         newGameView?.removeFromSuperview()
         newGameView = nil
         skView.isHidden = false
-        hud.isHidden = false
+        shell.isHidden = false
         reload()
     }
 
@@ -282,9 +322,14 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
         let effective: TileStyle = (tileStyle == .original && !haveOriginals)
             ? .custom : tileStyle
 
+        // The scene is built at the viewport's size, so the view has to be laid
+        // out before the scene exists rather than after.
+        skView.frame = shell.viewportRect
         let scene = WorldScene(map: map, style: effective,
                                originals: originals, size: skView.bounds.size)
-        scene.onStatusChange = { [weak self] text in self?.hud.stringValue = " \(text) " }
+        scene.onStatusChange = { [weak self] text in
+            self?.shell.bottomLines = Self.statusLines(text)
+        }
         skView.presentScene(scene)
         window.makeFirstResponder(skView)
 
@@ -296,6 +341,14 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
             title += "  (\(o.patternCount) original patterns, \(animated) animated)"
         }
         window.title = title
+
+        // No game logic stands behind these yet, so they hold dashes. They are
+        // here rather than left out because gold, food and crew get hooked up
+        // behind these exact slots later.
+        shell.dateLine = "MAY - 1492"
+        shell.messageLine = mapChoice.title.uppercased()
+        shell.leftPanel = [("MEN", "---"), ("FOOD", "---")]
+        shell.rightPanel = [("GOODS", "---"), ("GOLD", "---")]
         refreshChecks()
     }
 }

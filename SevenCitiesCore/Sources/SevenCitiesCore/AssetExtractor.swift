@@ -12,9 +12,12 @@ public enum AssetExtractor {
         public var historicalMap: (width: Int, height: Int)?
         public var terrainPatterns: Int?
         public var animatedTiles: Int?
+        public var fontGlyphs: Int?
         public var notes: [String] = []
 
-        public var wroteAnything: Bool { historicalMap != nil || terrainPatterns != nil }
+        public var wroteAnything: Bool {
+            historicalMap != nil || terrainPatterns != nil || fontGlyphs != nil
+        }
 
         /// A short human summary, for a CLI line or an alert body.
         public var summary: String {
@@ -23,6 +26,7 @@ public enum AssetExtractor {
             if let p = terrainPatterns {
                 parts.append("\(p) terrain patterns" + (animatedTiles.map { " + \($0) animated" } ?? ""))
             }
+            if let g = fontGlyphs { parts.append("\(g) font glyphs") }
             return parts.isEmpty ? "nothing extracted" : parts.joined(separator: ", ")
         }
     }
@@ -105,6 +109,17 @@ public enum AssetExtractor {
                 report.animatedTiles = art.tiles.count - drawn
             } catch {
                 report.notes.append("could not read the terrain art: \(error)")
+            }
+            // Separately, because the font is read out of the raw sector stream
+            // rather than out of `game`, and one failing should not cost the
+            // other.
+            do {
+                let font = try GameFont.extract(from: disk)
+                try font.json.write(to: outputDirectory.appendingPathComponent("font.json"),
+                                    atomically: true, encoding: .utf8)
+                report.fontGlyphs = font.glyphs.count
+            } catch {
+                report.notes.append("could not read the font: \(error)")
             }
         } else {
             report.notes.append("side 1 not supplied — the original terrain art is unavailable")
