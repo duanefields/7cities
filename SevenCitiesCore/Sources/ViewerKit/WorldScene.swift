@@ -43,6 +43,10 @@ final class WorldScene: SKScene {
     /// means "nothing to say", and the owner puts its own default back.
     var onMessage: (@MainActor (String) -> Void)?
 
+    /// Position and other things the original never showed. They go in the
+    /// window title rather than on the screen, which has only the two lines.
+    var onDetailChange: (@MainActor (String) -> Void)?
+
     private var position2D: (x: Int, y: Int)
     private var fog: FogOfWar
     private var fogNode: SKSpriteNode?
@@ -519,21 +523,21 @@ final class WorldScene: SKScene {
         cam.position = p
     }
 
-    /// Two short lines, because they have to fit under the classic aperture —
-    /// which is a narrower screen than the wide one, not a wider one. The single
-    /// forty-character line this replaced ran off both edges of it.
+    /// The two lines the original puts under the viewport, and it swaps which
+    /// two by where the expedition is: `SPEED` and `DEPTH` at sea, `PACE` and
+    /// `TERRAIN` ashore. Both captured from a live frame.
     ///
-    /// Zoom is gone from here deliberately: it means nothing while the aperture
-    /// is pinned, and the two lines the original has there are worth more spent
-    /// on the world than on the renderer.
+    /// Speed and pace have nothing behind them in this harness, so they hold
+    /// dashes for the same reason the four panels do. Depth and terrain are
+    /// real — the map knows both.
     private func refreshStatus() {
-        let t = map[position2D.x, position2D.y]
-        let tiles = (style == .original && originals != nil) ? "original" : "custom"
+        let here = map[position2D.x, position2D.y]
+        onStatusChange?(expedition.isAshore
+            ? ["PACE:---", "TERRAIN:\(here.displayName)"]
+            : ["SPEED:---", "DEPTH:\(here.displayName)"])
         let seen = String(format: "%.1f", fog.exploredFraction * 100)
-        onStatusChange?([
-            "X \(position2D.x)  Y \(position2D.y)    TERRAIN: \(t.displayName)",
-            "SEEN: \(seen)%    TILES: \(tiles)" + (follow ? "" : "    [FREE LOOK]"),
-        ])
+        let tiles = (style == .original && originals != nil) ? "original" : "custom"
+        onDetailChange?("(\(position2D.x), \(position2D.y))  seen \(seen)%  \(tiles) tiles")
     }
 
     // MARK: - Input

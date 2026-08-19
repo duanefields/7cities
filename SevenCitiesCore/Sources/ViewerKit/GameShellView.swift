@@ -20,8 +20,15 @@ import SevenCitiesCore
 /// | :--- | :---- |
 /// | background | `$00` black |
 /// | frame | `$07` yellow, dithered `10101010` over the black |
-/// | date and message | `$01` white |
-/// | panel labels and values | `$0E` light blue |
+/// | date, message and status lines | `$07` yellow |
+/// | panel labels | `$0E` light blue |
+/// | panel values | `$07` yellow |
+///
+/// Those are sampled from a live exploration frame, not guessed. Reading them
+/// off *color RAM* would have given black for every line, because the charset is
+/// inverted: a glyph's ink is its zero bits, so the letters take `$D021` and the
+/// background takes color RAM. The raster split at `$2250` then rewrites `$D021`
+/// down the screen, which is how one color-RAM value yields several text colors.
 ///
 /// The frame reads as an ornate olive band in the original for a reason worth
 /// keeping: `$60` and `$61` are `AA` bytes top to bottom, and `$62`/`$63` are the
@@ -166,8 +173,9 @@ final class GameShellView: NSView {
     private var palette: [NSColor] { OriginalTiles.c64 }
     private var background: NSColor { palette[0x00] }
     private var frameColor: NSColor { palette[0x07] }
-    private var textColor: NSColor { palette[0x01] }
-    private var panelColor: NSColor { palette[0x0E] }
+    private var textColor: NSColor { palette[0x07] }
+    private var labelColor: NSColor { palette[0x0E] }
+    private var valueColor: NSColor { palette[0x07] }
 
     override func draw(_ dirty: NSRect) {
         background.setFill()
@@ -226,8 +234,8 @@ final class GameShellView: NSView {
         let span = gridCells.high
         for (i, entry) in entries.enumerated() {
             let row = originRow + (span * (2 * i + 1)) / (2 * entries.count) - 1
-            draw(entry.label, centeredOn: col, row: row, color: panelColor)
-            draw(entry.value, centeredOn: col, row: row + 2, color: panelColor)
+            draw(entry.label, centeredOn: col, row: row, color: labelColor)
+            draw(entry.value, centeredOn: col, row: row + 2, color: valueColor)
         }
     }
 

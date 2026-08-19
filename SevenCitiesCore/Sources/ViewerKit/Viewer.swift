@@ -355,6 +355,10 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
         // through rather than a fallback to the world's name. The name is in the
         // window title.
         scene.onMessage = { [weak self] text in self?.shell.messageLine = text }
+        scene.onDetailChange = { [weak self] detail in
+            guard let self else { return }
+            window.title = "\(mapChoice.title) — \(detail)"
+        }
         skView.presentScene(scene)
         applyAperture()
         window.makeFirstResponder(skView)
