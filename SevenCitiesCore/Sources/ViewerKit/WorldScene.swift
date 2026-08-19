@@ -166,8 +166,10 @@ final class WorldScene: SKScene {
         // tile across.
         ring.texture = MarkerArt.texture(MarkerArt.ring, color: OriginalTiles.c64[0x01])
         ring.size = CGSize(width: TileArt.size, height: TileArt.size * 14 / 16)
-        bearingPip.texture = MarkerArt.texture(MarkerArt.pip, color: OriginalTiles.c64[0x02])
-        bearingPip.size = CGSize(width: TileArt.size * 0.375, height: TileArt.size * 0.375)
+        // The pip's shape depends on the heading, so its texture is built when
+        // the heading changes rather than once. Sized so a pattern pixel is the
+        // same size as one of the ring's.
+        bearingPip.size = CGSize(width: TileArt.size * 7 / 8, height: TileArt.size * 7 / 8)
         bearingPip.zPosition = 1
         for node in [ring, bearingPip] { explorer.addChild(node) }
 
@@ -512,6 +514,9 @@ final class WorldScene: SKScene {
         // expedition is under way.
         bearingPip.isHidden = heading == nil
         if let heading {
+            bearingPip.texture = MarkerArt.texture(
+                MarkerArt.pip(dx: heading.dx, dy: heading.dy),
+                color: OriginalTiles.c64[0x02])
             let r = ring.size.width / 2
             let o = MarkerArt.pipOffset(dx: heading.dx, dy: heading.dy)
             bearingPip.position = CGPoint(x: o.x * r, y: o.y * r)

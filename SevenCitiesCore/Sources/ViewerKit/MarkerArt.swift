@@ -52,17 +52,31 @@ enum MarkerArt {
         "..###...",
     ]
 
-    /// The bearing: a small **cross**, not a square.
+    /// The bearing: a small **cross with one long arm**, pointing inward.
     ///
     /// Sprite 0, three or four bytes, rewritten in place rather than swapped by
     /// pointer, and drawn in `$D027` = `$2` red against the ring's `$D028` = `$1`
-    /// white. It sits on the ring toward the heading, and is simply absent while
+    /// white. It sits on the rim toward the heading, and is simply absent while
     /// the expedition is stopped.
-    static let pip = [
-        ".#.",
-        "###",
-        ".#.",
-    ]
+    ///
+    /// It is not a symmetric plus. One arm runs longer, back toward the middle of
+    /// the ring, so the whole mark reads as a needle rather than a crosshair —
+    /// which is what the captured bytes show: a short cross with its stem
+    /// doubled on one side, and the stem turning with the heading.
+    static func pip(dx: Int, dy: Int) -> [String] {
+        let n = 7, c = 3
+        var g = Array(repeating: Array(repeating: Character("."), count: n), count: n)
+        g[c][c] = "#"
+        g[c - 1][c] = "#"; g[c + 1][c] = "#"
+        g[c][c - 1] = "#"; g[c][c + 1] = "#"
+        // The long arm, running back toward the ring's center. Pattern rows count
+        // downward, the same way map rows do, so this is simply the negated step.
+        for k in 2...3 {
+            let row = c - dy * k, col = c - dx * k
+            if (0..<n).contains(row), (0..<n).contains(col) { g[row][col] = "#" }
+        }
+        return g.map { String($0) }
+    }
 
     /// Where the pip sits for a step, as a fraction of the ring's radius. Modest,
     /// because on screen it rides on the ring rather than out past it, and the
