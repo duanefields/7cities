@@ -359,6 +359,19 @@ engineering record; this holds the work.
 
 ## The game itself — none of this is started
 
+- [ ] **The discovery screen.** The summary the original shows over a lavender
+      ground: the explored part of the world drawn small on the left, and a brown
+      panel reporting LAND, RIVERS, NATIVES, MINES and SPECIAL as percentages
+      *discovered*, plus MISSIONS, WEALTH and LIVES. It is worth recording what
+      this proves: the original keeps a per-cell record of where you have been,
+      because none of those percentages is computable without one. The fog of war
+      is therefore reproducing state the game already has rather than inventing
+      it, and this screen is what consumes that state. Most of it falls out of
+      the explored mask once that exists — the percentages are the mask
+      intersected with terrain we already decode, and the little map is the mask
+      at overview scale, which the viewer already renders. Screens carry their
+      own palettes: this one is lavender and brown where exploration is black and
+      yellow.
 - [ ] Movement rules: pace, terrain cost, rivers as the fast route inland.
 - [ ] The Old World: court, outfitting, ranks, the promotion ladder.
 - [ ] Natives: villages, trade, attitude, the peaceful/hostile axis.

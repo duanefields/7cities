@@ -1,4 +1,5 @@
 import AppKit
+import Foundation
 import SevenCitiesCore
 import SpriteKit
 
@@ -19,10 +20,78 @@ final class WorldScene: SKScene {
     /// window as an AppKit view rather than as a node, because anything
     /// parented to the camera inherits the camera transform and therefore
     /// shrinks, grows and drifts off-screen as you zoom.
-    var onStatusChange: (@MainActor (String) -> Void)?
+    var onStatusChange: (@MainActor ([String]) -> Void)?
 
     private var position2D: (x: Int, y: Int)
-    private var zoom: CGFloat = 3.0 { didSet { applyZoom() } }
+    private var fog: FogOfWar
+    private var fogNode: SKSpriteNode?
+
+    /// Whether the fog is drawn at all.
+    ///
+    /// Off belongs with the classic aperture and nothing else. The original has
+    /// no fog: its constraint is the *size of the hole*, not darkness, and every
+    /// one of its thirty-six tiles is drawn. Switching the fog off without also
+    /// shrinking the aperture shows far **more** than the C64 ever did, which is
+    /// the opposite of faithful — an early version of this offered exactly that
+    /// and called it the purist's setting.
+    ///
+    /// The fog *state* keeps running either way. It costs nothing to maintain,
+    /// and the discovery screen's percentages are computed from it, so switching
+    /// the drawing off must not stop the counting.
+    var fogEnabled = true {
+        didSet {
+            fogNode?.isHidden = !fogEnabled
+            if fogEnabled { updateFog() }
+            refreshStatus()
+        }
+    }
+    /// Reused between updates: one RGBA byte per map cell. Rebuilt on every step,
+    /// so it is not worth reallocating 400 KB each time.
+    private var fogPixels: [UInt8] = []
+    /// Loose enough that the window shows well past the sight radius.
+    ///
+    /// This was 3.0, at which a viewport shows about five and a half tiles —
+    /// entirely *inside* the seven-tile lit block, so every visible cell was
+    /// `.visible`, nothing was ever dimmed, and the fog looked broken while
+    /// working perfectly. An aperture tighter than its own sight radius cannot
+    /// show fog by construction.
+    static let defaultZoom: CGFloat = 1.0
+
+    private var zoom: CGFloat = WorldScene.defaultZoom { didSet { applyZoom() } }
+
+    /// Non-nil pins the view so exactly this many map tiles span its width, and
+    /// takes the zoom controls away.
+    ///
+    /// This is what makes the classic aperture *be* six tiles rather than merely
+    /// be drawn in a six-tile hole: the frame alone would leave whatever the
+    /// zoom happened to be showing, which is any number of tiles but six.
+    var lockedTilesAcross: Int? {
+        didSet {
+            // Releasing the lock has to put the zoom back, or the wide aperture
+            // inherits whatever the classic one computed — which is tighter than
+            // the sight radius, so the fog would have nothing to dim and would
+            // look broken. Only on the transition, so a resize does not fight
+            // the user's own zooming.
+            if lockedTilesAcross == nil, oldValue != nil { zoom = Self.defaultZoom }
+            applyLockedZoom()
+        }
+    }
+
+    private func applyLockedZoom() {
+        guard let tiles = lockedTilesAcross, tiles > 0, size.width > 0 else { return }
+        zoom = size.width / (CGFloat(tiles) * TileArt.size)
+        follow = true
+        centreOnExplorer(animated: false)
+        refreshStatus()
+    }
+
+    /// The view is `.resizeFill`, so the scene follows the viewport — and a
+    /// locked aperture has to be recomputed when it does, or resizing the window
+    /// silently changes how many tiles the classic mode shows.
+    override func didChangeSize(_ oldSize: CGSize) {
+        super.didChangeSize(oldSize)
+        applyLockedZoom()
+    }
     private var overviewMap: SKSpriteNode?
     /// Held so their filtering can follow the zoom.
     private var detailTextures: [SKTexture] = []
@@ -33,6 +102,8 @@ final class WorldScene: SKScene {
         self.style = style
         self.originals = originals
         self.position2D = map.suggestedStart() ?? (map.width / 2, map.height / 2)
+        self.fog = FogOfWar(width: map.width, height: map.height)
+        self.fog.look(from: self.position2D)
         super.init(size: size)
         scaleMode = .resizeFill
         backgroundColor = NSColor(srgbRed: 0.03, green: 0.07, blue: 0.18, alpha: 1)
@@ -44,6 +115,7 @@ final class WorldScene: SKScene {
     override func didMove(to view: SKView) {
         buildOverviewMap()
         buildTileMap()
+        buildFog()
 
         explorer.fillColor = NSColor(srgbRed: 1.0, green: 0.85, blue: 0.2, alpha: 1)
         explorer.strokeColor = .black
@@ -55,6 +127,7 @@ final class WorldScene: SKScene {
         addChild(cam)
 
         applyZoom()
+        applyLockedZoom()
         centreOnExplorer(animated: false)
         refreshStatus()
     }
@@ -203,6 +276,90 @@ final class WorldScene: SKScene {
         explorer.setScale(max(0.35, 1.0 / zoom))
     }
 
+    // MARK: - Fog of war
+
+    /// How dark a cell is drawn, as an alpha over black.
+    ///
+    /// `remembered` is a judgement rather than a measurement: enough to read as
+    /// memory beside lit ground, not so much that a coastline stops being
+    /// legible. `unseen` is total, so the world genuinely fills in behind you.
+    private static let rememberedAlpha: UInt8 = 150
+    private static let unseenAlpha: UInt8 = 255
+
+    /// One pixel per map cell, stretched over the world and linearly filtered.
+    ///
+    /// The filtering is the whole trick, and it is the one lesson worth taking
+    /// from the roguelike's fog: dimming has to feather *across* cell edges
+    /// rather than step at them, or the explored frontier reads as a staircase
+    /// of hard squares. A per-cell overlay of flat quads cannot be interpolated —
+    /// each quad is its own texture and `filteringMode` samples within a texture,
+    /// not between them. One small texture over the whole map gives linear
+    /// sampling something to work with, and the boundary softens over a cell.
+    /// It is also cheap: a single node, and the same technique the overview map
+    /// already uses.
+    private func buildFog() {
+        fogPixels = [UInt8](repeating: 0, count: map.width * map.height * 4)
+        let node = SKSpriteNode()
+        node.anchorPoint = .zero
+        node.position = .zero
+        node.size = CGSize(width: CGFloat(map.width) * TileArt.size,
+                           height: CGFloat(map.height) * TileArt.size)
+        // Above both the tile map and the overview, below the explorer — which
+        // must stay visible, since it is the one thing you always know.
+        node.zPosition = 5
+        node.isHidden = !fogEnabled
+        fogNode = node
+        addChild(node)
+        updateFog()
+    }
+
+    private func updateFog() {
+        // Skipped while hidden — but `fog` itself has already been updated by the
+        // caller, so nothing is lost by not drawing it, and switching the fog
+        // back on rebuilds from state that stayed current.
+        guard let fogNode, fogEnabled else { return }
+        let w = map.width, h = map.height
+        // No vertical flip here, unlike `buildOverviewMap`, and the difference is
+        // the thing to remember: that one *draws through* the context, whose
+        // coordinates are bottom-up, so it has to flip. This writes bytes into
+        // the backing buffer, and a bitmap buffer's first row is the image's
+        // *top* row. Flipping as well mirrored the fog — the lit circle appeared
+        // two hundred rows from the expedition, and everything you could see was
+        // black.
+        for y in 0..<h {
+            for x in 0..<w {
+                let alpha: UInt8 = switch fog.visibility(x: x, y: y) {
+                case .unseen: Self.unseenAlpha
+                case .remembered: Self.rememberedAlpha
+                case .visible: 0
+                }
+                // Black, premultiplied, so only the alpha carries anything.
+                let i = (y * w + x) * 4
+                fogPixels[i] = 0
+                fogPixels[i + 1] = 0
+                fogPixels[i + 2] = 0
+                fogPixels[i + 3] = alpha
+            }
+        }
+        // The image is made inside the exclusive-access closure and everything
+        // else outside it. Touching `fogPixels` again while that access is held
+        // is an exclusivity violation and traps at runtime — which it did.
+        let image: CGImage? = fogPixels.withUnsafeMutableBytes { raw in
+            guard let ctx = CGContext(
+                data: raw.baseAddress, width: w, height: h, bitsPerComponent: 8,
+                bytesPerRow: w * 4, space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+            else { return nil }
+            return ctx.makeImage()
+        }
+        guard let image else { return }
+        let texture = SKTexture(cgImage: image)
+        texture.filteringMode = .linear
+        fogNode.texture = texture
+        fogNode.size = CGSize(width: CGFloat(w) * TileArt.size,
+                              height: CGFloat(h) * TileArt.size)
+    }
+
     private func centreOnExplorer(animated: Bool) {
         let p = worldPoint(position2D.x, position2D.y)
         explorer.position = p
@@ -214,13 +371,21 @@ final class WorldScene: SKScene {
         }
     }
 
+    /// Two short lines, because they have to fit under the classic aperture —
+    /// which is a narrower screen than the wide one, not a wider one. The single
+    /// forty-character line this replaced ran off both edges of it.
+    ///
+    /// Zoom is gone from here deliberately: it means nothing while the aperture
+    /// is pinned, and the two lines the original has there are worth more spent
+    /// on the world than on the renderer.
     private func refreshStatus() {
         let t = map[position2D.x, position2D.y]
         let tiles = (style == .original && originals != nil) ? "original" : "custom"
-        onStatusChange?(
-            "(\(position2D.x), \(position2D.y))    TERRAIN: \(t.displayName)"
-            + "    ZOOM: \(String(format: "%.2f", zoom))x    TILES: \(tiles)"
-            + (follow ? "" : "    [free look]"))
+        let seen = String(format: "%.1f", fog.exploredFraction * 100)
+        onStatusChange?([
+            "X \(position2D.x)  Y \(position2D.y)    TERRAIN: \(t.displayName)",
+            "SEEN: \(seen)%    TILES: \(tiles)" + (follow ? "" : "    [FREE LOOK]"),
+        ])
     }
 
     // MARK: - Input
@@ -252,25 +417,32 @@ final class WorldScene: SKScene {
     }
 
     override func keyDown(with event: NSEvent) {
-        switch event.charactersIgnoringModifiers?.lowercased() {
-        case "=", "+": zoom = min(zoom * 1.25, 12); refreshStatus(); return
-        case "-", "_": zoom = max(zoom / 1.25, 0.12); refreshStatus(); return
-        case "0": zoom = 0.16; follow = false; cam.position = CGPoint(
-            x: CGFloat(map.width) * TileArt.size / 2,
-            y: CGFloat(map.height) * TileArt.size / 2); refreshStatus(); return
-        case "f": follow.toggle(); centreOnExplorer(animated: true); refreshStatus(); return
-        default: break
+        // Zooming and free look are the wide aperture's affordances. Under the
+        // classic one the window is the point, so they are simply not offered.
+        if lockedTilesAcross == nil {
+            switch event.charactersIgnoringModifiers?.lowercased() {
+            case "=", "+": zoom = min(zoom * 1.25, 12); refreshStatus(); return
+            case "-", "_": zoom = max(zoom / 1.25, 0.12); refreshStatus(); return
+            case "0": zoom = 0.16; follow = false; cam.position = CGPoint(
+                x: CGFloat(map.width) * TileArt.size / 2,
+                y: CGFloat(map.height) * TileArt.size / 2); refreshStatus(); return
+            case "f": follow.toggle(); centreOnExplorer(animated: true); refreshStatus(); return
+            default: break
+            }
         }
         guard let (dx, dy) = direction(for: event) else { return }
         let nx = position2D.x + dx, ny = position2D.y + dy
         guard map.contains(x: nx, y: ny) else { return }
         position2D = (nx, ny)
+        fog.look(from: position2D)
+        updateFog()
         follow = true
         centreOnExplorer(animated: true)
         refreshStatus()
     }
 
     override func scrollWheel(with event: NSEvent) {
+        guard lockedTilesAcross == nil else { return }
         follow = false
         cam.position.x -= event.scrollingDeltaX / zoom
         cam.position.y += event.scrollingDeltaY / zoom
@@ -278,11 +450,13 @@ final class WorldScene: SKScene {
     }
 
     override func magnify(with event: NSEvent) {
+        guard lockedTilesAcross == nil else { return }
         zoom = min(max(zoom * (1 + event.magnification), 0.12), 12)
         refreshStatus()
     }
 
     override func mouseDragged(with event: NSEvent) {
+        guard lockedTilesAcross == nil else { return }
         follow = false
         cam.position.x -= event.deltaX / zoom
         cam.position.y += event.deltaY / zoom

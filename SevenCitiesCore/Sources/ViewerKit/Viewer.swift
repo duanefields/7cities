@@ -45,6 +45,10 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
     /// Non-nil while the New Game screen is up, which is also how the rest of
     /// this knows a session has not started yet.
     private var newGameView: NewGameView?
+    private var scene: WorldScene?
+    /// How much world the window shows, and with it whether the fog is drawn at
+    /// all. Defaults to the wide window; `.classic` is the faithful one.
+    private var aperture: Aperture = .classic
 
     /// - Parameter assetDirectory: where `historical.map` and
     ///   `original_tiles.json` live. Defaults to the app's Application Support
@@ -140,6 +144,18 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
                                  action: #selector(startNewGame), keyEquivalent: "n")
         newGame.target = self
         gameMenu.addItem(newGame)
+        gameMenu.addItem(.separator())
+        let apertureItem = NSMenuItem(title: "Aperture", action: nil, keyEquivalent: "")
+        let apertureMenu = NSMenu(title: "Aperture")
+        for mode in Aperture.allCases {
+            let item = NSMenuItem(title: mode.rawValue,
+                                  action: #selector(pickAperture(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = mode.rawValue
+            apertureMenu.addItem(item)
+        }
+        apertureItem.submenu = apertureMenu
+        gameMenu.addItem(apertureItem)
         gameItem.submenu = gameMenu
         main.addItem(gameItem)
 
@@ -177,7 +193,8 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
             for item in menu.submenu?.items ?? [] {
                 guard let tag = item.representedObject as? String else { continue }
                 item.state = (tag == tileStyle.rawValue
-                              || tag == OriginalTiles.palette.rawValue) ? .on : .off
+                              || tag == OriginalTiles.palette.rawValue
+                              || tag == aperture.rawValue) ? .on : .off
             }
         }
     }
@@ -219,6 +236,27 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
 
     @objc private func startNewGame() { showNewGame() }
 
+    @objc private func pickAperture(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String,
+              let mode = Aperture.allCases.first(where: { $0.rawValue == raw })
+        else { return }
+        aperture = mode
+        // Live, not on reload: the explored mask keeps running under either
+        // aperture, so there is nothing to rebuild — only the layout to redo and
+        // the zoom to pin or release.
+        shell.aperture = mode
+        applyAperture()
+        refreshChecks()
+    }
+
+    /// The two halves of an aperture: how wide the hole is, which is the shell's
+    /// business, and what is drawn through it, which is the scene's.
+    private func applyAperture() {
+        scene?.fogEnabled = aperture == .explorer
+        scene?.lockedTilesAcross = aperture == .classic ? Aperture.classicTiles : nil
+        skView.frame = shell.viewportRect
+    }
+
     // MARK: - New Game
 
     /// Put the New Game screen up over the map, and take the session down.
@@ -252,23 +290,6 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
         container.addSubview(view)
         newGameView = view
         window.makeFirstResponder(view)
-    }
-
-    /// Break the scene's one status line into the two the original has under
-    /// the viewport.
-    ///
-    /// `WorldScene` emits a single line wide enough for a 1100-point window,
-    /// which is far wider than the frame it now has to sit under — centered, it
-    /// ran off both edges. The fields are separated by runs of spaces, so they
-    /// can be split back apart and dealt half each.
-    static func statusLines(_ text: String) -> [String] {
-        let fields = text.components(separatedBy: "   ")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty }
-        guard fields.count > 1 else { return [text] }
-        let half = (fields.count + 1) / 2
-        return [fields[..<half].joined(separator: "  "),
-                fields[half...].joined(separator: "  ")]
     }
 
     /// Take the New Game screen down and show the world it picked.
@@ -327,10 +348,10 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
         skView.frame = shell.viewportRect
         let scene = WorldScene(map: map, style: effective,
                                originals: originals, size: skView.bounds.size)
-        scene.onStatusChange = { [weak self] text in
-            self?.shell.bottomLines = Self.statusLines(text)
-        }
+        self.scene = scene
+        scene.onStatusChange = { [weak self] lines in self?.shell.bottomLines = lines }
         skView.presentScene(scene)
+        applyAperture()
         window.makeFirstResponder(skView)
 
         var title = "Seven Cities — \(mapChoice.title) — \(effective.rawValue) tiles"

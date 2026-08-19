@@ -27,6 +27,24 @@ import SevenCitiesCore
 /// keeping: `$60` and `$61` are `AA` bytes top to bottom, and `$62`/`$63` are the
 /// same dither in half a cell so the border hugs the viewport. Alternating yellow
 /// and black pixels at 320 across is what the eye turns into olive.
+/// How much world the window shows.
+enum Aperture: String, CaseIterable, Sendable {
+    /// The original's window: six map tiles square, and nothing outside it.
+    ///
+    /// This is the faithful setting, and the fog has no part in it. The C64's
+    /// constraint was never darkness — every one of those thirty-six tiles is
+    /// drawn, and what you cannot see is simply outside the hole. Because the
+    /// aperture is fixed, the whole screen can be drawn at a much larger scale
+    /// than the wide one allows, so this is chunky rather than cramped.
+    case classic = "Classic (6x6 tiles)"
+    /// A window as wide as the screen allows, with fog of war supplying the
+    /// constraint the small hole used to. See `FogOfWar`.
+    case explorer = "Explorer (fog of war)"
+
+    /// The original's window in map tiles. Two characters to a tile.
+    static let classicTiles = 6
+}
+
 @MainActor
 final class GameShellView: NSView {
 
@@ -57,10 +75,14 @@ final class GameShellView: NSView {
     /// them; everything left over goes to the viewport, which is where it is
     /// worth having.
     private static let panelCells = 10
+    /// The original's 6x6 tiles, in character cells.
+    private static let classicCells = Aperture.classicTiles * 2
     /// Cells above the viewport (blank, date, message, frame) and below it
     /// (frame, blank, two status lines).
     private static let cellsAbove = 4
     private static let cellsBelow = 5
+
+    var aperture: Aperture = .classic { didSet { relayout() } }
 
     private(set) var scale = 3
     private var cell: CGFloat { CGFloat(8 * scale) }
@@ -93,24 +115,39 @@ final class GameShellView: NSView {
     private(set) var viewportRect: NSRect = .zero
 
     private func relayout() {
-        // An integer scale, because anything else resamples an 8x8 glyph and the
-        // charset stops being the charset. Floored against the original's own
-        // 320x200 so the whole layout always has somewhere to sit.
-        scale = max(2, min(Int(bounds.width / 320), Int(bounds.height / 200)))
+        // An integer scale throughout, because anything else resamples an 8x8
+        // glyph and the charset stops being the charset.
+        switch aperture {
+        case .classic:
+            // The grid is fixed, so the scale is free to be as large as the
+            // window allows. That is the whole reason this mode is worth having
+            // rather than being a smaller version of the other one: a six-tile
+            // window on a modern display can be *big*.
+            let colsNeeded = Self.panelCells * 2 + 2 + Self.classicCells
+            let rowsNeeded = Self.cellsAbove + Self.cellsBelow + Self.classicCells
+            scale = max(2, min(Int(bounds.width) / (colsNeeded * 8),
+                               Int(bounds.height) / (rowsNeeded * 8)))
+            gridCells = (Self.classicCells, Self.classicCells)
+        case .explorer:
+            // Floored against the original's own 320x200 so the layout always
+            // has somewhere to sit; the grid then takes whatever is left.
+            scale = max(2, min(Int(bounds.width / 320), Int(bounds.height / 200)))
+            var wide = Int(bounds.width / cell) - Self.panelCells * 2 - 2
+            var high = Int(bounds.height / cell) - Self.cellsAbove - Self.cellsBelow
+            // The interior must be even in both directions to hold whole tiles.
+            wide -= wide % 2
+            high -= high % 2
+            gridCells = (max(2, wide), max(2, high))
+        }
 
         let cols = Int(bounds.width / cell)
         let rows = Int(bounds.height / cell)
-        // Two cells go to the frame itself, and the interior must be even in
-        // both directions to hold whole tiles.
-        var wide = cols - Self.panelCells * 2 - 2
-        var high = rows - Self.cellsAbove - Self.cellsBelow
-        wide -= wide % 2
-        high -= high % 2
-        gridCells = (max(2, wide), max(2, high))
-
-        // Centered horizontally; the vertical position is fixed by how many
-        // lines sit above it.
-        gridOrigin = (col: (cols - gridCells.wide) / 2, row: Self.cellsAbove)
+        // Centered both ways, but never so high that the two lines above the
+        // frame have nowhere to go. Everything else is placed relative to this,
+        // so the block travels together rather than the text pinning to the top
+        // while the frame floats in the middle.
+        gridOrigin = (col: (cols - gridCells.wide) / 2,
+                      row: max(Self.cellsAbove, (rows - gridCells.high) / 2))
 
         let x = CGFloat(gridOrigin.col) * cell
         let y = CGFloat(gridOrigin.row) * cell
@@ -145,8 +182,8 @@ final class GameShellView: NSView {
 
         // Date and message, centered on the whole screen the way the original
         // centers them — over the viewport rather than over a panel.
-        draw(dateLine, centeredOn: cols / 2, row: 1, color: textColor)
-        draw(messageLine, centeredOn: cols / 2, row: 2, color: textColor)
+        draw(dateLine, centeredOn: cols / 2, row: originRow - 3, color: textColor)
+        draw(messageLine, centeredOn: cols / 2, row: originRow - 2, color: textColor)
 
         drawFrame(originCol: originCol, originRow: originRow)
 
