@@ -197,10 +197,14 @@ final class GameShellView: NSView {
 
         // Panels, spaced down the viewport's height so they read as belonging to
         // it rather than floating in a margin.
-        let leftCenter = originCol / 2
-        let rightCenter = originCol + gridCells.wide + 1 + (cols - originCol - gridCells.wide - 1) / 2
-        drawPanel(leftPanel, centeredOn: leftCenter, originRow: originRow)
-        drawPanel(rightPanel, centeredOn: rightCenter, originRow: originRow)
+        // Each panel's labels share a left edge, which is what the original
+        // does — MEN and FOOD start at the same pixel, and so do GOODS and GOLD.
+        // The block is centered in its margin on the widest label it holds.
+        let rightMargin = originCol + gridCells.wide + 1
+        drawPanel(leftPanel, leftColumn: panelLeft(in: 0..<(originCol - 1), leftPanel),
+                  originRow: originRow)
+        drawPanel(rightPanel, leftColumn: panelLeft(in: (rightMargin + 1)..<cols, rightPanel),
+                  originRow: originRow)
 
         // Left-aligned to the viewport's left edge, not centered. The original
         // starts both of these at column 14, which is exactly where its map grid
@@ -231,16 +235,30 @@ final class GameShellView: NSView {
         }
     }
 
+    /// Where a panel's labels start: its margin's centre, offset by the widest
+    /// label so the whole block sits centered rather than the longest label
+    /// overhanging.
+    private func panelLeft(in margin: Range<Int>,
+                           _ entries: [(label: String, value: String)]) -> Int {
+        let widest = entries.map(\.label.count).max() ?? 0
+        return max(margin.lowerBound,
+                   margin.lowerBound + (margin.count - widest) / 2)
+    }
+
     private func drawPanel(_ entries: [(label: String, value: String)],
-                           centeredOn col: Int, originRow: Int) {
+                           leftColumn: Int, originRow: Int) {
         guard !entries.isEmpty else { return }
         // Spread the entries evenly down the viewport's height rather than
         // pinning them to fixed rows, so they stay put as the window grows.
         let span = gridCells.high
         for (i, entry) in entries.enumerated() {
             let row = originRow + (span * (2 * i + 1)) / (2 * entries.count) - 1
-            draw(entry.label, centeredOn: col, row: row, color: labelColor)
-            draw(entry.value, centeredOn: col, row: row + 2, color: valueColor)
+            draw(entry.label, at: leftColumn, row: row, color: labelColor)
+            // Centered under its own label, so a short value sits under the
+            // middle of a long word rather than clinging to its left edge.
+            let indent = (entry.label.count - entry.value.count) / 2
+            draw(entry.value, at: leftColumn + max(0, indent), row: row + 2,
+                 color: valueColor)
         }
     }
 
