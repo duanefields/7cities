@@ -22,6 +22,17 @@ final class WorldScene: SKScene {
     /// the way a bare marker is.
     private var explorerIsShip = false
 
+    /// Where the expedition is and what it may do. The rules live in
+    /// `SevenCitiesCore` where they are tested rather than clicked; this only
+    /// draws whatever they say.
+    private var expedition: Expedition
+    /// The ship drawn at its mooring while the party is away. Hidden aboard,
+    /// because then the ship *is* the expedition.
+    private let anchoredShip = SKSpriteNode()
+    /// The original's ship, held so the marker can be swapped back to it on
+    /// re-embarking. Nil when the original art is unavailable.
+    private var shipTexture: SKTexture?
+
     /// Called with the status text whenever it changes. The HUD lives in the
     /// window as an AppKit view rather than as a node, because anything
     /// parented to the camera inherits the camera transform and therefore
@@ -117,6 +128,7 @@ final class WorldScene: SKScene {
         // At sea, because the expedition arrives by ship. `suggestedStart` finds
         // land and is what the free-roaming viewer wanted.
         self.position2D = map.shipStart() ?? (map.width / 2, map.height / 2)
+        self.expedition = Expedition(atSea: self.position2D)
         self.fog = FogOfWar(width: map.width, height: map.height)
         self.fog.look(from: self.position2D)
         super.init(size: size)
@@ -136,6 +148,7 @@ final class WorldScene: SKScene {
         // `extract.sh` already pulls off the program disk — so the expedition can
         // be the game's own ship rather than a stand-in, with no new art.
         if style == .original, let texture = originals?.texture(for: .ship, variant: 0) {
+            shipTexture = texture
             explorer.texture = texture
             explorer.size = CGSize(width: TileArt.size, height: TileArt.size)
             explorerIsShip = true
@@ -146,6 +159,14 @@ final class WorldScene: SKScene {
         explorer.zPosition = 10
         addChild(explorer)
 
+        // The moored ship, drawn only while the party is ashore.
+        anchoredShip.texture = explorer.texture
+        anchoredShip.size = explorer.size
+        anchoredShip.zPosition = 9
+        anchoredShip.isHidden = true
+        addChild(anchoredShip)
+        updateMarker()
+
         camera = cam
         addChild(cam)
 
@@ -153,6 +174,7 @@ final class WorldScene: SKScene {
         applyLockedZoom()
         centreOnExplorer(animated: false)
         refreshStatus()
+        announce()
     }
 
     /// Terrain is drawn from the tile's map position in the original, not from
@@ -426,6 +448,69 @@ final class WorldScene: SKScene {
     ///
     /// `animated` is kept in the signature because the call sites read better
     /// for it, but there is deliberately nothing left to animate.
+    // MARK: - Ashore and aboard
+
+    /// Draw whichever of the two the expedition currently is, and moor the ship
+    /// where it was left.
+    private func updateMarker() {
+        if expedition.isAshore {
+            // Invented, unlike the ship: `$5529` has no entry for a landing
+            // party at all, which is part of why the on-screen marker is
+            // suspected of being a hardware sprite rather than a tile. Light red
+            // is the nearest palette entry to the fifth color measured off the
+            // captured exploration screen. See TODO.
+            explorer.texture = nil
+            explorer.colorBlendFactor = 1
+            explorer.color = OriginalTiles.c64[0x0A]
+            explorer.size = CGSize(width: TileArt.size * 0.55,
+                                   height: TileArt.size * 0.55)
+            explorerIsShip = false
+            anchoredShip.isHidden = false
+            anchoredShip.position = worldPoint(expedition.ship.x, expedition.ship.y)
+        } else {
+            if let texture = shipTexture {
+                explorer.texture = texture
+                explorer.size = CGSize(width: TileArt.size, height: TileArt.size)
+                explorer.colorBlendFactor = 0
+                explorerIsShip = true
+            }
+            anchoredShip.isHidden = true
+        }
+        applyZoom()
+    }
+
+    /// What the expedition is doing, on the line the original puts it on.
+    private func announce() {
+        onMessage?(expedition.isAshore ? "THE EXPEDITION IS ON LAND."
+                                       : "THE EXPEDITION IS ABOARD SHIP.")
+    }
+
+    /// One step. The rules are `Expedition`'s; the wording of a refusal is the
+    /// screen's business, which is why the outcome carries a reason rather than
+    /// a sentence.
+    private func step(dx: Int, dy: Int) {
+        let wasAshore = expedition.isAshore
+        switch expedition.step(dx: dx, dy: dy, in: map) {
+        case .blocked(.offMap):
+            return
+        case .blocked(.partyCannotSwim):
+            onMessage?("THE EXPEDITION CANNOT WALK ON WATER")
+            return
+        case .landed:
+            onMessage?("THE EXPEDITION GOES ASHORE.")
+        case .sailed, .walked, .boarded:
+            announce()
+        }
+
+        position2D = expedition.position
+        if expedition.isAshore != wasAshore { updateMarker() }
+        fog.look(from: position2D)
+        updateFog()
+        follow = true
+        centreOnExplorer(animated: true)
+        refreshStatus()
+    }
+
     private func centreOnExplorer(animated: Bool) {
         let p = worldPoint(position2D.x, position2D.y)
         explorer.position = p
@@ -504,21 +589,7 @@ final class WorldScene: SKScene {
             }
         }
         guard let (dx, dy) = direction(for: event) else { return }
-        let nx = position2D.x + dx, ny = position2D.y + dy
-        guard map.contains(x: nx, y: ny) else { return }
-        // A ship keeps to the water. Landing, and walking once landed, is the
-        // next chunk; until then the coast is a wall rather than a beach.
-        guard map[nx, ny].isWater else {
-            onMessage?("THE SHIP CANNOT SAIL ON LAND")
-            return
-        }
-        onMessage?("")
-        position2D = (nx, ny)
-        fog.look(from: position2D)
-        updateFog()
-        follow = true
-        centreOnExplorer(animated: true)
-        refreshStatus()
+        step(dx: dx, dy: dy)
     }
 
     override func scrollWheel(with event: NSEvent) {

@@ -350,12 +350,11 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
                                originals: originals, size: skView.bounds.size)
         self.scene = scene
         scene.onStatusChange = { [weak self] lines in self?.shell.bottomLines = lines }
-        scene.onMessage = { [weak self] text in
-            guard let self else { return }
-            // An empty message means the scene has nothing to announce, so the
-            // line goes back to naming the world rather than going blank.
-            shell.messageLine = text.isEmpty ? mapChoice.title.uppercased() : text
-        }
+        // The scene always has something to say here — it is where the original
+        // reports what the expedition is doing — so this is a straight pass
+        // through rather than a fallback to the world's name. The name is in the
+        // window title.
+        scene.onMessage = { [weak self] text in self?.shell.messageLine = text }
         skView.presentScene(scene)
         applyAperture()
         window.makeFirstResponder(skView)
@@ -373,7 +372,6 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
         // here rather than left out because gold, food and crew get hooked up
         // behind these exact slots later.
         shell.dateLine = "MAY - 1492"
-        shell.messageLine = mapChoice.title.uppercased()
         shell.leftPanel = [("MEN", "---"), ("FOOD", "---")]
         shell.rightPanel = [("GOODS", "---"), ("GOLD", "---")]
         refreshChecks()
