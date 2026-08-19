@@ -419,19 +419,30 @@ engineering record; this holds the work.
       game through vice-mcp**, tapped or held, on either port, so movement has to
       be driven by hand at the emulator.
 
-- [x] ~~**Settle whether the expedition marker is a hardware sprite.**~~ **Yes.**
-      Captured at sea: `$D015` = `03`, so sprites 0 and 1, both at the same
-      position (177,127) — an overlay pair, colors `$2` and `$1`. Sprite 1 carries
-      a small diamond, which is the compass rose. That is the fifth color, outside
-      the four the terrain multicolor uses, measured in the earlier static capture.
-      The ship tile at `$5529` entry `$3` is a *map* tile, which is what the
-      fourteen cells of terrain value `$3` on the historical map disk are: moored
-      ships. The viewer now draws it that way.
+- [x] ~~**Settle whether the expedition marker is a hardware sprite, and how the
+      heading is drawn.**~~ **Done, both.** Captured from a live quest at sea.
 
-      Still open: **whether the pointers cycle with heading.** They read
-      `$2C $2D $2E` and held steady across twelve samples while stationary, and
-      Duane reports the heading only shows while under way — so the test is to
-      sample them *during* movement, which needs hands on the emulator.
+      The marker is **two overlaid hardware sprites**: `$D015` = `03`, both at the
+      same position (177,127), colors `$2` and `$1`, pointers `$2C` and `$2D`.
+      That is the fifth color, outside the four the terrain multicolor uses, that
+      turned up in the earlier static capture and could not be explained.
+
+      **Sprite 1 is the compass ring** — a small diamond outline, 7 of 63 bytes,
+      and completely static across every sample.
+
+      **Sprite 0 is the heading, and it is a pip rather than an arrow.** Its
+      bitmap is *rewritten in place* — the pointers never change, `2c2d2e` across
+      every sample of two sailing runs. Each shape is 3 or 4 bytes placed at a
+      different spot inside the 24x21 sprite: top, right, upper-right and so on,
+      marking the point of the rose you are steering toward. When the expedition
+      is stationary the bitmap is **empty**, which is why the heading only shows
+      while under way.
+
+      So animating the compass needs no art and no pointer table: draw a static
+      ring, and put one pip on it at the bearing. The ship tile at `$5529` entry
+      `$3` is a *map* tile, which is what the historical disk's fourteen cells of
+      terrain `$3` are — moored ships. The viewer already draws it that way.
+
 - [ ] **The discovery screen.** The summary the original shows over a lavender
       ground: the explored part of the world drawn small on the left, and a brown
       panel reporting LAND, RIVERS, NATIVES, MINES and SPECIAL as percentages
