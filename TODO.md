@@ -351,15 +351,24 @@ engineering record; this holds the work.
       which draws in `$D021`. On one frame, 17 of the 144 terrain glyphs carried
       exactly one speck each; the other 127 were pure `$55`.
 
-      **And they animate.** Diffing both charset buffers (`$A000`-`$AFFF` and
-      `$B800`-`$BFFF`) across twenty moves shows those same bytes toggling
-      `$55`<->`$54`/`$51`/`$45` all over the surface, so the specks move between
-      frames rather than sitting still.
+      **They do not animate**, and getting that wrong is worth recording.
+      Sampling the charset while the ship was *stationary* gave the same 17
+      specks in the same places across six samples over three seconds. A diff of
+      both charset buffers across twenty *moves* does show those bytes toggling
+      all over the surface — but that is the view scrolling a different piece of
+      sea under a fixed stipple, not the stipple moving. Reading the moving diff
+      as animation was a mistake, caught by Duane watching the original.
 
-      What is left is the *placement rule* — which glyph gets a speck, at which
-      pair, and how that advances per frame. That lives in the composition step
-      (`$58B8`, `$31B4`) and in the `EOR #$55` pass at `$4057`, and is a reading
-      job rather than a capture job.
+      So the specks are fixed to the **world**, not the screen, and the sea only
+      appears to move because you do. The viewer now stipples about one tile in
+      eight as a pure function of map position, which matches 17 of 144.
+
+      What is left is the real *placement rule* — which tile gets a speck and at
+      which pair — since ours is a hash rather than the original's algorithm. It
+      lives in the composition step (`$58B8`, `$31B4`), and is a reading job
+      rather than a capture job. Whether the `EOR #$55` pass at `$4057` animates
+      anything at all is now doubtful and should be re-examined rather than
+      assumed.
 
 - [x] ~~**Identify the exploration view's composition step.**~~ Solved and
       ported. The view is a 12x12 grid of unique character codes over 6x6 map
