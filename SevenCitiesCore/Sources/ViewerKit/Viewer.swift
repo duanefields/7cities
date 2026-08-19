@@ -350,6 +350,12 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
                                originals: originals, size: skView.bounds.size)
         self.scene = scene
         scene.onStatusChange = { [weak self] lines in self?.shell.bottomLines = lines }
+        scene.onMessage = { [weak self] text in
+            guard let self else { return }
+            // An empty message means the scene has nothing to announce, so the
+            // line goes back to naming the world rather than going blank.
+            shell.messageLine = text.isEmpty ? mapChoice.title.uppercased() : text
+        }
         skView.presentScene(scene)
         applyAperture()
         window.makeFirstResponder(skView)

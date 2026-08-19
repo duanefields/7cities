@@ -14,13 +14,23 @@ final class WorldScene: SKScene {
     private let originals: OriginalTiles?
     private var tileMap: SKTileMapNode!
     private let cam = SKCameraNode()
-    private let explorer = SKShapeNode(circleOfRadius: TileArt.size * 0.32)
+    /// The expedition. A real ship when the original art is available, and a
+    /// plain marker when it is not.
+    private let explorer = SKSpriteNode()
+    /// Whether `explorer` is carrying the original's ship tile, which is one map
+    /// tile square and must not be rescaled to stay a constant size on screen
+    /// the way a bare marker is.
+    private var explorerIsShip = false
 
     /// Called with the status text whenever it changes. The HUD lives in the
     /// window as an AppKit view rather than as a node, because anything
     /// parented to the camera inherits the camera transform and therefore
     /// shrinks, grows and drifts off-screen as you zoom.
     var onStatusChange: (@MainActor ([String]) -> Void)?
+
+    /// Transient text for the line the original announces discoveries on. Empty
+    /// means "nothing to say", and the owner puts its own default back.
+    var onMessage: (@MainActor (String) -> Void)?
 
     private var position2D: (x: Int, y: Int)
     private var fog: FogOfWar
@@ -101,7 +111,9 @@ final class WorldScene: SKScene {
         self.map = map
         self.style = style
         self.originals = originals
-        self.position2D = map.suggestedStart() ?? (map.width / 2, map.height / 2)
+        // At sea, because the expedition arrives by ship. `suggestedStart` finds
+        // land and is what the free-roaming viewer wanted.
+        self.position2D = map.shipStart() ?? (map.width / 2, map.height / 2)
         self.fog = FogOfWar(width: map.width, height: map.height)
         self.fog.look(from: self.position2D)
         super.init(size: size)
@@ -117,9 +129,17 @@ final class WorldScene: SKScene {
         buildTileMap()
         buildFog()
 
-        explorer.fillColor = NSColor(srgbRed: 1.0, green: 0.85, blue: 0.2, alpha: 1)
-        explorer.strokeColor = .black
-        explorer.lineWidth = 2
+        // `$5529` entry `$3` is the ship, and it is one of the static patterns
+        // `extract.sh` already pulls off the program disk — so the expedition can
+        // be the game's own ship rather than a stand-in, with no new art.
+        if style == .original, let texture = originals?.texture(for: .ship, variant: 0) {
+            explorer.texture = texture
+            explorer.size = CGSize(width: TileArt.size, height: TileArt.size)
+            explorerIsShip = true
+        } else {
+            explorer.color = NSColor(srgbRed: 1.0, green: 0.85, blue: 0.2, alpha: 1)
+            explorer.size = CGSize(width: TileArt.size * 0.64, height: TileArt.size * 0.64)
+        }
         explorer.zPosition = 10
         addChild(explorer)
 
@@ -272,8 +292,10 @@ final class WorldScene: SKScene {
         // mush even at 0.89x. Nearest holds up now that a tile texture is the
         // same size as its cell; the earlier breakage was a 64-pixel texture in
         // a 32-point cell, not the filter.
-        // Keep the explorer marker a readable size on screen at any zoom.
-        explorer.setScale(max(0.35, 1.0 / zoom))
+        // A bare marker is kept a readable size on screen whatever the zoom; the
+        // ship is a map tile and stays the size of one, or it would swim free of
+        // the water it is sitting on.
+        explorer.setScale(explorerIsShip ? 1.0 : max(0.35, 1.0 / zoom))
     }
 
     // MARK: - Fog of war
@@ -390,9 +412,19 @@ final class WorldScene: SKScene {
 
     // MARK: - Input
 
-    /// The three schemes decided for the port: arrows, numpad, and the cluster
-    /// around J. The original was 8-way plus one button, so this is the whole
-    /// input surface.
+    /// Every way to steer, all live at once. The original was eight directions
+    /// and one button, so this is the whole input surface.
+    ///
+    /// - **Arrows** for the four cardinals.
+    /// - **Numpad**, which is the eight directions laid out as they point.
+    /// - **`WASD` with its diagonals** — `Q W E / A S D / Z X C`. `S` is south
+    ///   here, not a stand-still: there is no turn economy for a rest key to
+    ///   mean anything in, and `WASD` is what the muscle memory expects.
+    /// - **vi keys**, `Y U I / H J K L / B N M`, for people who prefer them.
+    ///
+    /// The vi set is an alternative rather than the default, which is how Duane's
+    /// roguelike offers them too. It costs nothing to have both: the two letter
+    /// clusters do not share a single key, so neither has to be chosen.
     private func direction(for event: NSEvent) -> (Int, Int)? {
         if let special = event.specialKey {
             switch special {
@@ -404,14 +436,14 @@ final class WorldScene: SKScene {
             }
         }
         switch event.charactersIgnoringModifiers?.lowercased() {
-        case "7", "y": return (-1, -1)
-        case "8", "u": return (0, -1)
-        case "9", "i": return (1, -1)
-        case "4", "h": return (-1, 0)
-        case "6", "k": return (1, 0)
-        case "1", "n": return (-1, 1)
-        case "2", "m": return (0, 1)
-        case "3", ",": return (1, 1)
+        case "7", "q", "y": return (-1, -1)
+        case "8", "w", "k": return (0, -1)
+        case "9", "e", "u": return (1, -1)
+        case "4", "a", "h": return (-1, 0)
+        case "6", "d", "l": return (1, 0)
+        case "1", "z", "b": return (-1, 1)
+        case "2", "s", "j": return (0, 1)
+        case "3", "c", "n": return (1, 1)
         default: return nil
         }
     }
@@ -433,6 +465,13 @@ final class WorldScene: SKScene {
         guard let (dx, dy) = direction(for: event) else { return }
         let nx = position2D.x + dx, ny = position2D.y + dy
         guard map.contains(x: nx, y: ny) else { return }
+        // A ship keeps to the water. Landing, and walking once landed, is the
+        // next chunk; until then the coast is a wall rather than a beach.
+        guard map[nx, ny].isWater else {
+            onMessage?("THE SHIP CANNOT SAIL ON LAND")
+            return
+        }
+        onMessage?("")
         position2D = (nx, ny)
         fog.look(from: position2D)
         updateFog()

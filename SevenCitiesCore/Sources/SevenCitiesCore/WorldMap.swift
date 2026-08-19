@@ -109,6 +109,33 @@ public struct WorldMap: Sendable {
         self[x + d.offset.dx, y + d.offset.dy]
     }
 
+    /// Where a ship begins: at sea off the eastern edge, mid-latitude.
+    ///
+    /// The original sails you west out of Spain, which is off the map entirely,
+    /// so you arrive over the eastern edge with open ocean ahead and the New
+    /// World somewhere beyond it. This puts you there — the easternmost water on
+    /// the middle row, backed off a few tiles so the first minute is sea rather
+    /// than immediate landfall.
+    ///
+    /// **This is reasoned, not measured.** The original's start is almost
+    /// certainly a fixed constant; reading it off the running game under VICE
+    /// would settle the exact latitude and the distance to land, and is the
+    /// right way to replace this. See TODO.
+    public func shipStart() -> (x: Int, y: Int)? {
+        let row = height / 2
+        // Walk in from the eastern edge until the water starts, then keep a few
+        // tiles of sea in hand.
+        for x in stride(from: width - 1, through: 0, by: -1) where self[x, row].isWater {
+            return (max(0, x - 3), row)
+        }
+        // No water on the middle row at all: take any water anywhere rather than
+        // stranding the ship on a mountain.
+        for y in 0..<height {
+            for x in 0..<width where self[x, y].isWater { return (x, y) }
+        }
+        return nil
+    }
+
     /// A sensible place to drop the player in: a land tile near the middle of
     /// the landmass, preferring somewhere adjacent to water so the coastline
     /// is visible on arrival.
