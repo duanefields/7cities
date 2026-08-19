@@ -18,9 +18,10 @@ final class WorldScene: SKScene {
     /// a static compass ring and a pip on it showing the bearing, exactly as the
     /// original's two overlaid sprites are.
     private let explorer = SKNode()
-    private let compassRing = SKSpriteNode()
-    private let compassPip = SKSpriteNode()
-    private let partyMarker = SKSpriteNode()
+    /// The ring is the expedition in both modes — the original uses one sprite
+    /// for the ship at sea and the party ashore.
+    private let ring = SKSpriteNode()
+    private let bearingPip = SKSpriteNode()
     /// The last step taken, which is where the pip points. Nil until the
     /// expedition moves, because the original shows no bearing while stopped.
     private var heading: (dx: Int, dy: Int)?
@@ -159,20 +160,16 @@ final class WorldScene: SKScene {
         // be the game's own ship rather than a stand-in, with no new art.
         if style == .original { shipTexture = originals?.texture(for: .ship, variant: 0) }
 
-        // The two sprites carry different colors, and the capture says which:
-        // $D027 = $2 for sprite 0, the bearing pip, and $D028 = $1 for sprite 1,
-        // the ring. So the ring is white and the pip that rides on it is red.
-        compassRing.texture = MarkerArt.texture(MarkerArt.compassRing,
-                                                color: OriginalTiles.c64[0x01])
-        compassRing.size = CGSize(width: TileArt.size * 0.7, height: TileArt.size * 0.7)
-        compassPip.texture = MarkerArt.texture(MarkerArt.compassPip,
-                                               color: OriginalTiles.c64[0x02])
-        compassPip.size = CGSize(width: TileArt.size * 0.2, height: TileArt.size * 0.2)
-        compassPip.zPosition = 1
-        partyMarker.texture = MarkerArt.texture(MarkerArt.party,
-                                                color: OriginalTiles.c64[0x01])
-        partyMarker.size = CGSize(width: TileArt.size * 0.44, height: TileArt.size * 0.62)
-        for node in [compassRing, compassPip, partyMarker] { explorer.addChild(node) }
+        // Colors from the sprite registers rather than from taste: $D028 = $1
+        // for sprite 1, the ring, and $D027 = $2 for sprite 0, the bearing.
+        // Sizes from the hardware expansion: 8x7 doubled is 16x14, about one map
+        // tile across.
+        ring.texture = MarkerArt.texture(MarkerArt.ring, color: OriginalTiles.c64[0x01])
+        ring.size = CGSize(width: TileArt.size, height: TileArt.size * 14 / 16)
+        bearingPip.texture = MarkerArt.texture(MarkerArt.pip, color: OriginalTiles.c64[0x02])
+        bearingPip.size = CGSize(width: TileArt.size * 0.375, height: TileArt.size * 0.375)
+        bearingPip.zPosition = 1
+        for node in [ring, bearingPip] { explorer.addChild(node) }
 
         explorer.zPosition = 10
         addChild(explorer)
@@ -210,7 +207,7 @@ final class WorldScene: SKScene {
         // The sea has no stored art to vary — the original draws it flat and
         // stipples it — so its variants are ours, one per wave phase.
         if terrain.isWater {
-            return "\(terrain)#\(SeaArt.variantKey(x: x, y: y))"
+            return "\(terrain)#w\(SeaArt.variant(x: x, y: y))"
         }
         return "\(terrain)#\(o.variant(for: terrain, x: x, y: y))"
     }
@@ -286,19 +283,13 @@ final class WorldScene: SKScene {
             let water = OriginalTiles.c64[0x0E]
             let speck = OriginalTiles.c64[0x07]
             let scale = OriginalTiles.defaultScale
-            // Every distinct appearance the stipple can take: bare water, and
-            // water with its speck at each of the 8 x 16 pixel-pair positions.
-            // Built once; which one a tile uses is decided by its map position.
-            var appearances: [String: (x: Int, y: Int)?] = ["bare": nil]
-            for sx in 0..<8 {
-                for sy in 0..<16 { appearances["s\(sx)_\(sy)"] = (x: sx, y: sy) }
-            }
             for terrain in Terrain.allCases where terrain.isWater {
-                for (name, at) in appearances {
-                    guard let texture = SeaArt.tile(speckAt: at, water: water,
-                                                    speck: speck, scale: scale)
+                for v in 0..<SeaArt.appearances {
+                    guard let texture = SeaArt.tile(specks: SeaArt.specks(v),
+                                                    water: water, speck: speck,
+                                                    scale: scale)
                     else { continue }
-                    let key = "\(terrain)#\(name)"
+                    let key = "\(terrain)#w\(v)"
                     let group = SKTileGroup(tileDefinition: SKTileDefinition(texture: texture))
                     group.name = key
                     groups[key] = group
@@ -515,15 +506,15 @@ final class WorldScene: SKScene {
     /// diamond of our own rather than the original's pixels.
     private func updateMarker() {
         let ashore = expedition.isAshore
-        partyMarker.isHidden = !ashore
-        compassRing.isHidden = ashore
-        // No bearing while stopped, which is what the original does: sprite 0's
-        // bitmap is simply empty until the expedition is under way.
-        compassPip.isHidden = ashore || heading == nil
-        if let heading, !ashore {
-            let r = compassRing.size.width / 2
+        // The ring is the expedition either way — captured at sea and ashore, it
+        // is the same sprite with the same pointer and the same seven bytes.
+        // No bearing while stopped: sprite 0's bitmap is simply empty until the
+        // expedition is under way.
+        bearingPip.isHidden = heading == nil
+        if let heading {
+            let r = ring.size.width / 2
             let o = MarkerArt.pipOffset(dx: heading.dx, dy: heading.dy)
-            compassPip.position = CGPoint(x: o.x * r, y: o.y * r)
+            bearingPip.position = CGPoint(x: o.x * r, y: o.y * r)
         }
         anchoredShip.isHidden = !ashore
         if ashore {
