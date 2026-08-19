@@ -17,10 +17,9 @@ final class WorldScene: SKScene {
     /// The expedition. A real ship when the original art is available, and a
     /// plain marker when it is not.
     private let explorer = SKSpriteNode()
-    /// Whether `explorer` is carrying the original's ship tile, which is one map
-    /// tile square and must not be rescaled to stay a constant size on screen
-    /// the way a bare marker is.
-    private var explorerIsShip = false
+    /// The marker is a map-sized thing in both modes, so it is never rescaled to
+    /// hold a constant size on screen — it would swim free of the tile it stands
+    /// on.
 
     /// Where the expedition is and what it may do. The rules live in
     /// `SevenCitiesCore` where they are tested rather than clicked; this only
@@ -151,21 +150,13 @@ final class WorldScene: SKScene {
         // `$5529` entry `$3` is the ship, and it is one of the static patterns
         // `extract.sh` already pulls off the program disk — so the expedition can
         // be the game's own ship rather than a stand-in, with no new art.
-        if style == .original, let texture = originals?.texture(for: .ship, variant: 0) {
-            shipTexture = texture
-            explorer.texture = texture
-            explorer.size = CGSize(width: TileArt.size, height: TileArt.size)
-            explorerIsShip = true
-        } else {
-            explorer.color = NSColor(srgbRed: 1.0, green: 0.85, blue: 0.2, alpha: 1)
-            explorer.size = CGSize(width: TileArt.size * 0.64, height: TileArt.size * 0.64)
-        }
+        if style == .original { shipTexture = originals?.texture(for: .ship, variant: 0) }
         explorer.zPosition = 10
         addChild(explorer)
 
         // The moored ship, drawn only while the party is ashore.
-        anchoredShip.texture = explorer.texture
-        anchoredShip.size = explorer.size
+        anchoredShip.texture = shipTexture
+        anchoredShip.size = CGSize(width: TileArt.size, height: TileArt.size)
         anchoredShip.zPosition = 9
         anchoredShip.isHidden = true
         addChild(anchoredShip)
@@ -321,10 +312,7 @@ final class WorldScene: SKScene {
         // mush even at 0.89x. Nearest holds up now that a tile texture is the
         // same size as its cell; the earlier breakage was a 64-pixel texture in
         // a 32-point cell, not the filter.
-        // A bare marker is kept a readable size on screen whatever the zoom; the
-        // ship is a map tile and stays the size of one, or it would swim free of
-        // the water it is sitting on.
-        explorer.setScale(explorerIsShip ? 1.0 : max(0.35, 1.0 / zoom))
+        explorer.setScale(1.0)
     }
 
     // MARK: - Fog of war
@@ -456,28 +444,41 @@ final class WorldScene: SKScene {
 
     /// Draw whichever of the two the expedition currently is, and moor the ship
     /// where it was left.
+    /// Draw whichever of the two the expedition currently is.
+    ///
+    /// Neither is the ship. Captured from the running game: at sea the marker is
+    /// a pair of overlaid **hardware sprites** — `$D015` = `03`, both at the same
+    /// position, colors `$2` and `$1` — carrying a small diamond, which is the
+    /// compass rose showing heading. The ship tile from `$5529` entry `$3` is a
+    /// *map* tile, drawn where the ship actually is; the historical map disk
+    /// carries fourteen cells of terrain value `$3`, which is what those are.
+    ///
+    /// So the marker is never the ship, and the ship is never the marker. An
+    /// earlier version had it exactly backwards.
+    ///
+    /// The shapes here are drawn rather than extracted. The sprite data lives in
+    /// RAM at runtime and has not been traced to anything on disk, so this is a
+    /// diamond of our own rather than the original's pixels.
     private func updateMarker() {
+        explorer.texture = nil
+        explorer.colorBlendFactor = 1
         if expedition.isAshore {
-            // Invented, unlike the ship: `$5529` has no entry for a landing
-            // party at all, which is part of why the on-screen marker is
-            // suspected of being a hardware sprite rather than a tile. Light red
-            // is the nearest palette entry to the fifth color measured off the
-            // captured exploration screen. See TODO.
-            explorer.texture = nil
-            explorer.colorBlendFactor = 1
+            // The party. Invented outright — `$5529` has no entry for a landing
+            // party, and its sprite has not been captured. Light red is the
+            // nearest palette entry to the color measured on screen.
             explorer.color = OriginalTiles.c64[0x0A]
-            explorer.size = CGSize(width: TileArt.size * 0.55,
-                                   height: TileArt.size * 0.55)
-            explorerIsShip = false
+            explorer.size = CGSize(width: TileArt.size * 0.5,
+                                   height: TileArt.size * 0.5)
+            explorer.zRotation = 0
             anchoredShip.isHidden = false
             anchoredShip.position = worldPoint(expedition.ship.x, expedition.ship.y)
         } else {
-            if let texture = shipTexture {
-                explorer.texture = texture
-                explorer.size = CGSize(width: TileArt.size, height: TileArt.size)
-                explorer.colorBlendFactor = 0
-                explorerIsShip = true
-            }
+            // The compass: a white square turned forty-five degrees, which is the
+            // diamond the captured sprite draws.
+            explorer.color = OriginalTiles.c64[0x01]
+            explorer.size = CGSize(width: TileArt.size * 0.42,
+                                   height: TileArt.size * 0.42)
+            explorer.zRotation = .pi / 4
             anchoredShip.isHidden = true
         }
         applyZoom()
