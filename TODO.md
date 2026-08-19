@@ -334,23 +334,33 @@ engineering record; this holds the work.
       slots, each with exactly the 4 bytes of headroom that `x & 3` needs, so
       `T[x & 1] + T[y & 1]` picks a slot and `x & 3` shifts within it. Twelve
       whole, distinct peaks. See NOTES.md for why it was wrongly rejected twice.
-- [ ] **The ocean has no waves, and that is not just the animation.** Entries
-      `$0`/`$1`/`$2` point at RAM buffers driven by the `EOR #$55` pass at
-      `$4057`, which swaps multicolor pixel pairs. Because those pointers are
-      below `TerrainTiles`' `< $9000` cutoff there is nothing in `game` to read,
-      so all three water depths extract as `animated: true` with a single **flat
-      fill** — and the viewer draws the sea as a solid blue field. The original
-      has white specks across it. So this is a fidelity gap visible *at rest*,
-      before any animation question arises, and it is the most conspicuous thing
-      still wrong with the exploration view.
+- [ ] **Reproduce the waves.** The mechanism is now measured from a running game
+      and needs no further capture — only porting.
 
-      The bitmaps exist in RAM at `$94B0` (deep and shallow) and `$94D8`
-      (medium), so **capturing them from a running game under VICE is the whole
-      job** — `vice_memory_read` over those two buffers while the exploration
-      screen is up. Do it in the same sitting as the start position and the
-      sprite question below; all three want the game running and nothing else.
-      Whether the three depths differ in pattern or only in color is unknown and
-      the capture answers it.
+      The sea is **flat**. The water tile buffers the `$5529` table points at
+      (`$94B0` deep/shallow, `$94D8` medium) hold a uniform `$55` — every
+      bit-pair `01`, which is solid `$D022` light blue — and `$94D8` is often all
+      zeros. There is no wave art anywhere, on disk or in RAM, so nothing can be
+      extracted. Confirmed twice: both buffers are all zeros in
+      `local/game_decrypted.bin`, and `$94B0` read as uniform `$55` on a live
+      exploration frame.
+
+      A wave is instead **one pixel-pair zeroed inside an otherwise-uniform water
+      byte, stamped into the composed charset**. Measured values, all against a
+      `$55` background: `$54`, `$51`, `$45` — pair index 3, 2 and 1 set to `00`,
+      which draws in `$D021`. On one frame, 17 of the 144 terrain glyphs carried
+      exactly one speck each; the other 127 were pure `$55`.
+
+      **And they animate.** Diffing both charset buffers (`$A000`-`$AFFF` and
+      `$B800`-`$BFFF`) across twenty moves shows those same bytes toggling
+      `$55`<->`$54`/`$51`/`$45` all over the surface, so the specks move between
+      frames rather than sitting still.
+
+      What is left is the *placement rule* — which glyph gets a speck, at which
+      pair, and how that advances per frame. That lives in the composition step
+      (`$58B8`, `$31B4`) and in the `EOR #$55` pass at `$4057`, and is a reading
+      job rather than a capture job.
+
 - [x] ~~**Identify the exploration view's composition step.**~~ Solved and
       ported. The view is a 12x12 grid of unique character codes over 6x6 map
       tiles (`$3107`), the charset is double-buffered and rewritten per frame
@@ -373,25 +383,40 @@ engineering record; this holds the work.
 
 ## The game itself — none of this is started
 
-- [ ] **Find where Spain puts you, and how far it is to land.** `WorldMap.shipStart()`
-      currently reasons rather than measures: eastern edge, mid-latitude, three
-      tiles clear of the first water. The original sails you west out of a Spain
-      that is off the map entirely, so the real start is almost certainly a fixed
-      constant. Reading it off the running game settles the latitude and — the
-      number that actually matters — how much open ocean stands between the start
-      and landfall, which decides whether the opening minute is discovery or
-      tedium. Under VICE: boot, get through outfitting, and read the expedition's
-      map position out of memory once the exploration screen is up.
-- [ ] **Settle whether the expedition marker is a hardware sprite, and whether it
-      animates.** Evidence that it is: the VICE capture of the exploration screen
-      holds exactly 24 pixels of `(175,60,88)`, a color outside the screen's
-      four-color terrain palette, sitting dead center of the 12x12 grid at cols
-      19-20, row 10. A fifth color there is what a VIC-II sprite gives you, since
-      sprites carry their own color register. If so, animation is a pointer cycle
-      rather than something to invent — which is the cheap way a 1984 C64 game
-      would animate sails or a walking party, and would explain why there is a
-      static ship tile *and* a separate on-screen marker. `vice_sprite_inspect`
-      plus watching the sprite pointers at the end of the video matrix answers it.
+- [ ] **Find where Spain puts you.** Still open, and harder than expected.
+      `WorldMap.shipStart()` reasons rather than measures.
+
+      **The expedition's map position is not a plain coordinate in RAM.** Diffed
+      `$0000`-`$BFFF` (48 KB) across twenty confirmed westward moves: not one
+      byte changed by 20, by 10, or by any consistent amount, and no 16-bit
+      little-endian pair moved by a plausible step either. `$86`/`$87`, which
+      `$58B8` reads map bytes through, held at `$B600` throughout. Candidates
+      found in a narrower 4 KB diff (`$0027`, `$0036`) were disproved — they did
+      not move across the twenty steps.
+
+      Worth trying next: `$C000`-`$FFFF`, which has not been diffed; and the idea
+      that the position is held as a **disk track/sector plus offset** rather
+      than as x/y, since the game streams map regions off the map disk as it
+      scrolls. That would explain the absence of any coordinate that counts.
+
+      Note that **joystick input does not reach the game through vice-mcp** —
+      neither `vice_joystick_tap` nor a held `vice_joystick_set`, on either port.
+      So any movement has to be driven by hand at the emulator, which is what
+      `boot_demo.py` built the demo path to avoid.
+
+- [x] ~~**Settle whether the expedition marker is a hardware sprite.**~~ **Yes.**
+      Captured at sea: `$D015` = `03`, so sprites 0 and 1, both at the same
+      position (177,127) — an overlay pair, colors `$2` and `$1`. Sprite 1 carries
+      a small diamond, which is the compass rose. That is the fifth color, outside
+      the four the terrain multicolor uses, measured in the earlier static capture.
+      The ship tile at `$5529` entry `$3` is a *map* tile, which is what the
+      fourteen cells of terrain value `$3` on the historical map disk are: moored
+      ships. The viewer now draws it that way.
+
+      Still open: **whether the pointers cycle with heading.** They read
+      `$2C $2D $2E` and held steady across twelve samples while stationary, and
+      Duane reports the heading only shows while under way — so the test is to
+      sample them *during* movement, which needs hands on the emulator.
 - [ ] **The discovery screen.** The summary the original shows over a lavender
       ground: the explored part of the world drawn small on the left, and a brown
       panel reporting LAND, RIVERS, NATIVES, MINES and SPECIAL as percentages
