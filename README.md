@@ -5,17 +5,45 @@ original Commodore 64 disks, and rebuilding it for macOS in Swift.
 
 The goal is fidelity underneath and a modern surface on top: the simulation's rules, stats and
 randomness recovered from the original binaries and verified against them, presented at native
-resolution with smooth scrolling and native conveniences.
+resolution with modern conveniences. Not smooth scrolling, as it turns out — the original moves
+the map by whole tiles and never between them, and tweening it looks wrong.
 
-**Status: milestone zero.** The map format is fully decoded and there is an explorable viewer.
-The game itself — trade, natives, the court, scoring — is not started. See `TODO.md`.
+**Status: milestone one — exploration.** You can start an expedition, sail west out of Spain,
+make landfall, walk the continent and get back aboard, on the classic map or on a world the
+original's own World Maker builds. The game's *rules* — trade, natives, the court, scoring — are
+not started. See `TODO.md`.
 
 ![The viewer showing the Gulf of Mexico and the Caribbean, drawn with the original C64 terrain
 art](images/viewer-classic-map.webp)
 
 The classic map and the terrain art above both came out of the original disks — the art is not
 a screenshot of the game, but the game's own tile data, read out of its main program and
-redrawn. See [What the viewer does](#what-the-viewer-does).
+redrawn. See [What the app does](#what-the-app-does).
+
+## Milestone one — exploration
+
+![The exploration screen: a coastline and open sea inside the original's dithered frame, with
+the compass and its bearing needle at the center, MEN, FOOD, GOODS and GOLD panels either side,
+and SPEED and DEPTH beneath](images/viewer-exploration.webp)
+
+Everything on that screen came out of the original disks and none of it ships here: the map,
+the terrain tiles, the frame around the viewport, and the charset every word is set in — `MEN`
+and `DEPTH` included. As with the shot above, it is not a photograph of the game but the game's
+own data, read off disks you supply and redrawn.
+
+The whole of it is navigation: pick a world, arrive at sea off the eastern edge as the original
+does, sail west, run the ship aground to send the party ashore, explore, and walk back to the
+ship to leave. There is no crew, no cargo, no supplies and no clock — the four panels and the
+pace line hold dashes because nothing stands behind them yet, and they are drawn rather than
+omitted because that is where those numbers go when they arrive.
+
+The screen is the original's, rebuilt rather than emulated. The charset, the viewport frame and
+the palette all come off your own disks; the layout, the colors, the compass and the wave
+stipple were each measured from the game running under an emulator rather than eyeballed. Two
+things it does that the C64 could not: the window can be as wide as your screen, with fog of
+war supplying the constraint the original's six-tile porthole used to — and if you would rather
+have the porthole, **Game ▸ Aperture ▸ Classic** gives you exactly six tiles, drawn much larger
+than a C64 ever could.
 
 ## You must supply your own disks
 
@@ -52,8 +80,11 @@ know this game's internals and something here is wrong, I would like to know.
 You do not need the game to try this. Clone it and run:
 
 ```bash
-make run            # opens the viewer on a freshly generated world
+make run            # opens the app on its New Game screen
 ```
+
+Without disk images the classic map is unavailable, so pick **Random World** and the World
+Maker builds you one.
 
 To get the *classic* map and the original terrain art, add images of disks you own:
 
@@ -70,16 +101,16 @@ Or skip all of that and use the app: **File ▸ Import Disk Images…** does the
 file picker.
 
 `make` on its own lists the other targets. Side 2 carries the historical map; side 1 carries
-the terrain art, the fonts and the World Maker. Either can be supplied without the other.
+the terrain art, the charset and the World Maker. Either can be supplied without the other.
 
 ## Dependencies
 
 **To build and run the port — one dependency, and it is the toolchain:**
 
-| Requirement | Version | Notes                                       |
-| :---------- | :------ | :------------------------------------------ |
-| macOS       | 14+     | declared in `Package.swift`                 |
-| Swift       | 6.0+    | Xcode 16, or the standalone toolchain       |
+| Requirement | Version | Notes                                 |
+| :---------- | :------ | :------------------------------------ |
+| macOS       | 14+     | declared in `Package.swift`           |
+| Swift       | 6.0+    | Xcode 16, or the standalone toolchain |
 
 There are **no Swift package dependencies** — `Package.swift` has an empty dependency list, so
 `swift build` fetches nothing. No emulator, no Python, no network access. AppKit and SpriteKit
@@ -88,18 +119,18 @@ are system frameworks.
 **To run the research tools in `tools/` — optional, and needed by nobody who just wants to
 build or play:**
 
-| Requirement | Needed by                                                |
-| :---------- | :-------------------------------------------------------- |
-| Python 3.9+ | all of them                                                |
-| Pillow      | the 7 that render or compare images (`pip install pillow`) |
-| [vice-mcp](https://github.com/barryw/vice-mcp) | the 6 that drive the emulator |
+| Requirement                                    | Needed by                                                  |
+| :--------------------------------------------- | :--------------------------------------------------------- |
+| Python 3.9+                                    | all of them                                                |
+| Pillow                                         | the 9 that render or compare images (`pip install pillow`) |
+| [vice-mcp](https://github.com/barryw/vice-mcp) | the 14 that drive the emulator                             |
 
 `vice-mcp` is a fork of VICE with an MCP server built in — Homebrew's VICE will not work.
 
 ### What the emulator is still for
 
 Nothing on the build, extract or run path. Everything a user does is static. It is needed for
-exactly two things:
+three things:
 
 - **Differential verification.** `rng_reference.py` and `arith_reference.py` execute the
   original 6502 and capture its output as test fixtures, which the Swift tests then assert
@@ -110,22 +141,43 @@ exactly two things:
   known-plaintext pair captured live by `catch_decrypt.py`. Its closed form was never found and
   the generating routine is not in RAM, so the table **cannot currently be re-derived
   statically**. If you would rather not take it on trust, that is the tool that reproduces it.
+- **Measuring what is not on the disks.** The exploration screen's colors, its compass sprites
+  and its wave stipple exist only at runtime — built into RAM by the game as it draws. They were
+  read off a live session rather than extracted, which is why those parts of the screen are
+  redrawn to measurements instead of loaded. `TODO.md` lists what is still guessed.
 
-## What the viewer does
+## What the app does
 
-- **World menu** — the classic map of the Americas, or **Generate New World**, which makes a
-  fresh one every time you pick it
-- **Tiles menu** — original C64 art or custom tiles drawn for this port
-- Walk with the arrow keys, the numpad, or the `YUI`/`HK`/`NM,` cluster
-- Drag or scroll to pan, `=`/`-` to zoom, `0` to fit the whole world, `f` to re-center
+- **New Game** (Cmd-N) — the classic map of the Americas, or a world the original's World Maker
+  builds fresh, generated off the main thread behind a progress bar
+- **Game ▸ Aperture** — *Classic*, the original's six-tile window with no fog, or *Explorer*, a
+  window as wide as the screen with fog of war and a three-tile sight radius
+- **Palette** — three models of the C64's colors; **Tiles** — original C64 art, or custom tiles
+  drawn for this port
+- Steer with the arrow keys, the numpad, the `QWE`/`ASD`/`ZXC` cluster, or vi's
+  `YUI`/`HJKL`/`BNM` — all four are live at once, so vi is there without being the default
+- Sail into land to go ashore; the ship moors where it was and waits. Walk back onto it to
+  re-embark
+- In *Explorer* only: drag or scroll to pan, `=`/`-` to zoom, `0` to fit the whole world, `f` to
+  re-center. *Classic* pins the aperture, so it offers none of them
 
-The world is 256 x 400 tiles at roughly three miles each.
+The world is 256 x 400 tiles at roughly three miles each. The sight radius is three, which is
+the original's six-tile window expressed as a radius — so nothing is ever revealed that the C64
+would not have revealed, and the extra room on a modern screen buys memory rather than
+vision.
 
-Both the classic map and the original terrain art come from your own disks, with no emulator.
-The art is not a screenshot: the game draws terrain as redefined characters, and the tile
-bitmaps turned out to be static data inside its main program, so `extract.sh` reads them
-directly. If no art has been extracted the viewer falls back to the custom tiles and says so in
-its title bar.
+Everything the screen is made of comes from your own disks, with no emulator: the classic map,
+the terrain tiles, the charset the text is set in and the four glyphs of the viewport frame.
+None of it is a screenshot. The game draws terrain as redefined characters and sets text in a
+charset of its own, and both turned out to be static data — the tiles inside the main program,
+the font in disk 1's raw sectors — so `extract.sh` reads them directly. If no art has been
+extracted the app falls back to custom tiles and says so in its title bar.
+
+Two things on that screen are *not* from the disks, because they are nowhere on them: the
+compass and the wave stipple. Both are hardware sprites or runtime-composed characters, so they
+are redrawn here to measurements taken from the game running under an emulator — shape,
+thickness, color and density. `NOTES.md` and `TODO.md` say which parts are measured and which
+are still a guess.
 
 ## Opening it in Xcode
 
@@ -178,20 +230,29 @@ Ported code is not trusted until it matches the original. `tools/rng_reference.p
 original 6502 routine into an emulator, runs it, and captures the output as a test fixture; the
 Swift tests then assert the port reproduces it exactly.
 
-| Component                       | Status                                                 |
-| :------------------------------ | :----------------------------------------------------- |
-| Fastloader / disk sector order  | Solved from the loader's own command string            |
-| Map format                      | Solved — blocked sectors, nibble tiles, 256x400         |
-| Terrain vocabulary              | Solved — from the game's own name table                |
-| `game` cipher                   | Solved — fixed byte substitution, verified exactly     |
-| Terrain tiles                   | Solved — read from the program, no emulator            |
-| World Maker RNG                 | **Ported and verified** against the original 6502      |
-| Multiply / divide helpers       | **Ported and verified** against the original 6502      |
-| World generation                | Placeholder — *a* generator, not *the* one             |
-| The game                        | Not started                                             |
+| Component                      | Status                                                                 |
+| :----------------------------- | :--------------------------------------------------------------------- |
+| Fastloader / disk sector order | Solved from the loader's own command string                            |
+| Map format                     | Solved — blocked sectors, nibble tiles, 256x400                        |
+| Terrain vocabulary             | Solved — from the game's own name table                                |
+| `game` cipher                  | Solved — fixed byte substitution, verified exactly                     |
+| Terrain tiles                  | Solved — read from the program, no emulator                            |
+| Charset and viewport frame     | Solved — static on disk 1, inverted at load                            |
+| World Maker RNG                | **Ported and verified** against the original 6502                      |
+| Multiply / divide helpers      | **Ported and verified** against the original 6502                      |
+| World generation               | **Ported and verified** — both bands byte for byte, and the draw order |
+| Exploration screen             | Measured from a live game — layout, colors, compass, wave stipple      |
+| Expedition position in memory  | Not found — see `TODO.md`                                              |
+| The game's rules               | Not started                                                            |
 
 The map decode was cross-checked against an independent community dump of the historical map
 and agrees on every continent, island chain, river course and mountain range.
+
+The World Maker is the largest thing verified this way. It is a plate-tectonics model and a
+cultural-diffusion model in 18 KB of 6502, and the port reproduces the original's output *byte
+for byte* over both bands of the map — every landmass, river course, lake and village — and
+finishes with its random generator in the state the original leaves it in, which is a claim
+about every draw of every phase in order, not just about the result.
 
 `NOTES.md` records how each of these was established, including the approaches that failed.
 
