@@ -39,6 +39,10 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
     private var generated: WorldMap?
     private var tileStyle: TileStyle = .original        // default: in-game tiles
     private var originals: OriginalTiles?
+    private var container: NSView!
+    /// Non-nil while the New Game screen is up, which is also how the rest of
+    /// this knows a session has not started yet.
+    private var newGameView: NewGameView?
 
     /// - Parameter assetDirectory: where `historical.map` and
     ///   `original_tiles.json` live. Defaults to the app's Application Support
@@ -55,7 +59,7 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
             backing: .buffered, defer: false)
         window.center()
 
-        let container = NSView(frame: frame)
+        container = NSView(frame: frame)
         container.autoresizingMask = [.width, .height]
 
         skView = SKView(frame: frame)
@@ -83,7 +87,7 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
         window.makeKeyAndOrderFront(nil)
 
         buildMenus()
-        reload()
+        showNewGame()
         NSApp.activate(ignoringOtherApps: true)
     }
 
@@ -108,19 +112,14 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
         fileItem.submenu = fileMenu
         main.addItem(fileItem)
 
-        let worldItem = NSMenuItem()
-        let worldMenu = NSMenu(title: "World")
-        let classic = NSMenuItem(title: "Classic Map (North & South America)",
-                                 action: #selector(pickClassic), keyEquivalent: "1")
-        classic.target = self
-        worldMenu.addItem(classic)
-        // Not a sticky choice: every invocation makes a fresh world.
-        let gen = NSMenuItem(title: "Generate New World",
-                             action: #selector(generateWorld), keyEquivalent: "g")
-        gen.target = self
-        worldMenu.addItem(gen)
-        worldItem.submenu = worldMenu
-        main.addItem(worldItem)
+        let gameItem = NSMenuItem()
+        let gameMenu = NSMenu(title: "Game")
+        let newGame = NSMenuItem(title: "New Game…",
+                                 action: #selector(startNewGame), keyEquivalent: "n")
+        newGame.target = self
+        gameMenu.addItem(newGame)
+        gameItem.submenu = gameMenu
+        main.addItem(gameItem)
 
         let paletteItem = NSMenuItem()
         let paletteMenu = NSMenu(title: "Palette")
@@ -180,7 +179,7 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
             assetDirectory = destination
             originals = nil                 // force a reload from the new assets
             if report.historicalMap != nil { mapChoice = .historical }
-            reload()
+            if newGameView != nil { showNewGame() } else { reload() }
             let alert = NSAlert()
             alert.messageText = report.wroteAnything ? "Extracted" : "Nothing extracted"
             alert.informativeText = ([report.summary] + report.notes)
@@ -195,27 +194,50 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
         }
     }
 
-    @objc private func pickClassic() {
-        mapChoice = .historical
-        reload()
+    @objc private func startNewGame() { showNewGame() }
+
+    // MARK: - New Game
+
+    /// Put the New Game screen up over the map, and take the session down.
+    ///
+    /// The classic map is only offered when `historical.map` is actually there,
+    /// so the screen has to be rebuilt each time rather than kept around — an
+    /// import between one game and the next changes the answer.
+    private func showNewGame() {
+        newGameView?.removeFromSuperview()
+        skView.isHidden = true
+        hud.isHidden = true
+        window.title = "Seven Cities of Gold"
+
+        let haveClassic = FileManager.default.fileExists(
+            atPath: assetDirectory.appendingPathComponent("historical.map").path)
+        let view = NewGameView(haveClassicMap: haveClassic)
+        view.frame = container.bounds
+        view.autoresizingMask = [.width, .height]
+        view.onImportDisks = { [weak self] in self?.importDisks() }
+        view.onChoice = { [weak self] choice in
+            guard let self else { return }
+            switch choice {
+            case .classic:
+                self.mapChoice = .historical
+            case .random(let world):
+                self.generated = WorldMap(world)
+                self.mapChoice = .generated(seed: world.seed, config: world.config)
+            }
+            self.startSession()
+        }
+        container.addSubview(view)
+        newGameView = view
+        window.makeFirstResponder(view)
     }
 
-    @objc private func generateWorld() {
-        // The game's own behaviour: seeded from the machine and stirred by the
-        // raster interrupt throughout, so this is a fresh world every time and
-        // not a function of any seed. There is no retry loop because there is
-        // nothing to retry — the stir is what stops a rejection sampler getting
-        // stuck, which is why the original never failed to build a world either.
-        do {
-            let world = try WorldMaker.randomWorld()
-            generated = WorldMap(world)
-            mapChoice = .generated(seed: world.seed, config: world.config)
-            reload()
-        } catch {
-            NSSound.beep()
-            FileHandle.standardError.write(
-                Data("could not generate a world: \(error)\n".utf8))
-        }
+    /// Take the New Game screen down and show the world it picked.
+    private func startSession() {
+        newGameView?.removeFromSuperview()
+        newGameView = nil
+        skView.isHidden = false
+        hud.isHidden = false
+        reload()
     }
 
     /// The C64 emits composite video, so every palette is a model of it and
@@ -247,24 +269,11 @@ public final class ViewerController: NSObject, NSApplicationDelegate {
         case .historical: loaded = try? WorldMap(contentsOf: url)
         case .generated: loaded = generated
         }
-        // Someone who has not supplied disk images should still get a world to
-        // walk around rather than an error screen, so fall back to generating
-        // one. Only an explicit request for the classic map can fail.
-        if loaded == nil, case .historical = mapChoice, generated == nil {
-            generateWorld()
-            return
-        }
-
+        // The New Game screen only offers the classic map when the file is
+        // there, so this is the case where it went away between the choice and
+        // the load. Going back to the screen is the only thing left to do.
         guard let map = loaded else {
-            window.title = "Seven Cities — historical.map not found"
-            let scene = SKScene(size: skView.bounds.size)
-            scene.backgroundColor = .black
-            let label = SKLabelNode(fontNamed: "Menlo")
-            label.text = "historical.map not found — run ./extract.sh, or press G to generate a world"
-            label.fontSize = 14
-            label.position = CGPoint(x: skView.bounds.midX, y: skView.bounds.midY)
-            scene.addChild(label)
-            skView.presentScene(scene)
+            showNewGame()
             return
         }
 
